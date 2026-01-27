@@ -63,7 +63,14 @@ services:
       - backend
     networks:
       - backend_network
-
+  certbot-renew:
+    image: certbot/certbot
+    restart: "no"
+    volumes:
+      - ./certs:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    command: renew --webroot --webroot-path=/var/www/certbot --quiet --no-self-upgrade
+    
 volumes:
   postgres_data:
 
