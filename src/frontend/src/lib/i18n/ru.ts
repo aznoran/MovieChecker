@@ -1,0 +1,128 @@
+import type { TranslationKeys } from "./en";
+
+const ru: Record<TranslationKeys, string> = {
+  // Common
+  cancel: "Отмена",
+  save: "Сохранить",
+  delete: "Удалить",
+  add: "Добавить",
+  clear: "Очистить",
+  loading: "Загрузка...",
+  all: "Все",
+  logout: "Выйти",
+  pleaseWait: "Подождите...",
+
+  // App
+  appName: "MovieChecker",
+
+  // Nav
+  navDiary: "Дневник",
+  navStats: "Статистика",
+
+  // Auth
+  signIn: "Войти",
+  register: "Регистрация",
+  signInDesc: "Войдите в свой кинодневник",
+  createAccount: "Создайте аккаунт",
+  username: "Логин",
+  password: "Пароль",
+  displayName: "Имя",
+  displayNamePlaceholder: "Как вас называть?",
+  alreadyHaveAccount: "Уже есть аккаунт?",
+  dontHaveAccount: "Нет аккаунта?",
+  registrationFailed: "Ошибка регистрации. Возможно, логин уже занят.",
+  loginFailed: "Неверный логин или пароль.",
+
+  // Home
+  movieDiary: "Кинодневник",
+  addEntry: "Добавить запись",
+  addFirstEntry: "Добавьте первую запись",
+  noEntries: "Записей пока нет. Начните отслеживать фильмы!",
+  deleteConfirm: "Удалить эту запись?",
+  loadingEntries: "Загрузка записей...",
+
+  // Add/Edit Dialog
+  addNewEntry: "Новая запись",
+  editEntry: "Редактировать",
+  poster: "Постер",
+  clickToUpload: "Нажмите для загрузки постера",
+  pasteFromClipboard: "Вставить из буфера",
+  title: "Название",
+  year: "Год",
+  type: "Тип",
+  genre: "Жанр",
+  genrePlaceholder: "Добавить свой жанр...",
+  genreAction: "Боевик",
+  genreComedy: "Комедия",
+  genreDrama: "Драма",
+  genreHorror: "Ужасы",
+  genreThriller: "Триллер",
+  genreRomance: "Романтика",
+  genreSciFi: "Фантастика",
+  genreFantasy: "Фэнтези",
+  genreAnimation: "Анимация",
+  genreDocumentary: "Документальный",
+  genreAdventure: "Приключения",
+  genreMystery: "Детектив",
+  genreCrime: "Криминал",
+  genreFamily: "Семейный",
+  genreMusical: "Мюзикл",
+  description: "Описание",
+  status: "Статус",
+  watchedBy: "Кто смотрел",
+  watchingBy: "Кто смотрит",
+  myRating: "Моя оценка (1-10)",
+  partnerRating: "Оценка партнёра (1-10)",
+  emotion: "Эмоция",
+  comment: "Комментарий",
+  commentPlaceholder: "Ваши впечатления...",
+  adding: "Добавление...",
+  saving: "Сохранение...",
+  failedToAdd: "Не удалось добавить запись",
+  failedToUpdate: "Не удалось обновить запись",
+  titleRequired: "Название обязательно",
+  clipboardNoImage: "В буфере нет изображения",
+  clipboardFailed: "Не удалось прочитать буфер обмена",
+
+  // Content Types
+  contentMovie: "Фильм",
+  contentSeries: "Сериал",
+  contentAnime: "Аниме",
+  contentCartoon: "Мультфильм",
+  contentShow: "Шоу",
+
+  // Watch Status
+  statusPlanned: "Запланировано",
+  statusWatching: "Смотрим",
+  statusCompleted: "Просмотрено",
+  statusDropped: "Брошено",
+
+  // Watched By
+  watchedByMe: "Я",
+  watchedByPartner: "Партнёр",
+  watchedByTogether: "Вместе",
+  watchedBySeparately: "По отдельности",
+
+  // Emotions
+  emotionJoy: "Радость",
+  emotionSadness: "Грусть",
+  emotionExcitement: "Восторг",
+  emotionCringe: "Кринж",
+  emotionConfused: "Что это было?",
+  emotionNeutral: "Нейтрально",
+
+  // Stats
+  statistics: "Статистика",
+  noStats: "Данных пока нет. Добавьте фильмы, чтобы увидеть статистику!",
+  completed: "Просмотрено",
+  watching: "Смотрим",
+  planned: "Запланировано",
+  dropped: "Брошено",
+  myAvgRating: "Моя средняя оценка",
+  partnerAvgRating: "Средняя оценка партнёра",
+  watchedTogether: "Смотрели вместе",
+  byContentType: "По типу контента",
+  emotionsAfterWatching: "Эмоции после просмотра",
+};
+
+export default ru;
