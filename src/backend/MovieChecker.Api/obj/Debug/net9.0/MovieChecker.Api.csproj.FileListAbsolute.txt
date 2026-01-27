@@ -159,3 +159,4 @@ D:\MovieChecker\src\backend\MovieChecker.Api\bin\Debug\net9.0\Microsoft.Extensio
 D:\MovieChecker\src\backend\MovieChecker.Api\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
 D:\MovieChecker\src\backend\MovieChecker.Api\bin\Debug\net9.0\Npgsql.dll
 D:\MovieChecker\src\backend\MovieChecker.Api\bin\Debug\net9.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
+D:\MovieChecker\src\backend\MovieChecker.Api\obj\Debug\net9.0\MovieChecker.Api.sourcelink.json
