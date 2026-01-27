@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-moviechecker}
+      POSTGRES_USER: ${POSTGRES_USER:-moviechecker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-moviechecker_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-moviechecker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-moviechecker};Username=${POSTGRES_USER:-moviechecker};Password=${POSTGRES_PASSWORD:-moviechecker_secret}"
+      Jwt__Key: ${JWT_KEY:-MovieCheckerSuperSecretKey123456789012345678901234567890}
+      Jwt__Issuer: MovieChecker
+      Jwt__Audience: MovieChecker
+      Cors__Origins__0: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5000/api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
