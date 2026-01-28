@@ -174,9 +174,34 @@ public static class WatchEntryEndpoints
         db.WatchEntries.Add(entry);
         await db.SaveChangesAsync();
 
-        // Add own rating if provided
-        if (request.Rating.HasValue)
+        // Add bulk ratings if provided (group mode)
+        if (request.Ratings is { Count: > 0 })
         {
+            // Get valid group member user IDs
+            var validUserIds = request.GroupId.HasValue
+                ? await db.GroupMembers
+                    .Where(m => m.GroupId == request.GroupId.Value)
+                    .Select(m => m.UserId)
+                    .ToListAsync()
+                : new List<int> { userId };
+
+            foreach (var ri in request.Ratings)
+            {
+                if (validUserIds.Contains(ri.UserId))
+                {
+                    db.EntryRatings.Add(new EntryRating
+                    {
+                        WatchEntryId = entry.Id,
+                        UserId = ri.UserId,
+                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                    });
+                }
+            }
+            await db.SaveChangesAsync();
+        }
+        else if (request.Rating.HasValue)
+        {
+            // Single own rating (backward compat)
             db.EntryRatings.Add(new EntryRating
             {
                 WatchEntryId = entry.Id,
@@ -233,9 +258,43 @@ public static class WatchEntryEndpoints
         if (request.StartedAt.HasValue) entry.StartedAt = request.StartedAt.Value;
         if (request.CompletedAt.HasValue) entry.CompletedAt = request.CompletedAt.Value;
 
-        // Handle own rating
-        if (request.Rating.HasValue)
+        // Handle bulk ratings if provided (group mode)
+        if (request.Ratings is { Count: > 0 })
         {
+            var validUserIds = entry.GroupId.HasValue
+                ? await db.GroupMembers
+                    .Where(m => m.GroupId == entry.GroupId.Value)
+                    .Select(m => m.UserId)
+                    .ToListAsync()
+                : new List<int> { userId };
+
+            // Remove ratings for users not in the new list
+            var submittedUserIds = request.Ratings.Select(r => r.UserId).ToHashSet();
+            var toRemove = entry.Ratings.Where(r => !submittedUserIds.Contains(r.UserId)).ToList();
+            db.EntryRatings.RemoveRange(toRemove);
+
+            foreach (var ri in request.Ratings)
+            {
+                if (!validUserIds.Contains(ri.UserId)) continue;
+                var existing = entry.Ratings.FirstOrDefault(r => r.UserId == ri.UserId);
+                if (existing != null)
+                {
+                    existing.Rating = Math.Clamp(ri.Rating, 1, 10);
+                }
+                else
+                {
+                    db.EntryRatings.Add(new EntryRating
+                    {
+                        WatchEntryId = entry.Id,
+                        UserId = ri.UserId,
+                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                    });
+                }
+            }
+        }
+        else if (request.Rating.HasValue)
+        {
+            // Single own rating (backward compat)
             var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
             if (existing != null)
             {

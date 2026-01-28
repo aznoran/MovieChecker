@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createMovie, createWatchEntry, uploadPoster } from "@/lib/api";
 import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
+import { useAuth } from "@/context/auth-context";
 import {
   ContentType,
   WatchStatus,
@@ -58,7 +59,9 @@ interface Props {
 
 export function AddEntryDialog({ open, onOpenChange }: Props) {
   const { locale, t } = useLocale();
-  const { activeGroupId } = useGroup();
+  const { activeGroupId, activeGroup } = useGroup();
+  const { user } = useAuth();
+  const isGroupMode = !!activeGroupId && !!activeGroup;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<ContentType>(ContentType.Movie);
@@ -67,6 +70,9 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
   const [status, setStatus] = useState<WatchStatus>(WatchStatus.Planned);
   const [watchedBy, setWatchedBy] = useState<WatchedBy>(WatchedBy.Together);
   const [myRating, setMyRating] = useState("");
+  // Group mode: selected member IDs and per-member ratings
+  const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
+  const [memberRatings, setMemberRatings] = useState<Record<number, string>>({});
   const [emotion, setEmotion] = useState<Emotion | null>(null);
   const [comment, setComment] = useState("");
   const [posterFile, setPosterFile] = useState<File | null>(null);
@@ -96,11 +102,18 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
         posterUrl,
       });
 
+      const ratingsArray = isGroupMode
+        ? selectedMembers
+            .filter((uid) => memberRatings[uid])
+            .map((uid) => ({ userId: uid, rating: parseInt(memberRatings[uid]) }))
+        : undefined;
+
       await createWatchEntry({
         movieId: movie.id,
         status,
-        watchedBy,
-        rating: myRating ? parseInt(myRating) : undefined,
+        watchedBy: isGroupMode ? WatchedBy.Together : watchedBy,
+        rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
+        ratings: ratingsArray,
         emotion: emotion ?? undefined,
         comment: comment || undefined,
         groupId: activeGroupId,
@@ -125,6 +138,8 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
     setStatus(WatchStatus.Planned);
     setWatchedBy(WatchedBy.Together);
     setMyRating("");
+    setSelectedMembers([]);
+    setMemberRatings({});
     setEmotion(null);
     setComment("");
     setPosterFile(null);
@@ -319,75 +334,154 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <ListChecks className="h-3.5 w-3.5" />
-                {t("status")}
-              </Label>
-              <Select
-                value={status.toString()}
-                onValueChange={(v) => setStatus(Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(watchStatusLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5" />
-                {status === WatchStatus.Planned || status === WatchStatus.Watching
-                  ? t("watchingBy")
-                  : t("watchedBy")}
-              </Label>
-              <Select
-                value={watchedBy.toString()}
-                onValueChange={(v) => {
-                  setWatchedBy(Number(v) as WatchedBy);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(watchedByLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <ListChecks className="h-3.5 w-3.5" />
+              {t("status")}
+            </Label>
+            <Select
+              value={status.toString()}
+              onValueChange={(v) => setStatus(Number(v))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(watchStatusLabels).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
-            <div className="space-y-2">
-              <Label htmlFor="myRating" className="flex items-center gap-1.5">
-                <Star className="h-3.5 w-3.5" />
-                {t("myRatingLabel")}
-              </Label>
-              <Input
-                id="myRating"
-                type="number"
-                value={myRating}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "") { setMyRating(""); return; }
-                  const n = Math.min(10, Math.max(1, parseInt(v) || 1));
-                  setMyRating(n.toString());
-                }}
-                min="1"
-                max="10"
-              />
-            </div>
+          {isGroupMode ? (
+            <>
+              {/* Group mode: member multi-select */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5" />
+                  {status === WatchStatus.Planned || status === WatchStatus.Watching
+                    ? t("watchingBy")
+                    : t("watchedBy")}
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {activeGroup.members.map((m) => {
+                    const selected = selectedMembers.includes(m.userId);
+                    return (
+                      <Button
+                        key={m.userId}
+                        type="button"
+                        variant={selected ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          if (selected) {
+                            setSelectedMembers((prev) => prev.filter((id) => id !== m.userId));
+                            setMemberRatings((prev) => {
+                              const next = { ...prev };
+                              delete next[m.userId];
+                              return next;
+                            });
+                          } else {
+                            setSelectedMembers((prev) => [...prev, m.userId]);
+                          }
+                        }}
+                      >
+                        {m.displayName}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Per-member rating fields */}
+              {status !== WatchStatus.Planned && status !== WatchStatus.Watching &&
+                selectedMembers.length > 0 && (
+                <div className="space-y-2">
+                  {selectedMembers.map((uid) => {
+                    const member = activeGroup.members.find((m) => m.userId === uid);
+                    if (!member) return null;
+                    return (
+                      <div key={uid} className="flex items-center gap-2">
+                        <Label className="flex items-center gap-1.5 min-w-0 shrink-0">
+                          <Star className="h-3.5 w-3.5" />
+                          {member.displayName}
+                        </Label>
+                        <Input
+                          type="number"
+                          value={memberRatings[uid] || ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setMemberRatings((prev) => {
+                              if (v === "") return { ...prev, [uid]: "" };
+                              const n = Math.min(10, Math.max(1, parseInt(v) || 1));
+                              return { ...prev, [uid]: n.toString() };
+                            });
+                          }}
+                          min="1"
+                          max="10"
+                          placeholder="1-10"
+                          className="w-24 h-8"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Personal mode: watchedBy select */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5" />
+                  {status === WatchStatus.Planned || status === WatchStatus.Watching
+                    ? t("watchingBy")
+                    : t("watchedBy")}
+                </Label>
+                <Select
+                  value={watchedBy.toString()}
+                  onValueChange={(v) => {
+                    setWatchedBy(Number(v) as WatchedBy);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(watchedByLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Personal mode: single rating */}
+              {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
+                <div className="space-y-2">
+                  <Label htmlFor="myRating" className="flex items-center gap-1.5">
+                    <Star className="h-3.5 w-3.5" />
+                    {t("myRatingLabel")}
+                  </Label>
+                  <Input
+                    id="myRating"
+                    type="number"
+                    value={myRating}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") { setMyRating(""); return; }
+                      const n = Math.min(10, Math.max(1, parseInt(v) || 1));
+                      setMyRating(n.toString());
+                    }}
+                    min="1"
+                    max="10"
+                  />
+                </div>
+              )}
+            </>
           )}
 
           <div className="space-y-2">

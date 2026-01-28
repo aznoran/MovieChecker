@@ -196,22 +196,27 @@ export default function HomePage() {
                       </Badge>
                     </div>
 
-                    {entry.ratings && entry.ratings.length > 0 && (
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm mb-2">
-                        {entry.ratings.slice(0, 3).map((r) => (
-                          <span key={r.id} className="flex items-center gap-1">
-                            <Star className="h-3.5 w-3.5 text-yellow-400" />
-                            <span className="text-muted-foreground">{r.displayName}:</span>
-                            <strong>{r.rating}/10</strong>
-                          </span>
-                        ))}
-                        {entry.ratings.length > 3 && (
-                          <span className="text-xs text-muted-foreground self-center">
-                            +{entry.ratings.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    {entry.ratings && entry.ratings.length > 0 && (() => {
+                      const sorted = [...entry.ratings].sort((a, b) =>
+                        a.displayName.localeCompare(b.displayName)
+                      );
+                      return (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm mb-2">
+                          {sorted.slice(0, 3).map((r) => (
+                            <span key={r.id} className="flex items-center gap-1">
+                              <Star className="h-3.5 w-3.5 text-yellow-400" />
+                              <span className="text-muted-foreground">{r.displayName}:</span>
+                              <strong>{r.rating}/10</strong>
+                            </span>
+                          ))}
+                          {sorted.length > 3 && (
+                            <span className="text-xs text-muted-foreground self-center">
+                              +{sorted.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {entry.comment && (
                       <p className="text-sm text-muted-foreground line-clamp-2 flex items-start gap-1">

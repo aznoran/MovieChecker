@@ -118,15 +118,11 @@ export const createWatchEntry = async (entry: {
   movieId: number;
   status: number;
   watchedBy: number;
-  myRating?: number;
-  partnerRating?: number;
   emotion?: number;
   comment?: string;
-  privateComment?: string;
-  startedAt?: string;
-  completedAt?: string;
   groupId?: number;
   rating?: number;
+  ratings?: { userId: number; rating: number }[];
 }): Promise<WatchEntry> => {
   const response = await api.post<WatchEntry>("/watch-entries", entry);
   return response.data;
@@ -137,14 +133,10 @@ export const updateWatchEntry = async (
   entry: {
     status?: number;
     watchedBy?: number;
-    myRating?: number;
-    partnerRating?: number;
     emotion?: number;
     comment?: string;
-    privateComment?: string;
-    startedAt?: string;
-    completedAt?: string;
     rating?: number;
+    ratings?: { userId: number; rating: number }[];
   }
 ): Promise<WatchEntry> => {
   const response = await api.put<WatchEntry>(`/watch-entries/${id}`, entry);

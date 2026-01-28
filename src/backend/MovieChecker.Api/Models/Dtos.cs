@@ -37,6 +37,8 @@ public record MovieDto(
 );
 
 // WatchEntry DTOs
+public record UserRatingInput(int UserId, int Rating);
+
 public record CreateWatchEntryRequest(
     int MovieId,
     WatchStatus Status,
@@ -49,7 +51,8 @@ public record CreateWatchEntryRequest(
     DateTime? StartedAt,
     DateTime? CompletedAt,
     int? GroupId,
-    int? Rating
+    int? Rating,
+    List<UserRatingInput>? Ratings
 );
 
 public record UpdateWatchEntryRequest(
@@ -62,7 +65,8 @@ public record UpdateWatchEntryRequest(
     string? PrivateComment,
     DateTime? StartedAt,
     DateTime? CompletedAt,
-    int? Rating
+    int? Rating,
+    List<UserRatingInput>? Ratings
 );
 
 public record WatchEntryDto(

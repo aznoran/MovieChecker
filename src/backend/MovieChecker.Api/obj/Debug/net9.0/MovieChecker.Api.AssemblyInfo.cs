@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MovieChecker.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+197343db16bd9b4a4f29c16a5e12a6ebeb3e2a3e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+45b184ce9eb552c03f992e9daf630173e769cb24")]
 [assembly: System.Reflection.AssemblyProductAttribute("MovieChecker.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MovieChecker.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
