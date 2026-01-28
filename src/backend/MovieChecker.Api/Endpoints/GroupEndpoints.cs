@@ -124,7 +124,7 @@ public static class GroupEndpoints
     {
         var userId = GetUserId(user);
 
-        // 1. Находим группу (без включения для проверки)
+        // 1. Находим группу
         var group = await db.Groups
             .FirstOrDefaultAsync(g => 
                 g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
@@ -132,22 +132,28 @@ public static class GroupEndpoints
         if (group == null)
             return Results.NotFound(new { message = "Invalid invite code" });
 
-        // 2. Проверяем членство отдельным запросом (оптимизация)
+        // 2. Проверяем членство
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
             return Results.BadRequest(new { message = "Already a member" });
 
         // 3. Добавляем участника
-        db.GroupMembers.Add(new GroupMember { GroupId = group.Id, UserId = userId });
+        db.GroupMembers.Add(new GroupMember 
+        { 
+            GroupId = group.Id, 
+            UserId = userId 
+        });
         await db.SaveChangesAsync();
 
-        // 4. ПЕРЕЗАПРАШИВАЕМ группу СО ВСЕМИ зависимостями для безопасного формирования ответа
+        // 4. ⚠️ КРИТИЧЕСКИ ВАЖНО: перезапрашиваем группу СО ВСЕМИ зависимостями
         var updatedGroup = await db.Groups
-            .Include(g => g.Members).ThenInclude(m => m.User)
+            .Include(g => g.Members)
+            .ThenInclude(m => m.User)  // ✅ Гарантирует загрузку User для ВСЕХ участников
             .FirstOrDefaultAsync(g => g.Id == group.Id);
 
         if (updatedGroup == null) 
-            return Results.NotFound(); // На всякий случай
+            return Results.NotFound();
 
+        // 5. Теперь безопасно формируем ответ
         return Results.Ok(new GroupDto(
             updatedGroup.Id,
             updatedGroup.Name,
@@ -155,7 +161,7 @@ public static class GroupEndpoints
             updatedGroup.CreatedByUserId,
             updatedGroup.Members.Select(m => new GroupMemberDto(
                 m.UserId,
-                m.User.DisplayName, // ✅ User гарантированно загружен
+                m.User.DisplayName,  // ✅ m.User точно не null
                 m.JoinedAt
             )).ToList(),
             updatedGroup.CreatedAt
