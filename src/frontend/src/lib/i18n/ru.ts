@@ -123,6 +123,29 @@ const ru: Record<TranslationKeys, string> = {
   watchedTogether: "Смотрели вместе",
   byContentType: "По типу контента",
   emotionsAfterWatching: "Эмоции после просмотра",
+
+  // Groups
+  personal: "Личное",
+  groups: "Группы",
+  createGroup: "Создать группу",
+  joinGroup: "Присоединиться",
+  leaveGroup: "Покинуть группу",
+  groupName: "Название группы",
+  inviteCode: "Код приглашения",
+  enterInviteCode: "Введите код приглашения",
+  members: "Участники",
+  copied: "Скопировано!",
+  copyCode: "Скопировать код",
+  noGroups: "Групп пока нет",
+  leaveGroupConfirm: "Покинуть эту группу?",
+  groupCreated: "Группа создана!",
+  joinedGroup: "Вы присоединились!",
+  invalidCode: "Неверный код приглашения",
+  alreadyMember: "Вы уже участник",
+  myRatingLabel: "Моя оценка",
+  allRatings: "Все оценки",
+  noRatingsYet: "Оценок пока нет",
+  ratingOf: " оценил(а)",
 };
 
 export default ru;

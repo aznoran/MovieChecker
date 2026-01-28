@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { useLocale } from "@/context/locale-context";
+import { useGroup } from "@/context/group-context";
 import { getWatchEntries, deleteWatchEntry, getPosterUrl } from "@/lib/api";
 import { WatchStatus, EmotionEmojis } from "@/types";
 import type { WatchEntry } from "@/types";
@@ -23,7 +24,6 @@ import {
   Plus,
   Trash2,
   Star,
-  Heart,
   MessageSquare,
   Film,
   Calendar,
@@ -43,6 +43,7 @@ const statusColors: Record<WatchStatus, string> = {
 export default function HomePage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { locale, t } = useLocale();
+  const { activeGroupId } = useGroup();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -55,9 +56,9 @@ export default function HomePage() {
   const [statusFilter, setStatusFilter] = useState<WatchStatus | null>(null);
 
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["watchEntries", statusFilter],
+    queryKey: ["watchEntries", statusFilter, activeGroupId],
     queryFn: () =>
-      getWatchEntries(statusFilter !== null ? statusFilter : undefined),
+      getWatchEntries(statusFilter !== null ? statusFilter : undefined, undefined, activeGroupId),
     enabled: isAuthenticated,
   });
 
@@ -195,18 +196,18 @@ export default function HomePage() {
                       </Badge>
                     </div>
 
-                    {(entry.myRating || entry.partnerRating) && (
-                      <div className="flex gap-3 text-sm mb-2">
-                        {entry.myRating && (
-                          <span className="flex items-center gap-1">
+                    {entry.ratings && entry.ratings.length > 0 && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm mb-2">
+                        {entry.ratings.slice(0, 3).map((r) => (
+                          <span key={r.id} className="flex items-center gap-1">
                             <Star className="h-3.5 w-3.5 text-yellow-400" />
-                            <strong>{entry.myRating}/10</strong>
+                            <span className="text-muted-foreground">{r.displayName}:</span>
+                            <strong>{r.rating}/10</strong>
                           </span>
-                        )}
-                        {entry.partnerRating && (
-                          <span className="flex items-center gap-1">
-                            <Heart className="h-3.5 w-3.5 text-pink-400" />
-                            <strong>{entry.partnerRating}/10</strong>
+                        ))}
+                        {entry.ratings.length > 3 && (
+                          <span className="text-xs text-muted-foreground self-center">
+                            +{entry.ratings.length - 3}
                           </span>
                         )}
                       </div>

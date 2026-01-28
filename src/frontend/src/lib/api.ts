@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { AuthResponse, Movie, WatchEntry, Stats } from "@/types";
+import type { AuthResponse, Movie, WatchEntry, Stats, Group } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -98,11 +98,13 @@ export const searchMovies = async (query: string): Promise<Movie[]> => {
 // Watch Entries
 export const getWatchEntries = async (
   status?: number,
-  watchedBy?: number
+  watchedBy?: number,
+  groupId?: number
 ): Promise<WatchEntry[]> => {
   const params: Record<string, number> = {};
   if (status !== undefined) params.status = status;
   if (watchedBy !== undefined) params.watchedBy = watchedBy;
+  if (groupId !== undefined) params.groupId = groupId;
   const response = await api.get<WatchEntry[]>("/watch-entries", { params });
   return response.data;
 };
@@ -123,6 +125,8 @@ export const createWatchEntry = async (entry: {
   privateComment?: string;
   startedAt?: string;
   completedAt?: string;
+  groupId?: number;
+  rating?: number;
 }): Promise<WatchEntry> => {
   const response = await api.post<WatchEntry>("/watch-entries", entry);
   return response.data;
@@ -140,19 +144,54 @@ export const updateWatchEntry = async (
     privateComment?: string;
     startedAt?: string;
     completedAt?: string;
+    rating?: number;
   }
 ): Promise<WatchEntry> => {
   const response = await api.put<WatchEntry>(`/watch-entries/${id}`, entry);
   return response.data;
 };
 
+export const rateEntry = async (
+  entryId: number,
+  rating: number
+): Promise<void> => {
+  await api.post(`/watch-entries/${entryId}/rate`, { rating });
+};
+
 export const deleteWatchEntry = async (id: number): Promise<void> => {
   await api.delete(`/watch-entries/${id}`);
 };
 
-export const getStats = async (): Promise<Stats> => {
-  const response = await api.get<Stats>("/watch-entries/stats");
+export const getStats = async (groupId?: number): Promise<Stats> => {
+  const params: Record<string, number> = {};
+  if (groupId !== undefined) params.groupId = groupId;
+  const response = await api.get<Stats>("/watch-entries/stats", { params });
   return response.data;
+};
+
+// Groups
+export const getMyGroups = async (): Promise<Group[]> => {
+  const response = await api.get<Group[]>("/groups");
+  return response.data;
+};
+
+export const getGroup = async (id: number): Promise<Group> => {
+  const response = await api.get<Group>(`/groups/${id}`);
+  return response.data;
+};
+
+export const createGroup = async (name: string): Promise<Group> => {
+  const response = await api.post<Group>("/groups", { name });
+  return response.data;
+};
+
+export const joinGroup = async (inviteCode: string): Promise<Group> => {
+  const response = await api.post<Group>("/groups/join", { inviteCode });
+  return response.data;
+};
+
+export const leaveGroup = async (id: number): Promise<void> => {
+  await api.delete(`/groups/${id}/leave`);
 };
 
 // Upload
@@ -169,11 +208,9 @@ export const getPosterUrl = (posterIdOrPath: string | undefined | null): string 
   if (!posterIdOrPath) return null;
   if (posterIdOrPath.startsWith("http")) return posterIdOrPath;
   const base = API_URL.replace("/api", "");
-  // New format: poster ID (numeric string)
   if (/^\d+$/.test(posterIdOrPath)) {
     return `${base}/api/posters/${posterIdOrPath}`;
   }
-  // Legacy format: file path
   return `${base}${posterIdOrPath}`;
 };
 

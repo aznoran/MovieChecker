@@ -9,4 +9,6 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<WatchEntry> WatchEntries { get; set; } = [];
+    public ICollection<GroupMember> GroupMemberships { get; set; } = [];
+    public ICollection<EntryRating> Ratings { get; set; } = [];
 }

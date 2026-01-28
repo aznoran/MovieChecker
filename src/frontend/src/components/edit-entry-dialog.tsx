@@ -2,8 +2,9 @@
 
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateWatchEntry, updateMovie, uploadPoster, getPosterUrl } from "@/lib/api";
+import { updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry } from "@/lib/api";
 import { useLocale } from "@/context/locale-context";
+import { useAuth } from "@/context/auth-context";
 import type { WatchEntry } from "@/types";
 import {
   WatchStatus,
@@ -40,7 +41,6 @@ import {
   ListChecks,
   Users,
   Star,
-  Heart,
   MessageSquare,
   Loader2,
   Film,
@@ -56,12 +56,12 @@ interface Props {
 
 export function EditEntryDialog({ entry, open, onOpenChange }: Props) {
   const { locale, t } = useLocale();
+  const { user } = useAuth();
+  const myExistingRating = entry.ratings?.find((r) => r.userId === user?.id);
+  const otherRatings = entry.ratings?.filter((r) => r.userId !== user?.id) ?? [];
   const [status, setStatus] = useState<WatchStatus>(entry.status);
   const [watchedBy, setWatchedBy] = useState<WatchedBy>(entry.watchedBy);
-  const [myRating, setMyRating] = useState(entry.myRating?.toString() || "");
-  const [partnerRating, setPartnerRating] = useState(
-    entry.partnerRating?.toString() || ""
-  );
+  const [myRating, setMyRating] = useState(myExistingRating?.rating?.toString() || "");
   const [emotion, setEmotion] = useState<Emotion | null>(entry.emotion ?? null);
   const [comment, setComment] = useState(entry.comment || "");
   const [posterFile, setPosterFile] = useState<File | null>(null);
@@ -87,8 +87,7 @@ export function EditEntryDialog({ entry, open, onOpenChange }: Props) {
       await updateWatchEntry(entry.id, {
         status,
         watchedBy,
-        myRating: myRating ? parseInt(myRating) : undefined,
-        partnerRating: partnerRating ? parseInt(partnerRating) : undefined,
+        rating: myRating ? parseInt(myRating) : undefined,
         emotion: emotion ?? undefined,
         comment: comment || undefined,
       });
@@ -276,10 +275,7 @@ export function EditEntryDialog({ entry, open, onOpenChange }: Props) {
               <Select
                 value={watchedBy.toString()}
                 onValueChange={(v) => {
-                  const next = Number(v) as WatchedBy;
-                  if (next === WatchedBy.Me) setPartnerRating("");
-                  if (next === WatchedBy.Partner) setMyRating("");
-                  setWatchedBy(next);
+                  setWatchedBy(Number(v) as WatchedBy);
                 }}
               >
                 <SelectTrigger>
@@ -297,50 +293,43 @@ export function EditEntryDialog({ entry, open, onOpenChange }: Props) {
           </div>
 
           {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
-            <>
-              {(watchedBy === WatchedBy.Me || watchedBy === WatchedBy.Together || watchedBy === WatchedBy.Separately) && (
-                <div className="space-y-2">
-                  <Label htmlFor="myRating" className="flex items-center gap-1.5">
-                    <Star className="h-3.5 w-3.5" />
-                    {t("myRating")}
-                  </Label>
-                  <Input
-                    id="myRating"
-                    type="number"
-                    value={myRating}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "") { setMyRating(""); return; }
-                      const n = Math.min(10, Math.max(1, parseInt(v) || 1));
-                      setMyRating(n.toString());
-                    }}
-                    min="1"
-                    max="10"
-                  />
-                </div>
-              )}
-              {(watchedBy === WatchedBy.Partner || watchedBy === WatchedBy.Together || watchedBy === WatchedBy.Separately) && (
-                <div className="space-y-2">
-                  <Label htmlFor="partnerRating" className="flex items-center gap-1.5">
-                    <Heart className="h-3.5 w-3.5" />
-                    {t("partnerRating")}
-                  </Label>
-                  <Input
-                    id="partnerRating"
-                    type="number"
-                    value={partnerRating}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "") { setPartnerRating(""); return; }
-                      const n = Math.min(10, Math.max(1, parseInt(v) || 1));
-                      setPartnerRating(n.toString());
-                    }}
-                    min="1"
-                    max="10"
-                  />
-                </div>
-              )}
-            </>
+            <div className="space-y-2">
+              <Label htmlFor="myRating" className="flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5" />
+                {t("myRatingLabel")}
+              </Label>
+              <Input
+                id="myRating"
+                type="number"
+                value={myRating}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "") { setMyRating(""); return; }
+                  const n = Math.min(10, Math.max(1, parseInt(v) || 1));
+                  setMyRating(n.toString());
+                }}
+                min="1"
+                max="10"
+              />
+            </div>
+          )}
+
+          {/* All ratings from other users */}
+          {otherRatings.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5" />
+                {t("allRatings")}
+              </Label>
+              <div className="space-y-1">
+                {otherRatings.map((r) => (
+                  <div key={r.id} className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">{r.displayName}{t("ratingOf")}</span>
+                    <strong>{r.rating}/10</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           <div className="space-y-2">

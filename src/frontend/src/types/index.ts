@@ -51,20 +51,42 @@ export interface Movie {
   createdAt: string;
 }
 
+export interface EntryRating {
+  id: number;
+  userId: number;
+  displayName: string;
+  rating: number;
+}
+
 export interface WatchEntry {
   id: number;
   movieId: number;
   movie: Movie;
   status: WatchStatus;
   watchedBy: WatchedBy;
-  myRating?: number;
-  partnerRating?: number;
+  groupId?: number;
   emotion?: Emotion;
   comment?: string;
+  ratings: EntryRating[];
   startedAt?: string;
   completedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Group {
+  id: number;
+  name: string;
+  inviteCode: string;
+  createdByUserId: number;
+  members: GroupMember[];
+  createdAt: string;
+}
+
+export interface GroupMember {
+  userId: number;
+  displayName: string;
+  joinedAt: string;
 }
 
 export interface Stats {

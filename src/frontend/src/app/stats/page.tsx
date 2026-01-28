@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { useLocale } from "@/context/locale-context";
+import { useGroup } from "@/context/group-context";
 import { getStats } from "@/lib/api";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,11 +26,12 @@ import {
 export default function StatsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useLocale();
+  const { activeGroupId } = useGroup();
   const router = useRouter();
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["stats"],
-    queryFn: getStats,
+    queryKey: ["stats", activeGroupId],
+    queryFn: () => getStats(activeGroupId),
     enabled: isAuthenticated,
   });
 

@@ -47,7 +47,9 @@ public record CreateWatchEntryRequest(
     string? Comment,
     string? PrivateComment,
     DateTime? StartedAt,
-    DateTime? CompletedAt
+    DateTime? CompletedAt,
+    int? GroupId,
+    int? Rating
 );
 
 public record UpdateWatchEntryRequest(
@@ -59,7 +61,8 @@ public record UpdateWatchEntryRequest(
     string? Comment,
     string? PrivateComment,
     DateTime? StartedAt,
-    DateTime? CompletedAt
+    DateTime? CompletedAt,
+    int? Rating
 );
 
 public record WatchEntryDto(
@@ -68,14 +71,40 @@ public record WatchEntryDto(
     MovieDto Movie,
     WatchStatus Status,
     WatchedBy WatchedBy,
-    int? MyRating,
-    int? PartnerRating,
+    int? GroupId,
     Emotion? Emotion,
     string? Comment,
+    List<EntryRatingDto> Ratings,
     DateTime? StartedAt,
     DateTime? CompletedAt,
     DateTime CreatedAt,
     DateTime UpdatedAt
+);
+
+public record EntryRatingDto(
+    int Id,
+    int UserId,
+    string DisplayName,
+    int Rating
+);
+
+// Group DTOs
+public record CreateGroupRequest(string Name);
+public record JoinGroupRequest(string InviteCode);
+
+public record GroupDto(
+    int Id,
+    string Name,
+    string InviteCode,
+    int CreatedByUserId,
+    List<GroupMemberDto> Members,
+    DateTime CreatedAt
+);
+
+public record GroupMemberDto(
+    int UserId,
+    string DisplayName,
+    DateTime JoinedAt
 );
 
 // Stats DTOs

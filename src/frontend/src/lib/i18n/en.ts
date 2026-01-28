@@ -121,6 +121,29 @@ const en = {
   watchedTogether: "Watched Together",
   byContentType: "By Content Type",
   emotionsAfterWatching: "Emotions After Watching",
+
+  // Groups
+  personal: "Personal",
+  groups: "Groups",
+  createGroup: "Create Group",
+  joinGroup: "Join Group",
+  leaveGroup: "Leave Group",
+  groupName: "Group Name",
+  inviteCode: "Invite Code",
+  enterInviteCode: "Enter invite code",
+  members: "Members",
+  copied: "Copied!",
+  copyCode: "Copy Code",
+  noGroups: "No groups yet",
+  leaveGroupConfirm: "Leave this group?",
+  groupCreated: "Group created!",
+  joinedGroup: "Joined group!",
+  invalidCode: "Invalid invite code",
+  alreadyMember: "Already a member",
+  myRatingLabel: "My Rating",
+  allRatings: "All Ratings",
+  noRatingsYet: "No ratings yet",
+  ratingOf: "'s rating",
 } as const;
 
 export type TranslationKeys = keyof typeof en;

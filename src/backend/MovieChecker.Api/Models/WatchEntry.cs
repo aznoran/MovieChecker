@@ -31,6 +31,7 @@ public class WatchEntry
     public int Id { get; set; }
     public int MovieId { get; set; }
     public int UserId { get; set; }
+    public int? GroupId { get; set; }
 
     public WatchStatus Status { get; set; } = WatchStatus.Planned;
     public WatchedBy WatchedBy { get; set; } = WatchedBy.Together;
@@ -49,4 +50,6 @@ public class WatchEntry
 
     public Movie Movie { get; set; } = null!;
     public User User { get; set; } = null!;
+    public Group? Group { get; set; }
+    public ICollection<EntryRating> Ratings { get; set; } = [];
 }

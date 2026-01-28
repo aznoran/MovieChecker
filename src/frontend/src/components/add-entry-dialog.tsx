@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createMovie, createWatchEntry, uploadPoster } from "@/lib/api";
 import { useLocale } from "@/context/locale-context";
+import { useGroup } from "@/context/group-context";
 import {
   ContentType,
   WatchStatus,
@@ -45,7 +46,6 @@ import {
   ListChecks,
   Users,
   Star,
-  Heart,
   MessageSquare,
   Loader2,
   ClipboardPaste,
@@ -58,6 +58,7 @@ interface Props {
 
 export function AddEntryDialog({ open, onOpenChange }: Props) {
   const { locale, t } = useLocale();
+  const { activeGroupId } = useGroup();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<ContentType>(ContentType.Movie);
@@ -66,7 +67,6 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
   const [status, setStatus] = useState<WatchStatus>(WatchStatus.Planned);
   const [watchedBy, setWatchedBy] = useState<WatchedBy>(WatchedBy.Together);
   const [myRating, setMyRating] = useState("");
-  const [partnerRating, setPartnerRating] = useState("");
   const [emotion, setEmotion] = useState<Emotion | null>(null);
   const [comment, setComment] = useState("");
   const [posterFile, setPosterFile] = useState<File | null>(null);
@@ -100,10 +100,10 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
         movieId: movie.id,
         status,
         watchedBy,
-        myRating: myRating ? parseInt(myRating) : undefined,
-        partnerRating: partnerRating ? parseInt(partnerRating) : undefined,
+        rating: myRating ? parseInt(myRating) : undefined,
         emotion: emotion ?? undefined,
         comment: comment || undefined,
+        groupId: activeGroupId,
       });
     },
     onSuccess: () => {
@@ -125,7 +125,6 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
     setStatus(WatchStatus.Planned);
     setWatchedBy(WatchedBy.Together);
     setMyRating("");
-    setPartnerRating("");
     setEmotion(null);
     setComment("");
     setPosterFile(null);
@@ -352,10 +351,7 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
               <Select
                 value={watchedBy.toString()}
                 onValueChange={(v) => {
-                  const next = Number(v) as WatchedBy;
-                  if (next === WatchedBy.Me) setPartnerRating("");
-                  if (next === WatchedBy.Partner) setMyRating("");
-                  setWatchedBy(next);
+                  setWatchedBy(Number(v) as WatchedBy);
                 }}
               >
                 <SelectTrigger>
@@ -373,50 +369,25 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
           </div>
 
           {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
-            <>
-              {(watchedBy === WatchedBy.Me || watchedBy === WatchedBy.Together || watchedBy === WatchedBy.Separately) && (
-                <div className="space-y-2">
-                  <Label htmlFor="myRating" className="flex items-center gap-1.5">
-                    <Star className="h-3.5 w-3.5" />
-                    {t("myRating")}
-                  </Label>
-                  <Input
-                    id="myRating"
-                    type="number"
-                    value={myRating}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "") { setMyRating(""); return; }
-                      const n = Math.min(10, Math.max(1, parseInt(v) || 1));
-                      setMyRating(n.toString());
-                    }}
-                    min="1"
-                    max="10"
-                  />
-                </div>
-              )}
-              {(watchedBy === WatchedBy.Partner || watchedBy === WatchedBy.Together || watchedBy === WatchedBy.Separately) && (
-                <div className="space-y-2">
-                  <Label htmlFor="partnerRating" className="flex items-center gap-1.5">
-                    <Heart className="h-3.5 w-3.5" />
-                    {t("partnerRating")}
-                  </Label>
-                  <Input
-                    id="partnerRating"
-                    type="number"
-                    value={partnerRating}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === "") { setPartnerRating(""); return; }
-                      const n = Math.min(10, Math.max(1, parseInt(v) || 1));
-                      setPartnerRating(n.toString());
-                    }}
-                    min="1"
-                    max="10"
-                  />
-                </div>
-              )}
-            </>
+            <div className="space-y-2">
+              <Label htmlFor="myRating" className="flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5" />
+                {t("myRatingLabel")}
+              </Label>
+              <Input
+                id="myRating"
+                type="number"
+                value={myRating}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "") { setMyRating(""); return; }
+                  const n = Math.min(10, Math.max(1, parseInt(v) || 1));
+                  setMyRating(n.toString());
+                }}
+                min="1"
+                max="10"
+              />
+            </div>
           )}
 
           <div className="space-y-2">
