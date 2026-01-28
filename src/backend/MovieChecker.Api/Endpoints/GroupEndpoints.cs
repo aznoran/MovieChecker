@@ -124,38 +124,41 @@ public static class GroupEndpoints
     {
         var userId = GetUserId(user);
 
-        var g = await db.Groups
-            .Include(g => g.Members)
-                .ThenInclude(m => m.User)
-            .FirstOrDefaultAsync(g => g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
+        // 1. Находим группу (без включения для проверки)
+        var group = await db.Groups
+            .FirstOrDefaultAsync(g => 
+                g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
 
-        if (g == null)
+        if (group == null)
             return Results.NotFound(new { message = "Invalid invite code" });
 
-        if (g.Members.Any(m => m.UserId == userId))
+        // 2. Проверяем членство отдельным запросом (оптимизация)
+        if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
             return Results.BadRequest(new { message = "Already a member" });
 
-        db.GroupMembers.Add(new GroupMember
-        {
-            GroupId = g.Id,
-            UserId = userId
-        });
+        // 3. Добавляем участника
+        db.GroupMembers.Add(new GroupMember { GroupId = group.Id, UserId = userId });
         await db.SaveChangesAsync();
 
-        // Reload to include new member
-        await db.Entry(g).Collection(x => x.Members).LoadAsync();
+        // 4. ПЕРЕЗАПРАШИВАЕМ группу СО ВСЕМИ зависимостями для безопасного формирования ответа
+        var updatedGroup = await db.Groups
+            .Include(g => g.Members).ThenInclude(m => m.User)
+            .FirstOrDefaultAsync(g => g.Id == group.Id);
+
+        if (updatedGroup == null) 
+            return Results.NotFound(); // На всякий случай
 
         return Results.Ok(new GroupDto(
-            g.Id,
-            g.Name,
-            g.InviteCode,
-            g.CreatedByUserId,
-            g.Members.Select(m => new GroupMemberDto(
+            updatedGroup.Id,
+            updatedGroup.Name,
+            updatedGroup.InviteCode,
+            updatedGroup.CreatedByUserId,
+            updatedGroup.Members.Select(m => new GroupMemberDto(
                 m.UserId,
-                m.User.DisplayName,
+                m.User.DisplayName, // ✅ User гарантированно загружен
                 m.JoinedAt
             )).ToList(),
-            g.CreatedAt
+            updatedGroup.CreatedAt
         ));
     }
 

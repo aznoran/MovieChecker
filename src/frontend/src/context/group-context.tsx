@@ -51,6 +51,13 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Reset on logout
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setActiveGroupId(undefined);
+    }
+  }, [isAuthenticated, setActiveGroupId]);
+
   // If activeGroupId is set but not in groups list, reset to personal
   useEffect(() => {
     if (!isLoading && activeGroupId !== undefined && !groups.find((g) => g.id === activeGroupId)) {
