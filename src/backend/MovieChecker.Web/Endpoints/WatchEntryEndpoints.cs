@@ -50,7 +50,11 @@ public static class WatchEntryEndpoints
         w.StartedAt,
         w.CompletedAt,
         w.CreatedAt,
-        w.UpdatedAt
+        w.UpdatedAt,
+        w.CurrentSeason,
+        w.CurrentEpisode,
+        w.TotalEpisodes,
+        w.WatchingTime
     );
 
     private static async Task<IResult> GetAll(
@@ -151,7 +155,8 @@ public static class WatchEntryEndpoints
         else
         {
             // Check duplicate for personal entries
-            if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
+            if (await db.WatchEntries.AnyAsync(w =>
+                    w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
                 return Results.BadRequest(new { message = "Watch entry already exists for this movie" });
         }
 
@@ -168,7 +173,11 @@ public static class WatchEntryEndpoints
             Comment = request.Comment,
             PrivateComment = request.PrivateComment,
             StartedAt = request.StartedAt,
-            CompletedAt = request.CompletedAt
+            CompletedAt = request.CompletedAt,
+            CurrentSeason = request.CurrentSeason,
+            CurrentEpisode = request.CurrentEpisode,
+            TotalEpisodes = request.TotalEpisodes,
+            WatchingTime = request.WatchingTime,
         };
 
         db.WatchEntries.Add(entry);
@@ -197,6 +206,7 @@ public static class WatchEntryEndpoints
                     });
                 }
             }
+
             await db.SaveChangesAsync();
         }
         else if (request.Rating.HasValue)
@@ -257,6 +267,10 @@ public static class WatchEntryEndpoints
         if (request.PrivateComment != null) entry.PrivateComment = request.PrivateComment;
         if (request.StartedAt.HasValue) entry.StartedAt = request.StartedAt.Value;
         if (request.CompletedAt.HasValue) entry.CompletedAt = request.CompletedAt.Value;
+        if (request.CurrentSeason.HasValue) entry.CurrentSeason = request.CurrentSeason.Value;
+        if (request.CurrentEpisode.HasValue) entry.CurrentEpisode = request.CurrentEpisode.Value;
+        if (request.TotalEpisodes.HasValue) entry.TotalEpisodes = request.TotalEpisodes.Value;
+        if (request.WatchingTime.HasValue) entry.WatchingTime = request.WatchingTime.Value;
 
         // Handle bulk ratings if provided (group mode)
         if (request.Ratings is { Count: > 0 })
@@ -450,7 +464,8 @@ public static class WatchEntryEndpoints
             AveragePartnerRating: otherRatings.Count > 0 ? otherRatings.Average() : 0,
             WatchedTogether: entries.Count(e => e.WatchedBy == WatchedBy.Together),
             ByType: entries.GroupBy(e => e.Movie.Type.ToString()).ToDictionary(g => g.Key, g => g.Count()),
-            ByEmotion: entries.Where(e => e.Emotion.HasValue).GroupBy(e => e.Emotion!.Value.ToString()).ToDictionary(g => g.Key, g => g.Count()),
+            ByEmotion: entries.Where(e => e.Emotion.HasValue).GroupBy(e => e.Emotion!.Value.ToString())
+                .ToDictionary(g => g.Key, g => g.Count()),
             MemberRatings: allRatings
                 .GroupBy(r => r.UserId)
                 .Select(g => new MemberRatingDto(

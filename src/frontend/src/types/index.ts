@@ -72,6 +72,10 @@ export interface WatchEntry {
   completedAt?: string;
   createdAt: string;
   updatedAt: string;
+  currentSeason: number;
+  currentEpisode: number;
+  totalEpisodes: number;
+  watchingTime: number;
 }
 
 export interface Group {

@@ -63,7 +63,7 @@ export function GenreMultiSelect({ value, onChange }: Props) {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selected.map((genre) => (

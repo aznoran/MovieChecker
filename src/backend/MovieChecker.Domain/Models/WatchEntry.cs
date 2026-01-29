@@ -45,6 +45,15 @@ public class WatchEntry
 
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+
+    public int? CurrentSeason { get; set; }
+
+    public int? CurrentEpisode { get; set; }
+
+    public int? TotalEpisodes { get; set; }
+
+    public int? WatchingTime { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

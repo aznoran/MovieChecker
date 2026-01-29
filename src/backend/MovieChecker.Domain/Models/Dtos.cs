@@ -52,6 +52,10 @@ public record CreateWatchEntryRequest(
     DateTime? CompletedAt,
     int? GroupId,
     int? Rating,
+    int? CurrentSeason,
+    int? CurrentEpisode,
+    int? TotalEpisodes,
+    int? WatchingTime,
     List<UserRatingInput>? Ratings
 );
 
@@ -66,6 +70,10 @@ public record UpdateWatchEntryRequest(
     DateTime? StartedAt,
     DateTime? CompletedAt,
     int? Rating,
+    int? CurrentSeason,
+    int? CurrentEpisode,
+    int? TotalEpisodes,
+    int? WatchingTime,
     List<UserRatingInput>? Ratings
 );
 
@@ -82,7 +90,11 @@ public record WatchEntryDto(
     DateTime? StartedAt,
     DateTime? CompletedAt,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    int? CurrentSeason,
+    int? CurrentEpisode,
+    int? TotalEpisodes,
+    int? WatchingTime
 );
 
 public record EntryRatingDto(
