@@ -16,7 +16,6 @@ import {
 import {
   getContentTypeLabels,
   getWatchStatusLabels,
-  getWatchedByLabels,
 } from "@/lib/i18n/labels";
 import {
   Dialog,
@@ -68,7 +67,6 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
   const [year, setYear] = useState("");
   const [genre, setGenre] = useState("");
   const [status, setStatus] = useState<WatchStatus>(WatchStatus.Planned);
-  const [watchedBy, setWatchedBy] = useState<WatchedBy>(WatchedBy.Together);
   const [myRating, setMyRating] = useState("");
   // Group mode: selected member IDs and per-member ratings
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
@@ -82,7 +80,6 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
 
   const contentTypeLabels = getContentTypeLabels(locale);
   const watchStatusLabels = getWatchStatusLabels(locale);
-  const watchedByLabels = getWatchedByLabels(locale);
 
   const queryClient = useQueryClient();
 
@@ -111,7 +108,7 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
       await createWatchEntry({
         movieId: movie.id,
         status,
-        watchedBy: isGroupMode ? WatchedBy.Together : watchedBy,
+        watchedBy: isGroupMode ? WatchedBy.Together : WatchedBy.Me,
         rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
         ratings: ratingsArray,
         emotion: emotion ?? undefined,
@@ -136,7 +133,6 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
     setYear("");
     setGenre("");
     setStatus(WatchStatus.Planned);
-    setWatchedBy(WatchedBy.Together);
     setMyRating("");
     setSelectedMembers([]);
     setMemberRatings({});
@@ -432,33 +428,6 @@ export function AddEntryDialog({ open, onOpenChange }: Props) {
             </>
           ) : (
             <>
-              {/* Personal mode: watchedBy select */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" />
-                  {status === WatchStatus.Planned || status === WatchStatus.Watching
-                    ? t("watchingBy")
-                    : t("watchedBy")}
-                </Label>
-                <Select
-                  value={watchedBy.toString()}
-                  onValueChange={(v) => {
-                    setWatchedBy(Number(v) as WatchedBy);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(watchedByLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Personal mode: single rating */}
               {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
                 <div className="space-y-2">

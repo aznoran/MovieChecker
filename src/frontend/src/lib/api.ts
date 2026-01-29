@@ -26,6 +26,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== "undefined") {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem("activeGroupId");
       window.location.href = "/login";
     }
     return Promise.reject(error);
@@ -184,6 +185,14 @@ export const joinGroup = async (inviteCode: string): Promise<Group> => {
 
 export const leaveGroup = async (id: number): Promise<void> => {
   await api.delete(`/groups/${id}/leave`);
+};
+
+export const kickMember = async (groupId: number, userId: number): Promise<void> => {
+  await api.delete(`/groups/${groupId}/members/${userId}`);
+};
+
+export const transferOwnership = async (groupId: number, newOwnerId: number): Promise<void> => {
+  await api.put(`/groups/${groupId}/transfer`, { newOwnerId });
 };
 
 // Upload

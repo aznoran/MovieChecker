@@ -191,9 +191,11 @@ export default function HomePage() {
                       >
                         {watchStatusLabels[entry.status]}
                       </Badge>
-                      <Badge variant="secondary">
-                        {watchedByLabels[entry.watchedBy]}
-                      </Badge>
+                      {activeGroupId && (
+                        <Badge variant="secondary">
+                          {watchedByLabels[entry.watchedBy]}
+                        </Badge>
+                      )}
                     </div>
 
                     {entry.ratings && entry.ratings.length > 0 && (() => {

@@ -8,6 +8,8 @@ import {
   createGroup as apiCreateGroup,
   joinGroup as apiJoinGroup,
   leaveGroup as apiLeaveGroup,
+  kickMember as apiKickMember,
+  transferOwnership as apiTransferOwnership,
 } from "@/lib/api";
 import type { Group } from "@/types";
 
@@ -19,6 +21,8 @@ interface GroupContextValue {
   createGroup: (name: string) => Promise<Group>;
   joinGroup: (code: string) => Promise<Group>;
   leaveGroup: (id: number) => Promise<void>;
+  kickMember: (groupId: number, userId: number) => Promise<void>;
+  transferOwnership: (groupId: number, newOwnerId: number) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -51,12 +55,13 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Reset on logout
+  // Reset on logout: clear active group and all cached query data
   useEffect(() => {
     if (!isAuthenticated) {
       setActiveGroupId(undefined);
+      queryClient.clear();
     }
-  }, [isAuthenticated, setActiveGroupId]);
+  }, [isAuthenticated, setActiveGroupId, queryClient]);
 
   // If activeGroupId is set but not in groups list, reset to personal
   useEffect(() => {
@@ -91,6 +96,22 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
+  const kickMutation = useMutation({
+    mutationFn: ({ groupId, userId }: { groupId: number; userId: number }) =>
+      apiKickMember(groupId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    },
+  });
+
+  const transferMutation = useMutation({
+    mutationFn: ({ groupId, newOwnerId }: { groupId: number; newOwnerId: number }) =>
+      apiTransferOwnership(groupId, newOwnerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    },
+  });
+
   return (
     <GroupContext.Provider
       value={{
@@ -101,6 +122,8 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
         createGroup: (name) => createMutation.mutateAsync(name),
         joinGroup: (code) => joinMutation.mutateAsync(code),
         leaveGroup: (id) => leaveMutation.mutateAsync(id),
+        kickMember: (groupId, userId) => kickMutation.mutateAsync({ groupId, userId }),
+        transferOwnership: (groupId, newOwnerId) => transferMutation.mutateAsync({ groupId, newOwnerId }),
         isLoading,
       }}
     >

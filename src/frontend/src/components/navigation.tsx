@@ -34,6 +34,9 @@ import {
   Copy,
   Check,
   DoorOpen,
+  Crown,
+  UserMinus,
+  ShieldCheck,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 
@@ -41,7 +44,7 @@ export function Navigation() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useLocale();
-  const { groups, activeGroupId, activeGroup, setActiveGroupId, createGroup, joinGroup, leaveGroup } = useGroup();
+  const { groups, activeGroupId, activeGroup, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership } = useGroup();
 
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -83,7 +86,29 @@ export function Navigation() {
 
   const handleLeaveGroup = async (id: number) => {
     if (!confirm(t("leaveGroupConfirm"))) return;
-    await leaveGroup(id);
+    try {
+      await leaveGroup(id);
+    } catch {
+      setError(t("failedToAdd"));
+    }
+  };
+
+  const handleKickMember = async (groupId: number, userId: number) => {
+    if (!confirm(t("kickConfirm"))) return;
+    try {
+      await kickMember(groupId, userId);
+    } catch {
+      setError(t("failedToKick"));
+    }
+  };
+
+  const handleTransferOwnership = async (groupId: number, newOwnerId: number) => {
+    if (!confirm(t("transferConfirm"))) return;
+    try {
+      await transferOwnership(groupId, newOwnerId);
+    } catch {
+      setError(t("failedToTransfer"));
+    }
   };
 
   const handleCopyCode = async (code: string) => {
@@ -221,39 +246,105 @@ export function Navigation() {
             {groups.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium">{t("groups")}</p>
-                <div className="space-y-2">
-                  {groups.map((g) => (
-                    <div key={g.id} className="border rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{g.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs text-destructive hover:text-destructive"
-                          onClick={() => handleLeaveGroup(g.id)}
-                        >
-                          <DoorOpen className="h-3.5 w-3.5 mr-1" />
-                          {t("leaveGroup")}
-                        </Button>
+                <div className="space-y-3">
+                  {groups.map((g) => {
+                    const isOwner = user?.id === g.createdByUserId;
+                    return (
+                      <div key={g.id} className="border rounded-lg p-3 space-y-3">
+                        {/* Group header */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {isOwner && <Crown className="h-3.5 w-3.5 text-yellow-400" />}
+                            <span className="font-medium text-sm">{g.name}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-destructive hover:text-destructive"
+                            onClick={() => handleLeaveGroup(g.id)}
+                          >
+                            <DoorOpen className="h-3.5 w-3.5 mr-1" />
+                            {t("leaveGroup")}
+                          </Button>
+                        </div>
+
+                        {/* Invite code */}
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs bg-muted px-2 py-1 rounded font-mono flex-1">
+                            {g.inviteCode}
+                          </code>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => handleCopyCode(g.inviteCode)}
+                          >
+                            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          </Button>
+                        </div>
+
+                        {/* Members list */}
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-muted-foreground">{t("members")}</p>
+                          {g.members.map((m) => {
+                            const isMemberOwner = m.userId === g.createdByUserId;
+                            const isSelf = m.userId === user?.id;
+                            return (
+                              <div
+                                key={m.userId}
+                                className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/50"
+                              >
+                                <div className="flex items-center gap-2 text-sm min-w-0">
+                                  {isMemberOwner ? (
+                                    <Crown className="h-3 w-3 text-yellow-400 shrink-0" />
+                                  ) : (
+                                    <User className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  )}
+                                  <span className="truncate">
+                                    {m.displayName}
+                                    {isSelf && (
+                                      <span className="text-muted-foreground ml-1">
+                                        ({t("watchedByMe")})
+                                      </span>
+                                    )}
+                                  </span>
+                                  {isMemberOwner && (
+                                    <span className="text-[10px] text-yellow-500 font-medium shrink-0">
+                                      {t("owner")}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Owner actions on other members */}
+                                {isOwner && !isSelf && (
+                                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                      title={t("transferOwnership")}
+                                      onClick={() => handleTransferOwnership(g.id, m.userId)}
+                                    >
+                                      <ShieldCheck className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                      title={t("kickMember")}
+                                      onClick={() => handleKickMember(g.id, m.userId)}
+                                    >
+                                      <UserMinus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs bg-muted px-2 py-1 rounded font-mono flex-1">
-                          {g.inviteCode}
-                        </code>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => handleCopyCode(g.inviteCode)}
-                        >
-                          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                        </Button>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {t("members")}: {g.members.map((m) => m.displayName).join(", ")}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

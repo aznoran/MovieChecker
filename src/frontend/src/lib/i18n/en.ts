@@ -121,6 +121,14 @@ const en = {
   watchedTogether: "Watched Together",
   byContentType: "By Content Type",
   emotionsAfterWatching: "Emotions After Watching",
+  totalEntries: "Total Entries",
+  averageRating: "Average Rating",
+  personalStats: "Your Statistics",
+  groupStatsTitle: "Group Statistics",
+  ratingsComparison: "Ratings",
+  noRated: "Not rated yet",
+  statusBreakdown: "Status Breakdown",
+  memberCount: "members",
 
   // Groups
   personal: "Personal",
@@ -144,6 +152,17 @@ const en = {
   allRatings: "All Ratings",
   noRatingsYet: "No ratings yet",
   ratingOf: "'s rating",
+  memberAvgRatings: "Member Ratings",
+  rated: "rated",
+  kickMember: "Remove",
+  kickConfirm: "Remove this member from the group?",
+  transferOwnership: "Make Owner",
+  transferConfirm: "Transfer group ownership to this member? You will lose owner rights.",
+  owner: "Owner",
+  failedToKick: "Failed to remove member",
+  failedToTransfer: "Failed to transfer ownership",
+  memberRemoved: "Member removed",
+  ownershipTransferred: "Ownership transferred",
 } as const;
 
 export type TranslationKeys = keyof typeof en;

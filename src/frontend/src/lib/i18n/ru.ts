@@ -123,6 +123,14 @@ const ru: Record<TranslationKeys, string> = {
   watchedTogether: "Смотрели вместе",
   byContentType: "По типу контента",
   emotionsAfterWatching: "Эмоции после просмотра",
+  totalEntries: "Всего записей",
+  averageRating: "Средняя оценка",
+  personalStats: "Ваша статистика",
+  groupStatsTitle: "Статистика группы",
+  ratingsComparison: "Оценки",
+  noRated: "Нет оценок",
+  statusBreakdown: "По статусу",
+  memberCount: "участн.",
 
   // Groups
   personal: "Личное",
@@ -146,6 +154,17 @@ const ru: Record<TranslationKeys, string> = {
   allRatings: "Все оценки",
   noRatingsYet: "Оценок пока нет",
   ratingOf: " оценил(а)",
+  memberAvgRatings: "Оценки участников",
+  rated: "оценок",
+  kickMember: "Удалить",
+  kickConfirm: "Удалить этого участника из группы?",
+  transferOwnership: "Передать права",
+  transferConfirm: "Передать права владельца этому участнику? Вы потеряете права владельца.",
+  owner: "Владелец",
+  failedToKick: "Не удалось удалить участника",
+  failedToTransfer: "Не удалось передать права",
+  memberRemoved: "Участник удалён",
+  ownershipTransferred: "Права переданы",
 };
 
 export default ru;

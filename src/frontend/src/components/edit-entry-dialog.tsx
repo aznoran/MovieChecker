@@ -16,7 +16,6 @@ import {
 import {
   getContentTypeLabels,
   getWatchStatusLabels,
-  getWatchedByLabels,
 } from "@/lib/i18n/labels";
 import {
   Dialog,
@@ -62,7 +61,6 @@ export function EditEntryDialog({ entry, open, onOpenChange }: Props) {
   const isGroupMode = !!entry.groupId && !!activeGroup;
 
   const [status, setStatus] = useState<WatchStatus>(entry.status);
-  const [watchedBy, setWatchedBy] = useState<WatchedBy>(entry.watchedBy);
   // Personal mode: single rating
   const myExistingRating = entry.ratings?.find((r) => r.userId === user?.id);
   const [myRating, setMyRating] = useState(myExistingRating?.rating?.toString() || "");
@@ -88,7 +86,6 @@ export function EditEntryDialog({ entry, open, onOpenChange }: Props) {
 
   const contentTypeLabels = getContentTypeLabels(locale);
   const watchStatusLabels = getWatchStatusLabels(locale);
-  const watchedByLabels = getWatchedByLabels(locale);
 
   const queryClient = useQueryClient();
 
@@ -107,7 +104,7 @@ export function EditEntryDialog({ entry, open, onOpenChange }: Props) {
 
       await updateWatchEntry(entry.id, {
         status,
-        watchedBy: isGroupMode ? WatchedBy.Together : watchedBy,
+        watchedBy: isGroupMode ? WatchedBy.Together : WatchedBy.Me,
         rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
         ratings: ratingsArray,
         emotion: emotion ?? undefined,
@@ -363,33 +360,6 @@ export function EditEntryDialog({ entry, open, onOpenChange }: Props) {
             </>
           ) : (
             <>
-              {/* Personal mode: watchedBy select */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" />
-                  {status === WatchStatus.Planned || status === WatchStatus.Watching
-                    ? t("watchingBy")
-                    : t("watchedBy")}
-                </Label>
-                <Select
-                  value={watchedBy.toString()}
-                  onValueChange={(v) => {
-                    setWatchedBy(Number(v) as WatchedBy);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(watchedByLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Personal mode: single rating */}
               {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
                 <div className="space-y-2">

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="MovieChecker.Domain/MovieChecker.Domain.csproj" />
+  <Project Path="MovieChecker.Infrastructure/MovieChecker.Infrastructure.csproj" />
+  <Project Path="MovieChecker.Web/MovieChecker.Web.csproj" />
+</Solution>

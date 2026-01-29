@@ -89,6 +89,13 @@ export interface GroupMember {
   joinedAt: string;
 }
 
+export interface MemberRatingStats {
+  userId: number;
+  displayName: string;
+  averageRating: number;
+  totalRated: number;
+}
+
 export interface Stats {
   totalWatched: number;
   totalPlanned: number;
@@ -99,6 +106,7 @@ export interface Stats {
   watchedTogether: number;
   byType: Record<string, number>;
   byEmotion: Record<string, number>;
+  memberRatings?: MemberRatingStats[];
 }
 
 export const ContentTypeLabels: Record<ContentType, string> = {
