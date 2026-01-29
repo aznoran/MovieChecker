@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, useRef} from "react";
+import {useState, useRef, useEffect} from "react";
 import {useMutation, useQueryClient} from "@tanstack/react-query";
 import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Label} from "@/components/ui/label";
 import {Textarea} from "@/components/ui/textarea";
 import {
     Select,
@@ -67,7 +66,7 @@ interface Props {
 export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const {locale, t} = useLocale();
     const {user} = useAuth();
-    const {activeGroupId, activeGroup} = useGroup();
+    const {activeGroup} = useGroup();
     const isGroupMode = !!entry.groupId && !!activeGroup;
 
     const [status, setStatus] = useState<WatchStatus>(entry.status);
@@ -96,11 +95,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [currentEpisode, setCurrentEpisode] = useState((entry as any).currentEpisode?.toString() || "");
-    const [totalEpisodes, setTotalEpisodes] = useState((entry as any).totalEpisodes?.toString() || "");
-    const [currentSeason, setCurrentSeason] = useState((entry as any).currentSeason?.toString() || "");
+    const [currentEpisode, setCurrentEpisode] = useState(entry.currentEpisode?.toString() || "");
+    const [totalEpisodes, setTotalEpisodes] = useState(entry.totalEpisodes?.toString() || "");
+    const [currentSeason, setCurrentSeason] = useState(entry.currentSeason?.toString() || "");
 
-    const existingWatchingTime = (entry as any).watchingTime || 0;
+    const existingWatchingTime = entry.watchingTime || 0;
     const [hours, setHours] = useState(Math.floor(existingWatchingTime / 3600).toString());
     const [minutes, setMinutes] = useState(Math.floor((existingWatchingTime % 3600) / 60).toString());
     const [seconds, setSeconds] = useState((existingWatchingTime % 60).toString());
