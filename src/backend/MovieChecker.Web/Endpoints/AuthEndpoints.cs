@@ -29,7 +29,7 @@ public static class AuthEndpoints
         {
             Username = request.Username,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            DisplayName = request.DisplayName
+            DisplayName = string.IsNullOrEmpty(request.DisplayName) ? request.Username : request.DisplayName
         };
 
         db.Users.Add(user);
