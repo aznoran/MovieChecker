@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:17-alpine
@@ -52,6 +50,25 @@ services:
     networks:
       - backend_network
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@xui123qweqwe.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change_me_now}
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin/pgpass:/pgpass:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend_network
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped
@@ -66,9 +83,11 @@ services:
     depends_on:
       - backend
       - frontend
+      - pgadmin
 
 volumes:
   postgres_data:
+  pgadmin_data:
 
 networks:
   backend_network:
