@@ -202,7 +202,10 @@ const en = {
     invalidNumber: "Must be a positive number",
     invalidTimeComponent: "Must be between 0 and 59",
     invalidRating: "Rating must be between 1 and 10",
-    fixValidationErrors: "Please fix validation errors"
+    fixValidationErrors: "Please fix validation errors",
+    
+    // Image Editor
+    dragToRepositionHint: "Drag to reposition • Scroll or use slider to zoom"
 } as const;
 
 export type TranslationKeys = keyof typeof en;

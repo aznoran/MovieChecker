@@ -204,7 +204,10 @@ const ru: Record<TranslationKeys, string> = {
     invalidNumber: "Должно быть положительным числом",
     invalidTimeComponent: "Должно быть от 0 до 59",
     invalidRating: "Оценка должна быть от 1 до 10",
-    fixValidationErrors: "Исправьте ошибки в форме"
+    fixValidationErrors: "Исправьте ошибки в форме",
+    
+    // Image Editor
+    dragToRepositionHint: "Перетащите для перемещения • Прокрутите или используйте ползунок для увеличения"
 };
 
 export default ru;

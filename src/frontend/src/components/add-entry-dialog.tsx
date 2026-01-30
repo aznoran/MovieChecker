@@ -466,7 +466,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                     </span>
                                 </div>
                                 <p className="text-xs text-muted-foreground text-center">
-                                    Drag to reposition • Scroll or use slider to zoom
+                                    {t("dragToRepositionHint")}
                                 </p>
                             </div>
                         ) : (
