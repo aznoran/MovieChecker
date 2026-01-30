@@ -207,7 +207,14 @@ const ru: Record<TranslationKeys, string> = {
     invalidNumber: "Должно быть положительным числом",
     invalidTimeComponent: "Должно быть от 0 до 59",
     invalidRating: "Оценка должна быть от 1 до 10",
-    fixValidationErrors: "Исправьте ошибки в форме"
+    fixValidationErrors: "Исправьте ошибки в форме",
+
+    // Image Editor
+    imageEditorReset: "Сбросить позицию и масштаб",
+    imageEditorApply: "Применить",
+    imageEditorEdit: "Редактировать изображение",
+    imageEditorZoom: "Масштаб",
+    imageEditorDrag: "Перетащите для настройки позиции"
 };
 
 export default ru;

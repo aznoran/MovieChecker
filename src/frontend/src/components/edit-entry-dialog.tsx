@@ -33,6 +33,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import {ImageEditor} from "@/components/image-editor";
 import {
     Pencil,
     ImagePlus,
@@ -93,6 +94,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [posterPreview, setPosterPreview] = useState<string | null>(
         getPosterUrl(entry.movie.posterUrl)
     );
+    const [rawImagePreview, setRawImagePreview] = useState<string | null>(null);
+    const [isEditingImage, setIsEditingImage] = useState(false);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -236,14 +239,31 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setImageFile(file);
+        startImageEdit(file);
     };
 
-    const setImageFile = (file: File) => {
-        setPosterFile(file);
+    const startImageEdit = (file: File) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setRawImagePreview(reader.result as string);
+            setIsEditingImage(true);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleImageEditSave = (croppedFile: File) => {
+        setPosterFile(croppedFile);
         const reader = new FileReader();
         reader.onloadend = () => setPosterPreview(reader.result as string);
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(croppedFile);
+        setIsEditingImage(false);
+        setRawImagePreview(null);
+    };
+
+    const handleImageEditCancel = () => {
+        setIsEditingImage(false);
+        setRawImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
     const handlePasteFromClipboard = async () => {
@@ -255,7 +275,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     const blob = await item.getType(imageType);
                     const ext = imageType.split("/")[1] || "png";
                     const file = new File([blob], `clipboard.${ext}`, {type: imageType});
-                    setImageFile(file);
+                    startImageEdit(file);
                     return;
                 }
             }
@@ -265,9 +285,18 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         }
     };
 
+    const handleEditExistingImage = () => {
+        if (posterPreview) {
+            setRawImagePreview(posterPreview);
+            setIsEditingImage(true);
+        }
+    };
+
     const removePoster = () => {
         setPosterFile(null);
         setPosterPreview(null);
+        setRawImagePreview(null);
+        setIsEditingImage(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
@@ -352,7 +381,13 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 {t("posterDescription")}
                             </FieldDescription>
                         </FieldContent>
-                        {posterPreview ? (
+                        {isEditingImage && rawImagePreview ? (
+                            <ImageEditor
+                                imageSrc={rawImagePreview}
+                                onSave={handleImageEditSave}
+                                onCancel={handleImageEditCancel}
+                            />
+                        ) : posterPreview ? (
                             <div className="relative w-full h-48 rounded-lg overflow-hidden border">
                                 <img
                                     src={posterPreview}
@@ -365,9 +400,19 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         variant="secondary"
                                         size="icon"
                                         className="h-7 w-7"
-                                        onClick={() => fileInputRef.current?.click()}
+                                        onClick={handleEditExistingImage}
+                                        title={t("imageEditorEdit")}
                                     >
                                         <Pencil className="h-3.5 w-3.5"/>
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <ImagePlus className="h-3.5 w-3.5"/>
                                     </Button>
                                     <Button
                                         type="button"

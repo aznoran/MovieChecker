@@ -205,7 +205,14 @@ const en = {
     invalidNumber: "Must be a positive number",
     invalidTimeComponent: "Must be between 0 and 59",
     invalidRating: "Rating must be between 1 and 10",
-    fixValidationErrors: "Please fix validation errors"
+    fixValidationErrors: "Please fix validation errors",
+
+    // Image Editor
+    imageEditorReset: "Reset position and zoom",
+    imageEditorApply: "Apply",
+    imageEditorEdit: "Edit Image",
+    imageEditorZoom: "Zoom",
+    imageEditorDrag: "Drag to adjust position"
 } as const;
 
 export type TranslationKeys = keyof typeof en;
