@@ -30,7 +30,7 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, onClick, ...props }, ref) => (
+>(({ className, ...props }, ref) => (
   <AlertDialogPortal>
     <AlertDialogOverlay />
     <AlertDialogPrimitive.Content
@@ -39,10 +39,6 @@ const AlertDialogContent = React.forwardRef<
         "fixed left-[50%] top-[50%] z-50 grid max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg sm:max-w-md",
         className
       )}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.(e);
-      }}
       {...props}
     />
   </AlertDialogPortal>
@@ -119,14 +115,10 @@ AlertDialogDescription.displayName =
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
->(({ className, onClick, ...props }, ref) => (
+>(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Action
     ref={ref}
     className={cn(buttonVariants(), "min-w-[100px]", className)}
-    onClick={(e) => {
-      e.stopPropagation();
-      onClick?.(e);
-    }}
     {...props}
   />
 ))
@@ -135,7 +127,7 @@ AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
 const AlertDialogCancel = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel>
->(({ className, onClick, ...props }, ref) => (
+>(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Cancel
     ref={ref}
     className={cn(
@@ -143,10 +135,6 @@ const AlertDialogCancel = React.forwardRef<
       "min-w-[100px] sm:mt-0",
       className
     )}
-    onClick={(e) => {
-      e.stopPropagation();
-      onClick?.(e);
-    }}
     {...props}
   />
 ))
