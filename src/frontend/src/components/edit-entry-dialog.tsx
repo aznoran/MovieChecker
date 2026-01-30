@@ -357,7 +357,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 <img
                                     src={posterPreview}
                                     alt="Poster preview"
-                                    className="w-full h-full object-contain"
+                                    className="max-w-full max-h-full object-contain"
                                 />
                                 <div className="absolute top-2 right-2 flex gap-1">
                                     <Button

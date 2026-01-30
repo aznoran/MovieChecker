@@ -151,7 +151,7 @@ export default function HomePage() {
                                             <img
                                                 src={posterSrc}
                                                 alt={entry.movie.title}
-                                                className="w-full h-full object-contain"
+                                                className="max-w-full max-h-full object-contain"
                                             />
                                         </div>
                                     ) : (

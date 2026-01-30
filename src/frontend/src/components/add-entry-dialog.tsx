@@ -382,7 +382,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                 <img
                                     src={posterPreview}
                                     alt="Poster preview"
-                                    className="w-full h-full object-contain"
+                                    className="max-w-full max-h-full object-contain"
                                 />
                                 <Button
                                     type="button"
