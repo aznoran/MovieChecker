@@ -49,6 +49,7 @@ import {
     MessageSquare,
     Loader2,
     ClipboardPaste,
+    ZoomIn,
 } from "lucide-react";
 import * as React from "react";
 import {
@@ -85,6 +86,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const [comment, setComment] = useState("");
     const [posterFile, setPosterFile] = useState<File | null>(null);
     const [posterPreview, setPosterPreview] = useState<string | null>(null);
+    const [posterZoom, setPosterZoom] = useState(1);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -279,6 +281,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
 
     const setImageFile = (file: File) => {
         setPosterFile(file);
+        setPosterZoom(1); // Reset zoom when new image is loaded
         const reader = new FileReader();
         reader.onloadend = () => setPosterPreview(reader.result as string);
         reader.readAsDataURL(file);
@@ -306,6 +309,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const removePoster = () => {
         setPosterFile(null);
         setPosterPreview(null);
+        setPosterZoom(1); // Reset zoom when poster is removed
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
@@ -378,21 +382,42 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             </FieldDescription>
                         </FieldContent>
                         {posterPreview ? (
-                            <div className="relative w-full h-48 rounded-lg overflow-hidden border bg-muted flex items-center justify-center">
-                                <img
-                                    src={posterPreview}
-                                    alt="Poster preview"
-                                    className="max-w-full max-h-full object-contain"
-                                />
-                                <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-7 w-7"
-                                    onClick={removePoster}
-                                >
-                                    <X className="h-4 w-4"/>
-                                </Button>
+                            <div className="space-y-3">
+                                <div className="relative w-full h-48 rounded-lg overflow-hidden border bg-muted">
+                                    <img
+                                        src={posterPreview}
+                                        alt="Poster preview"
+                                        className="w-full h-full object-cover"
+                                        style={{
+                                            transform: `scale(${posterZoom})`,
+                                            transformOrigin: 'center center',
+                                        }}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="icon"
+                                        className="absolute top-2 right-2 h-7 w-7"
+                                        onClick={removePoster}
+                                    >
+                                        <X className="h-4 w-4"/>
+                                    </Button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <ZoomIn className="h-4 w-4 text-muted-foreground"/>
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="3"
+                                        step="0.1"
+                                        value={posterZoom}
+                                        onChange={(e) => setPosterZoom(parseFloat(e.target.value))}
+                                        className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
+                                    />
+                                    <span className="text-sm text-muted-foreground min-w-[3rem] text-right">
+                                        {Math.round(posterZoom * 100)}%
+                                    </span>
+                                </div>
                             </div>
                         ) : (
                             <div className="flex gap-2">
