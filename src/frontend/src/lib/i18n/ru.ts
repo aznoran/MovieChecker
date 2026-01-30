@@ -196,6 +196,12 @@ const ru: Record<TranslationKeys, string> = {
     emotionDescription: "Какие эмоции вызвал просмотр",
     commentDescription: "Поделитесь своими мыслями о просмотре",
 
+    // Comments
+    comments: "Комментарии",
+    addCommentPlaceholder: "Добавить комментарий...",
+    noComments: "Комментариев пока нет",
+    send: "Отправить",
+
     // Validation Errors
     titleTooLong: "Название слишком длинное (макс. 255 символов)",
     invalidYear: "Некорректный год (1900-2100)",

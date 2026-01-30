@@ -194,6 +194,12 @@ const en = {
     emotionDescription: "What emotions did the viewing evoke",
     commentDescription: "Share your thoughts about the viewing",
 
+    // Comments
+    comments: "Comments",
+    addCommentPlaceholder: "Add a comment...",
+    noComments: "No comments yet",
+    send: "Send",
+
     // Validation Errors
     titleTooLong: "Title is too long (max 255 characters)",
     invalidYear: "Invalid year (1900-2100)",

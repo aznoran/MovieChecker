@@ -58,6 +58,14 @@ export interface EntryRating {
   rating: number;
 }
 
+export interface EntryComment {
+  id: number;
+  userId: number;
+  displayName: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface WatchEntry {
   id: number;
   movieId: number;
@@ -76,6 +84,7 @@ export interface WatchEntry {
   currentEpisode: number;
   totalEpisodes: number;
   watchingTime: number;
+  lastComment?: EntryComment;
 }
 
 export interface Group {

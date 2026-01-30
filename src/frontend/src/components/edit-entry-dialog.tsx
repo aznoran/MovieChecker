@@ -57,6 +57,7 @@ import {
     FieldLegend,
 } from "@/components/ui/field";
 import {toast} from "sonner";
+import {CommentsSection} from "@/components/comments-section";
 
 interface Props {
     entry: WatchEntry;
@@ -755,6 +756,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             {validationErrors.comment && <FieldError>{validationErrors.comment}</FieldError>}
                         </Field>
                     </FieldGroup>
+
+                    {/* Comments Section - New Feature */}
+                    <div className="pt-4 border-t">
+                        <CommentsSection entryId={entry.id} />
+                    </div>
 
                     {error && (
                         <p className="text-sm text-destructive text-center">{error}</p>

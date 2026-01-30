@@ -22,6 +22,45 @@ namespace MovieChecker.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("MovieChecker.Domain.Models.EntryComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("WatchEntryId")
+                        .HasColumnType("integer")
+                        .HasColumnName("watch_entry_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_entry_comments");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_entry_comments_user_id");
+
+                    b.HasIndex("WatchEntryId")
+                        .HasDatabaseName("ix_entry_comments_watch_entry_id");
+
+                    b.ToTable("entry_comments", (string)null);
+                });
+
             modelBuilder.Entity("MovieChecker.Domain.Models.EntryRating", b =>
                 {
                     b.Property<int>("Id")
@@ -346,6 +385,27 @@ namespace MovieChecker.Infrastructure.Migrations
                     b.ToTable("watch_entries", (string)null);
                 });
 
+            modelBuilder.Entity("MovieChecker.Domain.Models.EntryComment", b =>
+                {
+                    b.HasOne("MovieChecker.Domain.Models.User", "User")
+                        .WithMany("Comments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_entry_comments_users_user_id");
+
+                    b.HasOne("MovieChecker.Domain.Models.WatchEntry", "WatchEntry")
+                        .WithMany("Comments")
+                        .HasForeignKey("WatchEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_entry_comments_watch_entries_watch_entry_id");
+
+                    b.Navigation("User");
+
+                    b.Navigation("WatchEntry");
+                });
+
             modelBuilder.Entity("MovieChecker.Domain.Models.EntryRating", b =>
                 {
                     b.HasOne("MovieChecker.Domain.Models.User", "User")
@@ -441,6 +501,8 @@ namespace MovieChecker.Infrastructure.Migrations
 
             modelBuilder.Entity("MovieChecker.Domain.Models.User", b =>
                 {
+                    b.Navigation("Comments");
+
                     b.Navigation("GroupMemberships");
 
                     b.Navigation("Ratings");
@@ -450,6 +512,8 @@ namespace MovieChecker.Infrastructure.Migrations
 
             modelBuilder.Entity("MovieChecker.Domain.Models.WatchEntry", b =>
                 {
+                    b.Navigation("Comments");
+
                     b.Navigation("Ratings");
                 });
 #pragma warning restore 612, 618

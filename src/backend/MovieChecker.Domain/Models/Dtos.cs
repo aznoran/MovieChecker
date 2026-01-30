@@ -94,7 +94,8 @@ public record WatchEntryDto(
     int? CurrentSeason,
     int? CurrentEpisode,
     int? TotalEpisodes,
-    int? WatchingTime
+    int? WatchingTime,
+    EntryCommentDto? LastComment
 );
 
 public record EntryRatingDto(
@@ -103,6 +104,16 @@ public record EntryRatingDto(
     string DisplayName,
     int Rating
 );
+
+public record EntryCommentDto(
+    int Id,
+    int UserId,
+    string DisplayName,
+    string Text,
+    DateTime CreatedAt
+);
+
+public record CreateCommentRequest(string Text);
 
 // Group DTOs
 public record CreateGroupRequest(string Name);

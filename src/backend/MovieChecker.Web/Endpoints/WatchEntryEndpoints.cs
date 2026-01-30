@@ -54,7 +54,16 @@ public static class WatchEntryEndpoints
         w.CurrentSeason,
         w.CurrentEpisode,
         w.TotalEpisodes,
-        w.WatchingTime
+        w.WatchingTime,
+        w.Comments.OrderByDescending(c => c.CreatedAt).FirstOrDefault() is { } lastComment
+            ? new EntryCommentDto(
+                lastComment.Id,
+                lastComment.UserId,
+                lastComment.User.DisplayName,
+                lastComment.Text,
+                lastComment.CreatedAt
+            )
+            : null
     );
 
     private static async Task<IResult> GetAll(
@@ -79,6 +88,7 @@ public static class WatchEntryEndpoints
             query = db.WatchEntries
                 .Include(w => w.Movie)
                 .Include(w => w.Ratings).ThenInclude(r => r.User)
+                .Include(w => w.Comments).ThenInclude(c => c.User)
                 .Where(w => w.GroupId == groupId.Value);
         }
         else
@@ -87,6 +97,7 @@ public static class WatchEntryEndpoints
             query = db.WatchEntries
                 .Include(w => w.Movie)
                 .Include(w => w.Ratings).ThenInclude(r => r.User)
+                .Include(w => w.Comments).ThenInclude(c => c.User)
                 .Where(w => w.UserId == userId && w.GroupId == null);
         }
 
@@ -109,6 +120,7 @@ public static class WatchEntryEndpoints
         var entry = await db.WatchEntries
             .Include(w => w.Movie)
             .Include(w => w.Ratings).ThenInclude(r => r.User)
+            .Include(w => w.Comments).ThenInclude(c => c.User)
             .FirstOrDefaultAsync(w => w.Id == id);
 
         if (entry == null)
@@ -225,6 +237,7 @@ public static class WatchEntryEndpoints
         entry = await db.WatchEntries
             .Include(w => w.Movie)
             .Include(w => w.Ratings).ThenInclude(r => r.User)
+            .Include(w => w.Comments).ThenInclude(c => c.User)
             .FirstAsync(w => w.Id == entry.Id);
 
         return Results.Created($"/api/watch-entries/{entry.Id}", ToDto(entry));
@@ -240,6 +253,7 @@ public static class WatchEntryEndpoints
         var entry = await db.WatchEntries
             .Include(w => w.Movie)
             .Include(w => w.Ratings).ThenInclude(r => r.User)
+            .Include(w => w.Comments).ThenInclude(c => c.User)
             .FirstOrDefaultAsync(w => w.Id == id);
 
         if (entry == null)

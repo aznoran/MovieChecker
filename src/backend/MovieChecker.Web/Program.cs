@@ -53,6 +53,7 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapMovieEndpoints();
 app.MapWatchEntryEndpoints();
+app.MapCommentEndpoints();
 app.MapUploadEndpoints();
 app.MapGroupEndpoints();
 

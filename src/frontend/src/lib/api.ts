@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { AuthResponse, Movie, WatchEntry, Stats, Group } from "@/types";
+import type { AuthResponse, Movie, WatchEntry, Stats, Group, EntryComment } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -213,6 +213,17 @@ export const getPosterUrl = (posterIdOrPath: string | undefined | null): string 
     return `${base}/api/posters/${posterIdOrPath}`;
   }
   return `${base}${posterIdOrPath}`;
+};
+
+// Comments
+export const getComments = async (entryId: number) => {
+  const response = await api.get<EntryComment[]>(`/watch-entries/${entryId}/comments`);
+  return response.data;
+};
+
+export const addComment = async (entryId: number, text: string) => {
+  const response = await api.post<EntryComment>(`/watch-entries/${entryId}/comments`, { text });
+  return response.data;
 };
 
 export default api;

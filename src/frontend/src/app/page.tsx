@@ -258,10 +258,11 @@ export default function HomePage() {
                                                 );
                                             })()}
 
-                                            {entry.comment && (
+                                            {entry.lastComment && (
                                                 <p className="text-sm text-muted-foreground line-clamp-2 flex items-start gap-1">
                                                     <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0"/>
-                                                    {entry.comment}
+                                                    <span className="font-medium">{entry.lastComment.displayName}:</span>
+                                                    {entry.lastComment.text}
                                                 </p>
                                             )}
                                         </div>
