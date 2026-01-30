@@ -92,6 +92,10 @@ export function Header() {
     const [generatedOtps, setGeneratedOtps] = useState<Map<number, { code: string; expiresAt: string; remainingSeconds: number }>>(new Map());
     const [changePasswordGroupId, setChangePasswordGroupId] = useState<number | null>(null);
     const [newPassword, setNewPassword] = useState("");
+    
+    // Role change dialog state
+    const [roleChangeDialog, setRoleChangeDialog] = useState<{ groupId: number; userId: number; currentRole: GroupRole } | null>(null);
+    const [selectedNewRole, setSelectedNewRole] = useState<GroupRole | null>(null);
 
     // Two-step join process state
     const [joinStep, setJoinStep] = useState<"code" | "auth">("code");
@@ -212,28 +216,27 @@ export function Header() {
     };
 
     const handleChangeRole = async (groupId: number, userId: number, currentRole: GroupRole) => {
-        const roleOptions = [
-            {value: GroupRole.Viewer, label: t("roleViewer")},
-            {value: GroupRole.Member, label: t("roleMember")},
-            {value: GroupRole.Admin, label: t("roleAdmin")},
-        ];
+        setRoleChangeDialog({ groupId, userId, currentRole });
+        setSelectedNewRole(currentRole);
+    };
 
-        const roleLabels = roleOptions.map(r => `${r.value}: ${r.label}`).join("\n");
-        const input = prompt(`${t("changeRole")}:\n${roleLabels}\n\nCurrent: ${currentRole}`);
+    const handleConfirmRoleChange = async () => {
+        if (!roleChangeDialog || selectedNewRole === null) return;
 
-        if (input === null) return;
-        const newRole = parseInt(input);
-
-        if (isNaN(newRole) || newRole < 0 || newRole > 2) {
-            setError("Invalid role");
-            return;
-        }
+        const { groupId, userId } = roleChangeDialog;
 
         try {
-            await updateMemberRole(groupId, userId, newRole);
+            await updateMemberRole(groupId, userId, selectedNewRole);
+            setRoleChangeDialog(null);
+            setSelectedNewRole(null);
         } catch {
             setError(t("roleUpdateError"));
         }
+    };
+
+    const handleCancelRoleChange = () => {
+        setRoleChangeDialog(null);
+        setSelectedNewRole(null);
     };
 
     const handleGenerateOtp = async (groupId: number) => {
@@ -992,6 +995,70 @@ export function Header() {
                                     })}
                                 </FieldGroup>
                             </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Role Change Dialog */}
+            <Dialog open={roleChangeDialog !== null} onOpenChange={(open) => !open && handleCancelRoleChange()}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{t("changeRole")}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        {roleChangeDialog && (
+                            <>
+                                <div className="space-y-2">
+                                    <FieldLabel>{t("currentRole")}</FieldLabel>
+                                    <div className="rounded-lg bg-muted/30 px-3 py-2 text-sm">
+                                        {roleChangeDialog.currentRole === GroupRole.Viewer && t("roleViewer")}
+                                        {roleChangeDialog.currentRole === GroupRole.Member && t("roleMember")}
+                                        {roleChangeDialog.currentRole === GroupRole.Admin && t("roleAdmin")}
+                                    </div>
+                                </div>
+
+                                <Field>
+                                    <FieldLabel>{t("selectNewRole")}</FieldLabel>
+                                    <Select
+                                        value={selectedNewRole?.toString()}
+                                        onValueChange={(value) => setSelectedNewRole(parseInt(value) as GroupRole)}
+                                    >
+                                        <SelectTrigger className="h-9">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={GroupRole.Viewer.toString()}>
+                                                <div className="flex items-center gap-2">
+                                                    <Eye className="h-4 w-4" />
+                                                    {t("roleViewer")}
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value={GroupRole.Member.toString()}>
+                                                <div className="flex items-center gap-2">
+                                                    <User className="h-4 w-4" />
+                                                    {t("roleMember")}
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value={GroupRole.Admin.toString()}>
+                                                <div className="flex items-center gap-2">
+                                                    <Shield className="h-4 w-4" />
+                                                    {t("roleAdmin")}
+                                                </div>
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+
+                                <div className="flex gap-2 justify-end pt-2">
+                                    <Button variant="ghost" onClick={handleCancelRoleChange}>
+                                        {t("cancel")}
+                                    </Button>
+                                    <Button onClick={handleConfirmRoleChange}>
+                                        {t("save")}
+                                    </Button>
+                                </div>
+                            </>
                         )}
                     </div>
                 </DialogContent>
