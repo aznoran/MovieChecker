@@ -80,6 +80,8 @@ const ru: Record<TranslationKeys, string> = {
     saving: "Сохранение...",
     failedToAdd: "Не удалось добавить запись",
     failedToUpdate: "Не удалось обновить запись",
+    postAdded: "Пост успешно добавлен",
+    postUpdated: "Пост успешно обновлен",
     titleRequired: "Название обязательно",
     clipboardNoImage: "В буфере нет изображения",
     clipboardFailed: "Не удалось прочитать буфер обмена",

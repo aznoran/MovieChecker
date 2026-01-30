@@ -78,6 +78,8 @@ const en = {
     saving: "Saving...",
     failedToAdd: "Failed to add entry",
     failedToUpdate: "Failed to update entry",
+    postUpdated: "Post updated successfully!",
+    postAdded: "Post added successfully!",
     titleRequired: "Title is required",
     clipboardNoImage: "No image found in clipboard",
     clipboardFailed: "Failed to read clipboard",

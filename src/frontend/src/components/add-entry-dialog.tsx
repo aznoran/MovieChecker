@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner"
 import {useState, useRef, useEffect} from "react";
 import {useMutation, useQueryClient} from "@tanstack/react-query";
 import {createMovie, createWatchEntry, uploadPoster} from "@/lib/api";
@@ -25,7 +26,6 @@ import {
 } from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Label} from "@/components/ui/label";
 import {Textarea} from "@/components/ui/textarea";
 import {
     Select,
@@ -50,7 +50,6 @@ import {
     Loader2,
     ClipboardPaste,
 } from "lucide-react";
-import {DatePickerTime} from "@/components/date-picker";
 import * as React from "react";
 import {
     Field,
@@ -61,8 +60,6 @@ import {
     FieldGroup,
     FieldSet,
     FieldLegend,
-    FieldSeparator,
-    FieldTitle
 } from "@/components/ui/field";
 
 interface Props {
@@ -73,7 +70,6 @@ interface Props {
 export function AddEntryDialog({open, onOpenChange}: Props) {
     const {locale, t} = useLocale();
     const {activeGroupId, activeGroup} = useGroup();
-    const {user} = useAuth();
     const isGroupMode = !!activeGroupId && !!activeGroup;
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -237,10 +233,12 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["watchEntries"]});
+            toast.success(t("postAdded"), { position: "top-center" })
             resetForm();
             onOpenChange(false);
         },
         onError: () => {
+            toast.error(t("failedToAdd"), { position: "top-center" })
             setError(t("failedToAdd"));
         },
     });

@@ -56,6 +56,7 @@ import {
     FieldSet,
     FieldLegend,
 } from "@/components/ui/field";
+import {toast} from "sonner";
 
 interface Props {
     entry: WatchEntry;
@@ -222,10 +223,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             });
         },
         onSuccess: () => {
+            toast.success(t("postUpdated"), { position: "top-center" })
             queryClient.invalidateQueries({queryKey: ["watchEntries"]});
             onOpenChange(false);
         },
         onError: () => {
+            toast.error(t("failedToUpdate"), { position: "top-center" })
             setError(t("failedToUpdate"));
         },
     });
