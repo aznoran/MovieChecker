@@ -173,13 +173,13 @@ export const getGroup = async (id: number): Promise<Group> => {
   return response.data;
 };
 
-export const createGroup = async (name: string): Promise<Group> => {
-  const response = await api.post<Group>("/groups", { name });
+export const createGroup = async (name: string, isPrivate: boolean = false, password?: string): Promise<Group> => {
+  const response = await api.post<Group>("/groups", { name, isPrivate, password });
   return response.data;
 };
 
-export const joinGroup = async (inviteCode: string): Promise<Group> => {
-  const response = await api.post<Group>("/groups/join", { inviteCode });
+export const joinGroup = async (inviteCode: string, password?: string): Promise<Group> => {
+  const response = await api.post<Group>("/groups/join", { inviteCode, password });
   return response.data;
 };
 
@@ -193,6 +193,10 @@ export const kickMember = async (groupId: number, userId: number): Promise<void>
 
 export const transferOwnership = async (groupId: number, newOwnerId: number): Promise<void> => {
   await api.put(`/groups/${groupId}/transfer`, { newOwnerId });
+};
+
+export const updateMemberRole = async (groupId: number, userId: number, role: number): Promise<void> => {
+  await api.put(`/groups/${groupId}/members/${userId}/role`, { role });
 };
 
 // Upload

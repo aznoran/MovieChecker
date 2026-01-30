@@ -98,6 +98,17 @@ const ru: Record<TranslationKeys, string> = {
     kickError: "Не удалось удалить участника",
     transferSuccess: "Права владельца успешно переданы",
     transferError: "Не удалось передать права владельца",
+    roleUpdateSuccess: "Роль участника успешно обновлена",
+    roleUpdateError: "Не удалось обновить роль участника",
+    privateGroup: "Приватная",
+    publicGroup: "Публичная",
+    groupPassword: "Пароль группы",
+    enterPassword: "Введите пароль",
+    roleViewer: "Наблюдатель",
+    roleMember: "Участник",
+    roleAdmin: "Администратор",
+    roleOwner: "Владелец",
+    changeRole: "Изменить роль",
 
     // Content Types
     contentMovie: "Фильм",

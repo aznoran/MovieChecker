@@ -10,6 +10,7 @@ import {
     leaveGroup as apiLeaveGroup,
     kickMember as apiKickMember,
     transferOwnership as apiTransferOwnership,
+    updateMemberRole as apiUpdateMemberRole,
 } from "@/lib/api";
 import type {Group} from "@/types";
 import {toast} from "sonner";
@@ -20,11 +21,12 @@ interface GroupContextValue {
     activeGroupId: number | undefined;
     activeGroup: Group | undefined;
     setActiveGroupId: (id: number | undefined) => void;
-    createGroup: (name: string) => Promise<Group>;
-    joinGroup: (code: string) => Promise<Group>;
+    createGroup: (name: string, isPrivate?: boolean, password?: string) => Promise<Group>;
+    joinGroup: (code: string, password?: string) => Promise<Group>;
     leaveGroup: (id: number) => Promise<void>;
     kickMember: (groupId: number, userId: number) => Promise<void>;
     transferOwnership: (groupId: number, newOwnerId: number) => Promise<void>;
+    updateMemberRole: (groupId: number, userId: number, role: number) => Promise<void>;
     isLoading: boolean;
 }
 
@@ -76,7 +78,8 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 
     const createMutation = useMutation({
-        mutationFn: apiCreateGroup,
+        mutationFn: ({ name, isPrivate, password }: { name: string, isPrivate?: boolean, password?: string }) => 
+            apiCreateGroup(name, isPrivate, password),
         onSuccess: (group) => {
             toast.success(t("groupCreateSuccess"), { position: "top-center" });
             queryClient.invalidateQueries({queryKey: ["groups"]});
@@ -88,7 +91,8 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     });
 
     const joinMutation = useMutation({
-        mutationFn: apiJoinGroup,
+        mutationFn: ({ code, password }: { code: string, password?: string }) => 
+            apiJoinGroup(code, password),
         onSuccess: (group) => {
             toast.success(t("joinSuccess"), { position: "top-center" })
             queryClient.invalidateQueries({queryKey: ["groups"]});
@@ -135,6 +139,18 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         }
     });
 
+    const updateRoleMutation = useMutation({
+        mutationFn: ({groupId, userId, role}: { groupId: number; userId: number; role: number }) =>
+            apiUpdateMemberRole(groupId, userId, role),
+        onSuccess: () => {
+            toast.success(t("roleUpdateSuccess"), { position: "top-center" })
+            queryClient.invalidateQueries({queryKey: ["groups"]});
+        },
+        onError: () => {
+            toast.error(t("roleUpdateError"), { position: "top-center" })
+        }
+    });
+
     return (
         <GroupContext.Provider
             value={{
@@ -142,11 +158,12 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
                 activeGroupId,
                 activeGroup,
                 setActiveGroupId,
-                createGroup: (name) => createMutation.mutateAsync(name),
-                joinGroup: (code) => joinMutation.mutateAsync(code),
+                createGroup: (name, isPrivate, password) => createMutation.mutateAsync({ name, isPrivate, password }),
+                joinGroup: (code, password) => joinMutation.mutateAsync({ code, password }),
                 leaveGroup: (id) => leaveMutation.mutateAsync(id),
                 kickMember: (groupId, userId) => kickMutation.mutateAsync({groupId, userId}),
                 transferOwnership: (groupId, newOwnerId) => transferMutation.mutateAsync({groupId, newOwnerId}),
+                updateMemberRole: (groupId, userId, role) => updateRoleMutation.mutateAsync({groupId, userId, role}),
                 isLoading,
             }}
         >

@@ -96,6 +96,17 @@ const en = {
     kickError: "Failed to remove member",
     transferSuccess: "Ownership transferred successfully",
     transferError: "Failed to transfer ownership",
+    roleUpdateSuccess: "Member role updated successfully",
+    roleUpdateError: "Failed to update member role",
+    privateGroup: "Private",
+    publicGroup: "Public",
+    groupPassword: "Group Password",
+    enterPassword: "Enter password",
+    roleViewer: "Viewer",
+    roleMember: "Member",
+    roleAdmin: "Admin",
+    roleOwner: "Owner",
+    changeRole: "Change Role",
 
     // Content Types
     contentMovie: "Film",

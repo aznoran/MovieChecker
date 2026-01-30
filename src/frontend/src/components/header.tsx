@@ -37,18 +37,27 @@ import {
   Crown,
   UserMinus,
   ShieldCheck,
+  Lock,
+  LockOpen,
+  UserCog,
+  Shield,
+  Eye,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
+import { GroupRole, GroupRoleLabels } from "@/types";
 
 export function Header() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useLocale();
-  const { groups, activeGroupId, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership } = useGroup();
+  const { groups, activeGroupId, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership, updateMemberRole } = useGroup();
 
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
+  const [newGroupPassword, setNewGroupPassword] = useState("");
   const [joinCode, setJoinCode] = useState("");
+  const [joinPassword, setJoinPassword] = useState("");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
 
@@ -64,9 +73,15 @@ export function Header() {
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
+    if (newGroupIsPrivate && !newGroupPassword.trim()) {
+      setError(t("groupPassword") + " " + t("titleRequired"));
+      return;
+    }
     try {
-      await createGroup(newGroupName.trim());
+      await createGroup(newGroupName.trim(), newGroupIsPrivate, newGroupPassword || undefined);
       setNewGroupName("");
+      setNewGroupIsPrivate(false);
+      setNewGroupPassword("");
       setError("");
     } catch {
       setError(t("failedToAdd"));
@@ -76,8 +91,9 @@ export function Header() {
   const handleJoinGroup = async () => {
     if (!joinCode.trim()) return;
     try {
-      await joinGroup(joinCode.trim());
+      await joinGroup(joinCode.trim(), joinPassword || undefined);
       setJoinCode("");
+      setJoinPassword("");
       setError("");
     } catch {
       setError(t("invalidCode"));
@@ -108,6 +124,31 @@ export function Header() {
       await transferOwnership(groupId, newOwnerId);
     } catch {
       setError(t("failedToTransfer"));
+    }
+  };
+
+  const handleChangeRole = async (groupId: number, userId: number, currentRole: GroupRole) => {
+    const roleOptions = [
+      { value: GroupRole.Viewer, label: t("roleViewer") },
+      { value: GroupRole.Member, label: t("roleMember") },
+      { value: GroupRole.Admin, label: t("roleAdmin") },
+    ];
+    
+    const roleLabels = roleOptions.map(r => `${r.value}: ${r.label}`).join("\n");
+    const input = prompt(`${t("changeRole")}:\n${roleLabels}\n\nCurrent: ${currentRole}`);
+    
+    if (input === null) return;
+    const newRole = parseInt(input);
+    
+    if (isNaN(newRole) || newRole < 0 || newRole > 2) {
+      setError("Invalid role");
+      return;
+    }
+    
+    try {
+      await updateMemberRole(groupId, userId, newRole);
+    } catch {
+      setError(t("roleUpdateError"));
     }
   };
 
@@ -150,7 +191,7 @@ export function Header() {
               value={activeGroupId?.toString() ?? "personal"}
               onValueChange={(v) => setActiveGroupId(v === "personal" ? undefined : parseInt(v))}
             >
-              <SelectTrigger className="w-[160px] h-8 text-sm">
+              <SelectTrigger className="w-[180px] h-8 text-sm">
                 <UsersRound className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                 <SelectValue />
               </SelectTrigger>
@@ -158,7 +199,10 @@ export function Header() {
                 <SelectItem value="personal">{t("personal")}</SelectItem>
                 {groups.map((g) => (
                   <SelectItem key={g.id} value={g.id.toString()}>
-                    {g.name}
+                    <div className="flex items-center gap-1.5">
+                      {g.isPrivate ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
+                      {g.name}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -209,7 +253,7 @@ export function Header() {
             {/* Create group */}
             <div className="space-y-2">
               <p className="text-sm font-medium">{t("createGroup")}</p>
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <Input
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
@@ -217,8 +261,32 @@ export function Header() {
                   className="h-8 text-sm"
                   onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
                 />
-                <Button size="sm" className="h-8 shrink-0" onClick={handleCreateGroup}>
-                  <Plus className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isPrivate"
+                    checked={newGroupIsPrivate}
+                    onChange={(e) => setNewGroupIsPrivate(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="isPrivate" className="text-sm flex items-center gap-1">
+                    {newGroupIsPrivate ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
+                    {newGroupIsPrivate ? t("privateGroup") : t("publicGroup")}
+                  </label>
+                </div>
+                {newGroupIsPrivate && (
+                  <Input
+                    type="password"
+                    value={newGroupPassword}
+                    onChange={(e) => setNewGroupPassword(e.target.value)}
+                    placeholder={t("groupPassword")}
+                    className="h-8 text-sm"
+                    onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+                  />
+                )}
+                <Button size="sm" className="h-8 w-full" onClick={handleCreateGroup}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  {t("createGroup")}
                 </Button>
               </div>
             </div>
@@ -226,7 +294,7 @@ export function Header() {
             {/* Join group */}
             <div className="space-y-2">
               <p className="text-sm font-medium">{t("joinGroup")}</p>
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <Input
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value)}
@@ -234,8 +302,17 @@ export function Header() {
                   className="h-8 text-sm font-mono"
                   onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
                 />
-                <Button size="sm" className="h-8 shrink-0" onClick={handleJoinGroup}>
-                  <UserPlus className="h-3.5 w-3.5" />
+                <Input
+                  type="password"
+                  value={joinPassword}
+                  onChange={(e) => setJoinPassword(e.target.value)}
+                  placeholder={t("enterPassword") + " (" + t("privateGroup").toLowerCase() + ")"}
+                  className="h-8 text-sm"
+                  onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
+                />
+                <Button size="sm" className="h-8 w-full" onClick={handleJoinGroup}>
+                  <UserPlus className="h-3.5 w-3.5 mr-1" />
+                  {t("joinGroup")}
                 </Button>
               </div>
             </div>
@@ -249,13 +326,27 @@ export function Header() {
                 <div className="space-y-3">
                   {groups.map((g) => {
                     const isOwner = user?.id === g.createdByUserId;
+                    const currentUserMember = g.members.find(m => m.userId === user?.id);
+                    const isAdmin = currentUserMember?.role === GroupRole.Admin;
+                    const canManage = isOwner || isAdmin;
+                    
                     return (
                       <div key={g.id} className="border rounded-lg p-3 space-y-3">
                         {/* Group header */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
+                            {g.isPrivate ? (
+                              <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                            ) : (
+                              <LockOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
                             {isOwner && <Crown className="h-3.5 w-3.5 text-yellow-400" />}
                             <span className="font-medium text-sm">{g.name}</span>
+                            {g.isPrivate && (
+                              <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">
+                                {t("privateGroup")}
+                              </span>
+                            )}
                           </div>
                           <Button
                             variant="ghost"
@@ -289,17 +380,29 @@ export function Header() {
                           {g.members.map((m) => {
                             const isMemberOwner = m.userId === g.createdByUserId;
                             const isSelf = m.userId === user?.id;
+                            
+                            // Icon based on role
+                            let roleIcon = <User className="h-3 w-3 text-muted-foreground shrink-0" />;
+                            let roleLabel = t("roleMember");
+                            
+                            if (m.role === GroupRole.Owner) {
+                              roleIcon = <Crown className="h-3 w-3 text-yellow-400 shrink-0" />;
+                              roleLabel = t("roleOwner");
+                            } else if (m.role === GroupRole.Admin) {
+                              roleIcon = <Shield className="h-3 w-3 text-blue-400 shrink-0" />;
+                              roleLabel = t("roleAdmin");
+                            } else if (m.role === GroupRole.Viewer) {
+                              roleIcon = <Eye className="h-3 w-3 text-gray-400 shrink-0" />;
+                              roleLabel = t("roleViewer");
+                            }
+                            
                             return (
                               <div
                                 key={m.userId}
                                 className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/50"
                               >
                                 <div className="flex items-center gap-2 text-sm min-w-0">
-                                  {isMemberOwner ? (
-                                    <Crown className="h-3 w-3 text-yellow-400 shrink-0" />
-                                  ) : (
-                                    <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                                  )}
+                                  {roleIcon}
                                   <span className="truncate">
                                     {m.displayName}
                                     {isSelf && (
@@ -308,25 +411,36 @@ export function Header() {
                                       </span>
                                     )}
                                   </span>
-                                  {isMemberOwner && (
-                                    <span className="text-[10px] text-yellow-500 font-medium shrink-0">
-                                      {t("owner")}
-                                    </span>
-                                  )}
+                                  <span className="text-[10px] text-muted-foreground font-medium shrink-0">
+                                    {roleLabel}
+                                  </span>
                                 </div>
 
-                                {/* Owner actions on other members */}
-                                {isOwner && !isSelf && (
+                                {/* Owner/Admin actions on other members */}
+                                {canManage && !isSelf && !isMemberOwner && (
                                   <div className="flex items-center gap-1 shrink-0 ml-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                                      title={t("transferOwnership")}
-                                      onClick={() => handleTransferOwnership(g.id, m.userId)}
-                                    >
-                                      <ShieldCheck className="h-3 w-3" />
-                                    </Button>
+                                    {isOwner && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-blue-500"
+                                          title={t("changeRole")}
+                                          onClick={() => handleChangeRole(g.id, m.userId, m.role)}
+                                        >
+                                          <UserCog className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                          title={t("transferOwnership")}
+                                          onClick={() => handleTransferOwnership(g.id, m.userId)}
+                                        >
+                                          <ShieldCheck className="h-3 w-3" />
+                                        </Button>
+                                      </>
+                                    )}
                                     <Button
                                       variant="ghost"
                                       size="sm"
