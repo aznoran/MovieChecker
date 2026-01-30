@@ -155,6 +155,28 @@ public static class GroupEndpoints
         if (updatedGroup == null) 
             return Results.NotFound();
 
+        // 4. Отправить уведомления другим участникам группы
+        var joiningUser = await db.Users.FindAsync(userId);
+        if (joiningUser != null)
+        {
+            var otherMemberIds = updatedGroup.Members
+                .Where(m => m.UserId != userId)
+                .Select(m => m.UserId)
+                .ToList();
+
+            foreach (var memberId in otherMemberIds)
+            {
+                await NotificationEndpoints.CreateNotification(
+                    db,
+                    memberId,
+                    NotificationType.MemberJoined,
+                    "New member joined",
+                    $"{joiningUser.DisplayName} joined the group \"{updatedGroup.Name}\"",
+                    updatedGroup.Id
+                );
+            }
+        }
+
         // 5. Теперь безопасно формируем ответ
         return Results.Ok(new GroupDto(
             updatedGroup.Id,

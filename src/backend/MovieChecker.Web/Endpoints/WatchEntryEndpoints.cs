@@ -227,6 +227,35 @@ public static class WatchEntryEndpoints
             .Include(w => w.Ratings).ThenInclude(r => r.User)
             .FirstAsync(w => w.Id == entry.Id);
 
+        // Send notifications to other group members when entry is added to a group
+        if (request.GroupId.HasValue)
+        {
+            var currentUser = await db.Users.FindAsync(userId);
+            var group = await db.Groups
+                .Include(g => g.Members)
+                .FirstOrDefaultAsync(g => g.Id == request.GroupId.Value);
+                
+            if (currentUser != null && group != null)
+            {
+                var otherMemberIds = group.Members
+                    .Where(m => m.UserId != userId)
+                    .Select(m => m.UserId)
+                    .ToList();
+
+                foreach (var memberId in otherMemberIds)
+                {
+                    await NotificationEndpoints.CreateNotification(
+                        db,
+                        memberId,
+                        NotificationType.EntryAdded,
+                        "New entry added",
+                        $"{currentUser.DisplayName} added \"{entry.Movie.Title}\" to {group.Name}",
+                        entry.Id
+                    );
+                }
+            }
+        }
+
         return Results.Created($"/api/watch-entries/{entry.Id}", ToDto(entry));
     }
 

@@ -18,6 +18,29 @@ public static class NotificationEndpoints
         group.MapDelete("/{id}", DeleteNotification);
     }
 
+    // Helper method to create notifications
+    public static async Task CreateNotification(
+        AppDbContext db,
+        int userId,
+        NotificationType type,
+        string title,
+        string message,
+        int? relatedId = null)
+    {
+        var notification = new Notification
+        {
+            UserId = userId,
+            Type = type,
+            Title = title,
+            Message = message,
+            RelatedId = relatedId,
+            IsRead = false
+        };
+
+        db.Notifications.Add(notification);
+        await db.SaveChangesAsync();
+    }
+
     private static async Task<IResult> GetNotifications(
         ClaimsPrincipal user,
         AppDbContext db,
