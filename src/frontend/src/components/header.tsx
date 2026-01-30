@@ -8,6 +8,8 @@ import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -282,127 +284,171 @@ export function Header() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Create group */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium">{t("createGroup")}</p>
-              <div className="space-y-2">
-                <Input
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  placeholder={t("groupName")}
-                  className="h-8 text-sm"
-                  onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
-                />
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
+            <div className="space-y-3">
+              <p className="text-sm font-semibold">{t("createGroup")}</p>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="groupName" className="text-xs text-muted-foreground">
+                    {t("groupName")}
+                  </Label>
+                  <Input
+                    id="groupName"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder={t("groupName")}
+                    className="h-9"
+                    onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+                  />
+                </div>
+                
+                <div className="flex items-center space-x-2 py-1">
+                  <Checkbox
                     id="isPrivate"
                     checked={newGroupIsPrivate}
-                    onChange={(e) => setNewGroupIsPrivate(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300"
+                    onCheckedChange={(checked) => setNewGroupIsPrivate(checked as boolean)}
                   />
-                  <label htmlFor="isPrivate" className="text-sm flex items-center gap-1">
-                    {newGroupIsPrivate ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
+                  <Label
+                    htmlFor="isPrivate"
+                    className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
+                  >
+                    {newGroupIsPrivate ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}
                     {newGroupIsPrivate ? t("privateGroup") : t("publicGroup")}
-                  </label>
+                  </Label>
                 </div>
+                
                 {newGroupIsPrivate && (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5 pl-6 border-l-2 border-muted">
+                    <Label htmlFor="groupPassword" className="text-xs text-muted-foreground">
+                      {t("groupPassword")} ({t("optionalPassword").toLowerCase()})
+                    </Label>
                     <Input
+                      id="groupPassword"
                       type="password"
                       value={newGroupPassword}
                       onChange={(e) => setNewGroupPassword(e.target.value)}
-                      placeholder={t("groupPassword") + " (" + t("optionalPassword").toLowerCase() + ")"}
-                      className="h-8 text-sm"
+                      placeholder={t("groupPassword")}
+                      className="h-9"
                       onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
                     />
-                    <p className="text-xs text-muted-foreground">{t("optionalPassword")}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {t("optionalPassword")}
+                    </p>
                   </div>
                 )}
-                <Button size="sm" className="h-8 w-full" onClick={handleCreateGroup}>
-                  <Plus className="h-3.5 w-3.5 mr-1" />
+                
+                <Button size="sm" className="w-full h-9" onClick={handleCreateGroup}>
+                  <Plus className="h-4 w-4 mr-1.5" />
                   {t("createGroup")}
                 </Button>
               </div>
             </div>
 
             {/* Join group */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium">{t("joinGroup")}</p>
-              <div className="space-y-2">
-                <Input
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value)}
-                  placeholder={t("enterInviteCode")}
-                  className="h-8 text-sm font-mono"
-                  onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
-                />
+            <div className="space-y-3 pt-2 border-t">
+              <p className="text-sm font-semibold">{t("joinGroup")}</p>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="joinCode" className="text-xs text-muted-foreground">
+                    {t("enterInviteCode")}
+                  </Label>
+                  <Input
+                    id="joinCode"
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value)}
+                    placeholder={t("enterInviteCode")}
+                    className="h-9 font-mono"
+                    onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
+                  />
+                </div>
                 
                 {/* Toggle between Password and OTP */}
-                <div className="flex gap-2 text-xs">
-                  <Button
-                    variant={!useOtpMode ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 flex-1"
-                    onClick={() => setUseOtpMode(false)}
-                  >
-                    <Lock className="h-3 w-3 mr-1" />
-                    {t("usePassword")}
-                  </Button>
-                  <Button
-                    variant={useOtpMode ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 flex-1"
-                    onClick={() => setUseOtpMode(true)}
-                  >
-                    <Key className="h-3 w-3 mr-1" />
-                    {t("useOtp")}
-                  </Button>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    {t("usePassword")} / {t("useOtp")}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={!useOtpMode ? "default" : "outline"}
+                      size="sm"
+                      className="h-9 flex-1"
+                      onClick={() => setUseOtpMode(false)}
+                    >
+                      <Lock className="h-3.5 w-3.5 mr-1.5" />
+                      {t("usePassword")}
+                    </Button>
+                    <Button
+                      variant={useOtpMode ? "default" : "outline"}
+                      size="sm"
+                      className="h-9 flex-1"
+                      onClick={() => setUseOtpMode(true)}
+                    >
+                      <Key className="h-3.5 w-3.5 mr-1.5" />
+                      {t("useOtp")}
+                    </Button>
+                  </div>
                 </div>
 
                 {!useOtpMode ? (
-                  <Input
-                    type="password"
-                    value={joinPassword}
-                    onChange={(e) => setJoinPassword(e.target.value)}
-                    placeholder={t("enterPassword")}
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
-                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="joinPassword" className="text-xs text-muted-foreground">
+                      {t("password")}
+                    </Label>
+                    <Input
+                      id="joinPassword"
+                      type="password"
+                      value={joinPassword}
+                      onChange={(e) => setJoinPassword(e.target.value)}
+                      placeholder={t("enterPassword")}
+                      className="h-9"
+                      onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
+                    />
+                  </div>
                 ) : (
-                  <div className="space-y-1">
-                    <InputOTP
-                      maxLength={6}
-                      value={joinOtp}
-                      onChange={(value) => setJoinOtp(value)}
-                    >
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                    <p className="text-xs text-muted-foreground">{t("enterOtp")}</p>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      {t("enterOtp")}
+                    </Label>
+                    <div className="flex justify-center bg-muted/50 p-3 rounded-lg">
+                      <InputOTP
+                        maxLength={6}
+                        value={joinOtp}
+                        onChange={(value) => setJoinOtp(value)}
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                    <p className="text-xs text-center text-muted-foreground">
+                      {t("enterOtp")}
+                    </p>
                   </div>
                 )}
                 
-                <Button size="sm" className="h-8 w-full" onClick={handleJoinGroup}>
-                  <UserPlus className="h-3.5 w-3.5 mr-1" />
+                <Button size="sm" className="w-full h-9" onClick={handleJoinGroup}>
+                  <UserPlus className="h-4 w-4 mr-1.5" />
                   {t("joinGroup")}
                 </Button>
               </div>
             </div>
 
-            {error && <p className="text-sm text-destructive text-center">{error}</p>}
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-md text-sm text-center">
+                {error}
+              </div>
+            )}
 
             {/* Group list */}
             {groups.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">{t("groups")}</p>
+              <div className="space-y-3 pt-4 border-t">
+                <p className="text-sm font-semibold">{t("groups")}</p>
                 <div className="space-y-3">
                   {groups.map((g) => {
                     const isOwner = user?.id === g.createdByUserId;
@@ -480,27 +526,29 @@ export function Header() {
 
                             {/* Show generated OTP */}
                             {generatedOtps.get(g.id) && (
-                              <div className="bg-blue-50 dark:bg-blue-950 p-2 rounded space-y-1">
-                                <p className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                              <div className="bg-primary/5 border-2 border-primary/20 p-3 rounded-lg space-y-2">
+                                <p className="text-xs font-semibold text-primary text-center">
                                   {t("otpGenerated")}:
                                 </p>
-                                <code className="text-lg font-mono font-bold text-blue-900 dark:text-blue-100 block text-center tracking-wider">
-                                  {generatedOtps.get(g.id)!.code}
-                                </code>
-                                <p className="text-xs text-blue-600 dark:text-blue-400 text-center">
+                                <div className="bg-primary/10 p-3 rounded-md">
+                                  <code className="text-2xl font-mono font-bold text-primary block text-center tracking-[0.3em]">
+                                    {generatedOtps.get(g.id)!.code}
+                                  </code>
+                                </div>
+                                <p className="text-xs text-primary/80 text-center font-medium">
                                   {t("otpExpiresIn")} 30 {t("otpMinutes")}
                                 </p>
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
-                                  className="h-6 w-full text-xs"
+                                  className="h-8 w-full text-xs"
                                   onClick={() => {
                                     navigator.clipboard.writeText(generatedOtps.get(g.id)!.code);
                                     setCopied(true);
                                     setTimeout(() => setCopied(false), 2000);
                                   }}
                                 >
-                                  {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                                  {copied ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
                                   {t("copyCode")}
                                 </Button>
                               </div>
@@ -508,19 +556,27 @@ export function Header() {
 
                             {/* Password change form */}
                             {changePasswordGroupId === g.id && (
-                              <div className="bg-muted p-2 rounded space-y-2">
-                                <Input
-                                  type="password"
-                                  value={newPassword}
-                                  onChange={(e) => setNewPassword(e.target.value)}
-                                  placeholder={t("newPassword") + " (" + t("optionalPassword").toLowerCase() + ")"}
-                                  className="h-7 text-xs"
-                                />
-                                <p className="text-xs text-muted-foreground">{t("optionalPassword")}</p>
+                              <div className="bg-muted/50 border p-3 rounded-lg space-y-3">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor={`newPassword-${g.id}`} className="text-xs text-muted-foreground">
+                                    {t("newPassword")} ({t("optionalPassword").toLowerCase()})
+                                  </Label>
+                                  <Input
+                                    id={`newPassword-${g.id}`}
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder={t("newPassword")}
+                                    className="h-8"
+                                  />
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
+                                    {t("optionalPassword")}
+                                  </p>
+                                </div>
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
-                                    className="h-7 text-xs flex-1"
+                                    className="h-8 flex-1"
                                     onClick={() => handleUpdatePassword(g.id)}
                                   >
                                     {t("save")}
@@ -528,7 +584,7 @@ export function Header() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-7 text-xs flex-1"
+                                    className="h-8 flex-1"
                                     onClick={() => {
                                       setChangePasswordGroupId(null);
                                       setNewPassword("");
