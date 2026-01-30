@@ -111,6 +111,7 @@ const ru: Record<TranslationKeys, string> = {
     statusWatching: "Смотрим",
     statusCompleted: "Просмотрено",
     statusDropped: "Брошено",
+    statusUnderConsideration: "На рассмотрении",
 
     // Watched By
     watchedByMe: "Я",

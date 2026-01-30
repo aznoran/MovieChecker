@@ -11,6 +11,7 @@ export enum WatchStatus {
   Watching = 1,
   Completed = 2,
   Dropped = 3,
+  UnderConsideration = 4,
 }
 
 export enum WatchedBy {

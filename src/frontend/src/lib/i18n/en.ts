@@ -109,6 +109,7 @@ const en = {
     statusWatching: "Watching",
     statusCompleted: "Completed",
     statusDropped: "Dropped",
+    statusUnderConsideration: "Under Consideration",
 
     // Watched By
     watchedByMe: "Me",
