@@ -118,6 +118,12 @@ export function ImageEditor({
         const image = imageRef.current;
         const canvas = canvasRef.current;
 
+        // Ensure image is fully loaded with valid dimensions
+        if (!image.naturalWidth || !image.naturalHeight) {
+            console.error("Image not loaded or has no dimensions");
+            return;
+        }
+
         // Get the container dimensions (the visible area)
         const containerRect = container.getBoundingClientRect();
         const containerWidth = containerRect.width;
@@ -168,10 +174,8 @@ export function ImageEditor({
 
         // Convert canvas to blob and create a File
         canvas.toBlob((blob) => {
-            console.log("toBlob callback, blob:", blob?.size, blob?.type);
             if (blob) {
                 const file = new File([blob], "poster.png", {type: "image/png"});
-                console.log("created file:", file.name, file.size);
                 onSave(file);
             } else {
                 console.error("Failed to create blob from canvas - canvas may be tainted by CORS");
