@@ -110,7 +110,9 @@ public record EntryRatingDto(
 
 // Group DTOs
 public record CreateGroupRequest(string Name, bool IsPrivate = false, string? Password = null);
-public record JoinGroupRequest(string InviteCode, string? Password = null);
+public record JoinGroupRequest(string InviteCode, string? Password = null, string? Otp = null);
+public record UpdateGroupPasswordRequest(string? NewPassword);
+public record GenerateOtpResponse(string Code, DateTime ExpiresAt);
 
 public sealed record TransferGroupRequest(int NewOwnerId);
 public sealed record UpdateMemberRoleRequest(GroupRole Role);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using MovieChecker.Domain.Models;
 using MovieChecker.Infrastructure.Data;
+using MovieChecker.Infrastructure.Services;
 
 namespace MovieChecker.Web.Endpoints;
 
@@ -20,6 +21,8 @@ public static class GroupEndpoints
         group.MapDelete("/{id:int}/members/{userId:int}", DeleteUser);
         group.MapPut("/{id:int}/transfer", TransferGroup);
         group.MapPut("/{id:int}/members/{userId:int}/role", UpdateMemberRole);
+        group.MapPost("/{id:int}/generate-otp", GenerateOtp);
+        group.MapPut("/{id:int}/password", UpdatePassword);
     }
 
     private static int GetUserId(ClaimsPrincipal user) =>
@@ -95,19 +98,14 @@ public static class GroupEndpoints
     {
         var userId = GetUserId(user);
 
-        // Validate password requirement for private groups
-        if (request.IsPrivate && string.IsNullOrWhiteSpace(request.Password))
-        {
-            return Results.BadRequest(new { message = "Password is required for private groups" });
-        }
-
+        // Password is optional for private groups (can use OTP instead)
         var g = new Group
         {
             Name = request.Name,
             InviteCode = GenerateInviteCode(),
             CreatedByUserId = userId,
             IsPrivate = request.IsPrivate,
-            PasswordHash = request.IsPrivate && !string.IsNullOrEmpty(request.Password) 
+            PasswordHash = !string.IsNullOrWhiteSpace(request.Password) 
                 ? BCrypt.Net.BCrypt.HashPassword(request.Password) 
                 : null
         };
@@ -140,11 +138,12 @@ public static class GroupEndpoints
     private static async Task<IResult> JoinGroup(
         JoinGroupRequest request,
         ClaimsPrincipal user,
-        AppDbContext db)
+        AppDbContext db,
+        OtpService otpService)
     {
         var userId = GetUserId(user);
 
-        // 1. Находим группу
+        // 1. Find the group
         var group = await db.Groups
             .FirstOrDefaultAsync(g => 
                 g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
@@ -152,26 +151,49 @@ public static class GroupEndpoints
         if (group == null)
             return Results.NotFound(new { message = "Invalid invite code" });
 
-        // 2. Проверяем пароль для частных групп
+        // 2. Check password or OTP for private groups
         if (group.IsPrivate)
         {
-            if (string.IsNullOrEmpty(request.Password))
+            bool authenticated = false;
+
+            // Try OTP first if provided
+            if (!string.IsNullOrWhiteSpace(request.Otp))
             {
-                return Results.BadRequest(new { message = "Password is required for private groups" });
+                authenticated = await otpService.ValidateOtpAsync(group.Id, request.Otp);
+                if (!authenticated)
+                    return Results.BadRequest(new { message = "Invalid or expired OTP code" });
+            }
+            // Then try password if group has one
+            else if (!string.IsNullOrWhiteSpace(group.PasswordHash))
+            {
+                if (string.IsNullOrWhiteSpace(request.Password))
+                {
+                    return Results.BadRequest(new { message = "Password or OTP is required for this private group" });
+                }
+
+                if (!BCrypt.Net.BCrypt.Verify(request.Password, group.PasswordHash))
+                {
+                    return Results.Unauthorized();
+                }
+                authenticated = true;
+            }
+            // Group is private but has no password (OTP-only)
+            else
+            {
+                return Results.BadRequest(new { message = "This private group requires an OTP code. Password is disabled." });
             }
 
-            if (string.IsNullOrEmpty(group.PasswordHash) || 
-                !BCrypt.Net.BCrypt.Verify(request.Password, group.PasswordHash))
+            if (!authenticated)
             {
                 return Results.Unauthorized();
             }
         }
 
-        // 3. Проверяем членство
+        // 3. Check membership
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
             return Results.BadRequest(new { message = "Already a member" });
 
-        // 4. Добавляем участника
+        // 4. Add member
         db.GroupMembers.Add(new GroupMember 
         { 
             GroupId = group.Id, 
@@ -182,13 +204,13 @@ public static class GroupEndpoints
 
         var updatedGroup = await db.Groups
             .Include(g => g.Members)
-            .ThenInclude(m => m.User)  // ✅ Гарантирует загрузку User для ВСЕХ участников
+            .ThenInclude(m => m.User)
             .FirstOrDefaultAsync(g => g.Id == group.Id);
 
         if (updatedGroup == null) 
             return Results.NotFound();
 
-        // 5. Теперь безопасно формируем ответ
+        // 5. Return updated group
         return Results.Ok(new GroupDto(
             updatedGroup.Id,
             updatedGroup.Name,
@@ -397,5 +419,78 @@ public static class GroupEndpoints
             )).ToList(),
             group.CreatedAt
         ));
+    }
+
+    private static async Task<IResult> GenerateOtp(
+        int id,
+        ClaimsPrincipal user,
+        AppDbContext db,
+        OtpService otpService)
+    {
+        var userId = GetUserId(user);
+
+        var group = await db.Groups
+            .Include(g => g.Members)
+            .FirstOrDefaultAsync(g => g.Id == id);
+
+        if (group == null)
+            return Results.NotFound();
+
+        var member = group.Members.FirstOrDefault(m => m.UserId == userId);
+
+        // Only Owner and Admin can generate OTP
+        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+        {
+            return Results.Forbid();
+        }
+
+        // Group must be private to generate OTP
+        if (!group.IsPrivate)
+        {
+            return Results.BadRequest(new { message = "OTP codes can only be generated for private groups" });
+        }
+
+        var (code, expiresAt) = await otpService.GenerateOtpAsync(group.Id);
+
+        return Results.Ok(new GenerateOtpResponse(code, expiresAt));
+    }
+
+    private static async Task<IResult> UpdatePassword(
+        int id,
+        UpdateGroupPasswordRequest request,
+        ClaimsPrincipal user,
+        AppDbContext db)
+    {
+        var userId = GetUserId(user);
+
+        var group = await db.Groups
+            .Include(g => g.Members)
+            .FirstOrDefaultAsync(g => g.Id == id);
+
+        if (group == null)
+            return Results.NotFound();
+
+        var member = group.Members.FirstOrDefault(m => m.UserId == userId);
+
+        // Only Owner and Admin can change password
+        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+        {
+            return Results.Forbid();
+        }
+
+        // Group must be private to have a password
+        if (!group.IsPrivate)
+        {
+            return Results.BadRequest(new { message = "Only private groups can have passwords" });
+        }
+
+        // Update password (null removes it, making group OTP-only)
+        group.PasswordHash = !string.IsNullOrWhiteSpace(request.NewPassword)
+            ? BCrypt.Net.BCrypt.HashPassword(request.NewPassword)
+            : null;
+
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new { message = "Password updated successfully" });
     }
 }
