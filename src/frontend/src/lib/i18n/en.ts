@@ -38,6 +38,8 @@ const en = {
     noEntries: "No entries yet. Start tracking your movies!",
     deleteConfirm: "Delete this entry?",
     loadingEntries: "Loading entries...",
+    errorLoadingEntries: "Failed to load entries. Please try again.",
+    retryLoad: "Retry",
 
     // Add/Edit Dialog
     addNewEntry: "Add New Entry",
@@ -127,6 +129,7 @@ const en = {
     // Stats
     statistics: "Statistics",
     noStats: "No data yet. Start adding movies to see stats!",
+    errorLoadingStats: "Failed to load statistics. Please try again.",
     completed: "Completed",
     watching: "Watching",
     planned: "Planned",

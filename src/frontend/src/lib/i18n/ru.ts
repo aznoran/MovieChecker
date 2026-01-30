@@ -40,6 +40,8 @@ const ru: Record<TranslationKeys, string> = {
     noEntries: "Записей пока нет. Начните отслеживать фильмы!",
     deleteConfirm: "Удалить эту запись?",
     loadingEntries: "Загрузка записей...",
+    errorLoadingEntries: "Не удалось загрузить записи. Попробуйте снова.",
+    retryLoad: "Повторить",
 
     // Add/Edit Dialog
     addNewEntry: "Новая запись",
@@ -129,6 +131,7 @@ const ru: Record<TranslationKeys, string> = {
     // Stats
     statistics: "Статистика",
     noStats: "Данных пока нет. Добавьте фильмы, чтобы увидеть статистику!",
+    errorLoadingStats: "Не удалось загрузить статистику. Попробуйте снова.",
     completed: "Просмотрено",
     watching: "Смотрим",
     planned: "Запланировано",
