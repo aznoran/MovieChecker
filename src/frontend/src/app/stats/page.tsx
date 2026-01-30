@@ -7,7 +7,6 @@ import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
 import { getStats } from "@/lib/api";
 import { EmotionEmojis } from "@/types";
-import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart3,
@@ -135,7 +134,6 @@ export default function StatsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
       <main className="container mx-auto px-4 py-6 max-w-4xl">
 
         {isLoading ? (
