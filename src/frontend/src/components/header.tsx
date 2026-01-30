@@ -9,12 +9,6 @@ import {useGroup} from "@/context/group-context";
 import {ConfirmDialog} from "@/components/confirm-dialog";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {usePathname} from "next/navigation";
-import {useAuth} from "@/context/auth-context";
-import {useLocale} from "@/context/locale-context";
-import {useGroup} from "@/context/group-context";
-import {Button} from "@/components/ui/button";
-import {Input} from "@/components/ui/input";
 import {Checkbox} from "@/components/ui/checkbox";
 import {
   Field,
@@ -52,20 +46,6 @@ import {
     Crown,
     UserMinus,
     ShieldCheck,
-    Clapperboard,
-    BarChart3,
-    LogOut,
-    User,
-    Languages,
-    UsersRound,
-    Plus,
-    UserPlus,
-    Copy,
-    Check,
-    DoorOpen,
-    Crown,
-    UserMinus,
-    ShieldCheck,
     Lock,
     LockOpen,
     UserCog,
@@ -80,7 +60,6 @@ import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {checkInviteCode} from "@/lib/api";
 import {Progress} from "@/components/ui/progress";
-import type {Locale} from "@/lib/i18n";
 
 export function Header() {
     const pathname = usePathname();
@@ -100,11 +79,6 @@ export function Header() {
         updatePassword
     } = useGroup();
 
-    const [groupDialogOpen, setGroupDialogOpen] = useState(false);
-    const [newGroupName, setNewGroupName] = useState("");
-    const [joinCode, setJoinCode] = useState("");
-    const [copied, setCopied] = useState(false);
-    const [error, setError] = useState("");
     const [groupDialogOpen, setGroupDialogOpen] = useState(false);
     const [newGroupName, setNewGroupName] = useState("");
     const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
@@ -180,8 +154,8 @@ export function Header() {
             // Set default auth mode based on whether password exists
             setUseOtpMode(!result.hasPassword);
             setJoinStep("auth");
-        } catch (err: any) {
-            setError(err.response?.data?.message || t("invalidCode"));
+        } catch {
+            setError(t("invalidCode"));
         }
     };
 
@@ -196,8 +170,8 @@ export function Header() {
             setError("");
             setJoinStep("code");
             setGroupToJoin(null);
-        } catch (err: any) {
-            setError(err.response?.data?.message || t("invalidCode"));
+        } catch {
+            setError(t("invalidCode"));
         }
     };
 
@@ -697,15 +671,32 @@ export function Header() {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                                                        onClick={() => handleLeaveGroup(g.id)}
-                                                    >
-                                                        <DoorOpen className="h-3.5 w-3.5 mr-1.5"/>
-                                                        {t("leave")}
-                                                    </Button>
+                                                    <ConfirmDialog
+                                                        trigger={
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                                                                onClick={() => handleLeaveGroup(g.id)}
+                                                            >
+                                                                <DoorOpen className="h-3.5 w-3.5 mr-1.5"/>
+                                                                {t("leave")}
+                                                            </Button>
+                                                        }
+                                                        onConfirm={async () => {
+                                                            try {
+                                                                await leaveGroup(g.id);
+                                                            } catch {
+                                                                setError(t("failedToAdd"));
+                                                            }
+                                                        }}
+                                                        title={t("leaveGroup")}
+                                                        description={t("leaveGroupConfirm")}
+                                                        confirmText={t("leaveGroup")}
+                                                        cancelText={t("cancel")}
+                                                        variant="destructive"
+                                                        icon={<DoorOpen className="h-6 w-6"/>}
+                                                    />
                                                 </div>
 
                                                 {/* Invite code */}
@@ -911,36 +902,84 @@ export function Header() {
                                                                             className="flex items-center gap-1 shrink-0 ml-2">
                                                                             {isOwner && (
                                                                                 <>
-                                                                                    <Button
-                                                                                        variant="ghost"
-                                                                                        size="sm"
-                                                                                        className="h-7 w-7 p-0 hover:bg-blue-500/10 hover:text-blue-500 rounded-md"
-                                                                                        title={t("changeRole")}
-                                                                                        onClick={() => handleChangeRole(g.id, m.userId, m.role)}
-                                                                                    >
-                                                                                        <UserCog
-                                                                                            className="h-3.5 w-3.5"/>
-                                                                                    </Button>
-                                                                                    <Button
-                                                                                        variant="ghost"
-                                                                                        size="sm"
-                                                                                        className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary rounded-md"
+                                                                                    <ConfirmDialog
+                                                                                        trigger={
+                                                                                            <Button
+                                                                                                variant="ghost"
+                                                                                                size="sm"
+                                                                                                className="h-7 w-7 p-0 hover:bg-blue-500/10 hover:text-blue-500 rounded-md"
+                                                                                                title={t("changeRole")}
+                                                                                            >
+                                                                                                <UserCog className="h-3.5 w-3.5"/>
+                                                                                            </Button>
+                                                                                        }
+                                                                                        onConfirm={async () => {
+                                                                                            try {
+                                                                                                await handleChangeRole(g.id, m.userId, m.role);
+                                                                                            } catch {
+                                                                                                setError(t(""));
+                                                                                            }
+                                                                                        }}
+                                                                                        title={t("")}
+                                                                                        description={t("")}
+                                                                                        confirmText={t("")}
+                                                                                        cancelText={t("cancel")}
+                                                                                        variant="destructive"
+                                                                                        icon={<ShieldCheck className="h-6 w-6"/>}
+                                                                                    />
+                                                                                    <ConfirmDialog
+                                                                                        trigger={
+                                                                                            <Button
+                                                                                                variant="ghost"
+                                                                                                size="sm"
+                                                                                                className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary rounded-md"
+                                                                                                title={t("transferOwnership")}
+                                                                                            >
+                                                                                                <ShieldCheck className="h-3 w-3"/>
+                                                                                            </Button>
+                                                                                        }
+                                                                                        onConfirm={async () => {
+                                                                                            try {
+                                                                                                await handleTransferOwnership(g.id, m.userId);
+                                                                                            } catch {
+                                                                                                setError(t("failedToTransfer"));
+                                                                                            }
+                                                                                        }}
                                                                                         title={t("transferOwnership")}
-                                                                                    onClick={() => handleTransferOwnership(g.id, m.userId)}
-                                                                                >
-                                                                                    <ShieldCheck className="h-3 w-3"/>
-                                                                                </Button>
-                                                                            </>
+                                                                                        description={t("transferConfirm")}
+                                                                                        confirmText={t("transferOwnership")}
+                                                                                        cancelText={t("cancel")}
+                                                                                        variant="destructive"
+                                                                                        icon={<UserMinus className="h-6 w-6"/>}
+                                                                                    />
+                                                                                </>
                                                                         )}
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                                                        <ConfirmDialog
+                                                                            trigger={
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                                                                    title={t("kickMember")}
+                                                                                    onClick={() => handleKickMember(g.id, m.userId)}
+                                                                                >
+                                                                                    <UserMinus className="h-3 w-3"/>
+                                                                                </Button>
+                                                                            }
+                                                                            onConfirm={async () => {
+                                                                                try {
+                                                                                    await kickMember(g.id, m.userId);
+                                                                                } catch {
+                                                                                    setError(t("failedToKick"));
+                                                                                }
+                                                                            }}
                                                                             title={t("kickMember")}
-                                                                            onClick={() => handleKickMember(g.id, m.userId)}
-                                                                        >
-                                                                            <UserMinus className="h-3 w-3"/>
-                                                                        </Button>
+                                                                            description={t("kickConfirm")}
+                                                                            confirmText={t("kickMember")}
+                                                                            cancelText={t("cancel")}
+                                                                            variant="destructive"
+                                                                            icon={<UserMinus className="h-6 w-6"/>}
+                                                                        />
                                                                     </div>
                                                                 )}
                                                             </div>
