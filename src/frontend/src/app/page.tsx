@@ -266,29 +266,28 @@ export default function HomePage() {
                                                 </p>
                                             )}
                                         </div>
-                                        <div 
-                                            className="flex justify-end pt-3 shrink-0"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <ConfirmDialog
-                                                trigger={
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-destructive hover:text-destructive"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-1"/>
-                                                        {t("delete")}
-                                                    </Button>
-                                                }
-                                                onConfirm={() => deleteMutation.mutate(entry.id)}
-                                                title={t("delete")}
-                                                description={t("deleteConfirm")}
-                                                confirmText={t("delete")}
-                                                cancelText={t("cancel")}
-                                                variant="destructive"
-                                                icon={<Trash2 className="h-6 w-6" />}
-                                            />
+                                        <div className="flex justify-end pt-3 shrink-0">
+                                            <div onClick={(e) => e.stopPropagation()}>
+                                                <ConfirmDialog
+                                                    trigger={
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-destructive hover:text-destructive"
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mr-1"/>
+                                                            {t("delete")}
+                                                        </Button>
+                                                    }
+                                                    onConfirm={() => deleteMutation.mutate(entry.id)}
+                                                    title={t("delete")}
+                                                    description={t("deleteConfirm")}
+                                                    confirmText={t("delete")}
+                                                    cancelText={t("cancel")}
+                                                    variant="destructive"
+                                                    icon={<Trash2 className="h-6 w-6" />}
+                                                />
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
