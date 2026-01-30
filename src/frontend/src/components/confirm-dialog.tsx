@@ -9,15 +9,17 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 interface ConfirmDialogOptions {
-  title?: string;
+  title: string;
   description: string;
   confirmText: string;
   cancelText: string;
   variant?: "default" | "destructive";
+  icon?: React.ReactNode;
 }
 
 interface ConfirmDialogContextValue {
@@ -59,6 +61,15 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
       <AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
+            {options?.icon && (
+              <AlertDialogMedia className={
+                options?.variant === "destructive"
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-primary/10 text-primary"
+              }>
+                {options.icon}
+              </AlertDialogMedia>
+            )}
             <AlertDialogTitle>{options?.title}</AlertDialogTitle>
             <AlertDialogDescription>{options?.description}</AlertDialogDescription>
           </AlertDialogHeader>

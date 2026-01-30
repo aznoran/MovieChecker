@@ -88,10 +88,12 @@ export function Header() {
 
   const handleLeaveGroup = async (id: number) => {
     const confirmed = await confirm({
+      title: t("leaveGroup"),
       description: t("leaveGroupConfirm"),
       confirmText: t("leaveGroup"),
       cancelText: t("cancel"),
       variant: "destructive",
+      icon: <DoorOpen className="h-6 w-6" />,
     });
     if (!confirmed) return;
     try {
@@ -103,10 +105,12 @@ export function Header() {
 
   const handleKickMember = async (groupId: number, userId: number) => {
     const confirmed = await confirm({
+      title: t("kickMember"),
       description: t("kickConfirm"),
       confirmText: t("kickMember"),
       cancelText: t("cancel"),
       variant: "destructive",
+      icon: <UserMinus className="h-6 w-6" />,
     });
     if (!confirmed) return;
     try {
@@ -118,10 +122,12 @@ export function Header() {
 
   const handleTransferOwnership = async (groupId: number, newOwnerId: number) => {
     const confirmed = await confirm({
+      title: t("transferOwnership"),
       description: t("transferConfirm"),
       confirmText: t("transferOwnership"),
       cancelText: t("cancel"),
       variant: "destructive",
+      icon: <ShieldCheck className="h-6 w-6" />,
     });
     if (!confirmed) return;
     try {

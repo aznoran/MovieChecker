@@ -275,10 +275,12 @@ export default function HomePage() {
                                                 onClick={async (e) => {
                                                     e.stopPropagation();
                                                     const confirmed = await confirm({
+                                                        title: t("delete"),
                                                         description: t("deleteConfirm"),
                                                         confirmText: t("delete"),
                                                         cancelText: t("cancel"),
                                                         variant: "destructive",
+                                                        icon: <Trash2 className="h-6 w-6" />,
                                                     });
                                                     if (confirmed) {
                                                         deleteMutation.mutate(entry.id);
