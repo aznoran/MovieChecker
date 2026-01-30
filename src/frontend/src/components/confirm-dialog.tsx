@@ -15,8 +15,8 @@ import {
 interface ConfirmDialogOptions {
   title?: string;
   description: string;
-  confirmText?: string;
-  cancelText?: string;
+  confirmText: string;
+  cancelText: string;
   variant?: "default" | "destructive";
 }
 
@@ -43,26 +43,28 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
     resolveCallback?.(true);
     setIsOpen(false);
     setResolveCallback(null);
+    setOptions(null);
   };
 
   const handleCancel = () => {
     resolveCallback?.(false);
     setIsOpen(false);
     setResolveCallback(null);
+    setOptions(null);
   };
 
   return (
     <ConfirmDialogContext.Provider value={{ confirm }}>
       {children}
-      <AlertDialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
+      <AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{options?.title || "Confirm"}</AlertDialogTitle>
+            <AlertDialogTitle>{options?.title}</AlertDialogTitle>
             <AlertDialogDescription>{options?.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCancel}>
-              {options?.cancelText || "Cancel"}
+              {options?.cancelText}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirm}
@@ -72,7 +74,7 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
                   : ""
               }
             >
-              {options?.confirmText || "Continue"}
+              {options?.confirmText}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
