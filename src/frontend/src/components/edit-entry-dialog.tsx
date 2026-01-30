@@ -315,46 +315,54 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     return;
                 }
 
-                // The preview container is h-48 (192px) - we'll use the same aspect ratio
+                // The preview container dimensions (h-48 = 192px)
                 const previewHeight = 192;
-                const previewWidth = previewHeight * (targetWidth / targetHeight); // Keep same aspect as target
+                const previewWidth = previewHeight * (targetWidth / targetHeight); // 128px for 2:3 ratio
                 
-                // Calculate how the image is displayed with object-contain
+                // Calculate how the image is displayed with object-contain in the preview
                 const imageAspect = img.width / img.height;
                 const previewAspect = previewWidth / previewHeight;
                 
-                let displayWidth, displayHeight, offsetX, offsetY;
+                let baseWidth, baseHeight, baseOffsetX, baseOffsetY;
                 if (imageAspect > previewAspect) {
                     // Image is wider - fit to width
-                    displayWidth = previewWidth;
-                    displayHeight = previewWidth / imageAspect;
-                    offsetX = 0;
-                    offsetY = (previewHeight - displayHeight) / 2;
+                    baseWidth = previewWidth;
+                    baseHeight = previewWidth / imageAspect;
+                    baseOffsetX = 0;
+                    baseOffsetY = (previewHeight - baseHeight) / 2;
                 } else {
                     // Image is taller - fit to height
-                    displayHeight = previewHeight;
-                    displayWidth = previewHeight * imageAspect;
-                    offsetX = (previewWidth - displayWidth) / 2;
-                    offsetY = 0;
+                    baseHeight = previewHeight;
+                    baseWidth = previewHeight * imageAspect;
+                    baseOffsetX = (previewWidth - baseWidth) / 2;
+                    baseOffsetY = 0;
                 }
 
-                // Apply zoom
-                displayWidth *= posterZoom;
-                displayHeight *= posterZoom;
-
-                // Apply position offset (drag)
-                offsetX += posterPosition.x;
-                offsetY += posterPosition.y;
-
-                // Calculate what portion of the original image to draw
-                // Map from display coordinates back to source image coordinates
-                const scale = img.width / displayWidth;
+                // CSS transform: scale(posterZoom) translate(posterPosition.x / posterZoom, posterPosition.y / posterZoom)
+                // This means: first scale, then translate by position/zoom
+                // The translate happens in the scaled coordinate space
                 
-                // The visible area in the preview
-                const visibleLeft = -offsetX * scale;
-                const visibleTop = -offsetY * scale;
-                const visibleWidth = previewWidth * scale;
-                const visibleHeight = previewHeight * scale;
+                // After scale, dimensions are:
+                const scaledWidth = baseWidth * posterZoom;
+                const scaledHeight = baseHeight * posterZoom;
+                
+                // After translate (in scaled space):
+                // The image center moves by (posterPosition.x / posterZoom, posterPosition.y / posterZoom) in original space
+                // Or equivalently, by (posterPosition.x, posterPosition.y) in scaled space
+                const finalOffsetX = baseOffsetX * posterZoom + posterPosition.x;
+                const finalOffsetY = baseOffsetY * posterZoom + posterPosition.y;
+
+                // Now calculate what part of the original image is visible in the preview window
+                const scale = img.width / baseWidth; // Original pixels per base display pixel
+                
+                // The preview window shows from 0,0 to previewWidth,previewHeight
+                // After transform, the image top-left is at (finalOffsetX, finalOffsetY)
+                // We want the portion that overlaps [0, previewWidth] x [0, previewHeight]
+                
+                const srcX = (-finalOffsetX / posterZoom) * scale;
+                const srcY = (-finalOffsetY / posterZoom) * scale;
+                const srcWidth = (previewWidth / posterZoom) * scale;
+                const srcHeight = (previewHeight / posterZoom) * scale;
 
                 // Fill background
                 ctx.fillStyle = '#f5f5f5';
@@ -363,7 +371,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 // Draw the cropped portion
                 ctx.drawImage(
                     img,
-                    visibleLeft, visibleTop, visibleWidth, visibleHeight,
+                    srcX, srcY, srcWidth, srcHeight,
                     0, 0, targetWidth, targetHeight
                 );
 
