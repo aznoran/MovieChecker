@@ -95,6 +95,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         getPosterUrl(entry.movie.posterUrl)
     );
     const [posterZoom, setPosterZoom] = useState(1);
+    const [posterPosition, setPosterPosition] = useState({x: 0, y: 0});
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({x: 0, y: 0});
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -188,6 +191,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     useEffect(() => {
         if (open) {
             setPosterZoom(1);
+            setPosterPosition({x: 0, y: 0});
         }
     }, [open, entry.id]);
 
@@ -251,6 +255,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const setImageFile = (file: File) => {
         setPosterFile(file);
         setPosterZoom(1); // Reset zoom when new image is loaded
+        setPosterPosition({x: 0, y: 0}); // Reset position when new image is loaded
         const reader = new FileReader();
         reader.onloadend = () => setPosterPreview(reader.result as string);
         reader.readAsDataURL(file);
@@ -279,6 +284,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         setPosterFile(null);
         setPosterPreview(null);
         setPosterZoom(1); // Reset zoom when poster is removed
+        setPosterPosition({x: 0, y: 0}); // Reset position when poster is removed
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
@@ -365,23 +371,62 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                         </FieldContent>
                         {posterPreview ? (
                             <div className="space-y-3">
-                                <div className="relative w-full h-48 rounded-lg overflow-hidden border bg-muted">
+                                <div 
+                                    className="relative w-full h-48 rounded-lg overflow-hidden border bg-muted cursor-move"
+                                    onMouseDown={(e) => {
+                                        setIsDragging(true);
+                                        setDragStart({
+                                            x: e.clientX - posterPosition.x,
+                                            y: e.clientY - posterPosition.y
+                                        });
+                                    }}
+                                    onMouseMove={(e) => {
+                                        if (isDragging) {
+                                            setPosterPosition({
+                                                x: e.clientX - dragStart.x,
+                                                y: e.clientY - dragStart.y
+                                            });
+                                        }
+                                    }}
+                                    onMouseUp={() => setIsDragging(false)}
+                                    onMouseLeave={() => setIsDragging(false)}
+                                    onTouchStart={(e) => {
+                                        const touch = e.touches[0];
+                                        setIsDragging(true);
+                                        setDragStart({
+                                            x: touch.clientX - posterPosition.x,
+                                            y: touch.clientY - posterPosition.y
+                                        });
+                                    }}
+                                    onTouchMove={(e) => {
+                                        if (isDragging && e.touches[0]) {
+                                            const touch = e.touches[0];
+                                            setPosterPosition({
+                                                x: touch.clientX - dragStart.x,
+                                                y: touch.clientY - dragStart.y
+                                            });
+                                        }
+                                    }}
+                                    onTouchEnd={() => setIsDragging(false)}
+                                >
                                     <img
                                         src={posterPreview}
                                         alt="Poster preview"
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover pointer-events-none select-none"
                                         style={{
-                                            transform: `scale(${posterZoom})`,
+                                            transform: `scale(${posterZoom}) translate(${posterPosition.x / posterZoom}px, ${posterPosition.y / posterZoom}px)`,
                                             transformOrigin: 'center center',
                                         }}
+                                        draggable={false}
                                     />
-                                    <div className="absolute top-2 right-2 flex gap-1">
+                                    <div className="absolute top-2 right-2 flex gap-1 z-10">
                                         <Button
                                             type="button"
                                             variant="secondary"
                                             size="icon"
                                             className="h-7 w-7"
                                             onClick={() => fileInputRef.current?.click()}
+                                            onMouseDown={(e) => e.stopPropagation()}
                                         >
                                             <Pencil className="h-3.5 w-3.5"/>
                                         </Button>
@@ -391,6 +436,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                             size="icon"
                                             className="h-7 w-7"
                                             onClick={handlePasteFromClipboard}
+                                            onMouseDown={(e) => e.stopPropagation()}
                                         >
                                             <ClipboardPaste className="h-3.5 w-3.5"/>
                                         </Button>
@@ -400,6 +446,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                             size="icon"
                                             className="h-7 w-7"
                                             onClick={removePoster}
+                                            onMouseDown={(e) => e.stopPropagation()}
                                         >
                                             <X className="h-4 w-4"/>
                                         </Button>
@@ -421,6 +468,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         {Math.round(posterZoom * 100)}%
                                     </span>
                                 </div>
+                                <p className="text-xs text-muted-foreground text-center">
+                                    Drag to reposition • Scroll or use slider to zoom
+                                </p>
                             </div>
                         ) : (
                             <div className="flex gap-2">
