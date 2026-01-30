@@ -149,26 +149,38 @@ export function ImageEditor({
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        // Calculate the displayed image dimensions
+        // Calculate the scale factor for the displayed image
         const scale = zoom / 100;
+        
+        // The displayed image dimensions (how big the image appears)
         const displayedWidth = image.naturalWidth * scale;
         const displayedHeight = image.naturalHeight * scale;
 
-        // Calculate the image position relative to the container center
-        // The image is centered in the container, then offset by position
-        const imageX = (containerWidth - displayedWidth) / 2 + position.x;
-        const imageY = (containerHeight - displayedHeight) / 2 + position.y;
+        // The image is centered in the container via CSS:
+        // left: 50%, top: 50% puts the image's top-left at container center
+        // transform: translate(-50% + posX, -50% + posY) moves it by half its displayed size plus user offset
+        // 
+        // So the image's center is at:
+        //   centerX = containerWidth/2 + position.x
+        //   centerY = containerHeight/2 + position.y
+        //
+        // And the image's top-left corner (in container coordinates) is at:
+        //   imageLeft = centerX - displayedWidth/2 = containerWidth/2 + position.x - displayedWidth/2
+        //   imageTop = centerY - displayedHeight/2 = containerHeight/2 + position.y - displayedHeight/2
 
-        // Calculate what portion of the source image is visible
-        // We need to map container coordinates to source image coordinates
-        const scaleX = image.naturalWidth / displayedWidth;
-        const scaleY = image.naturalHeight / displayedHeight;
+        const imageLeft = containerWidth / 2 + position.x - displayedWidth / 2;
+        const imageTop = containerHeight / 2 + position.y - displayedHeight / 2;
 
-        // Source rectangle (in original image coordinates)
-        const srcX = -imageX * scaleX;
-        const srcY = -imageY * scaleY;
-        const srcWidth = containerWidth * scaleX;
-        const srcHeight = containerHeight * scaleY;
+        // The visible portion of the container (0, 0) to (containerWidth, containerHeight)
+        // maps to these coordinates in the displayed image:
+        //   visibleLeft = 0 - imageLeft = -imageLeft
+        //   visibleTop = 0 - imageTop = -imageTop
+        //
+        // Convert from displayed image coordinates to source image coordinates by dividing by scale
+        const srcX = -imageLeft / scale;
+        const srcY = -imageTop / scale;
+        const srcWidth = containerWidth / scale;
+        const srcHeight = containerHeight / scale;
 
         // Draw the visible portion of the image onto the canvas
         ctx.drawImage(
