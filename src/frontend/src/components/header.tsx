@@ -705,7 +705,7 @@ export function Header() {
 
                                                     {/* Invite code */}
                                                     <div
-                                                        className="flex items-center gap-2 bg-background/60 p-2.5 rounded-lg border border-border/40">
+                                                        className="flex items-center gap-2 bg-background/60 p-2 rounded-lg border border-border/40">
                                                         <code
                                                             className="text-sm font-mono flex-1 font-semibold tracking-wide">
                                                             {g.inviteCode}
@@ -723,8 +723,8 @@ export function Header() {
 
                                                     {/* OTP Management for private groups (Owner/Admin only) */}
                                                     {g.isPrivate && canManage && (
-                                                        <div className="space-y-3">
-                                                            <FieldSeparator className="my-1"/>
+                                                        <div className="space-y-2.5">
+                                                            <FieldSeparator className="my-0.5"/>
                                                             <div className="flex gap-2">
                                                                 <Button
                                                                     variant="outline"
@@ -749,7 +749,7 @@ export function Header() {
                                                             {/* Show generated OTP */}
                                                             {generatedOtps.get(g.id) && (
                                                                 <div
-                                                                    className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 p-4 rounded-xl space-y-3 animate-in slide-in-from-top-2">
+                                                                    className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
                                                                     <div className="flex items-center justify-between">
                                                                         <p className="text-xs font-semibold text-primary/90 uppercase tracking-wide">
                                                                             {t("otpGenerated")}
@@ -769,7 +769,7 @@ export function Header() {
                                                                     />
 
                                                                     <div
-                                                                        className="bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
+                                                                        className="bg-background/80 backdrop-blur-sm p-3 rounded-lg shadow-sm">
                                                                         <code
                                                                             className="text-3xl font-mono font-bold text-primary block text-center tracking-[0.4em] drop-shadow-sm">
                                                                             {generatedOtps.get(g.id)!.code}
@@ -797,7 +797,7 @@ export function Header() {
                                                             {/* Password change form */}
                                                             {changePasswordGroupId === g.id && (
                                                                 <div
-                                                                    className="bg-background/60 border border-border/60 p-4 rounded-xl space-y-3 animate-in slide-in-from-top-2">
+                                                                    className="bg-background/60 border border-border/60 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
                                                                     <Field>
                                                                         <FieldLabel htmlFor={`newPassword-${g.id}`}
                                                                                     className="text-sm font-medium">
@@ -921,12 +921,12 @@ export function Header() {
                                                                                                 try {
                                                                                                     await handleChangeRole(g.id, m.userId, m.role);
                                                                                                 } catch {
-                                                                                                    setError(t(""));
+                                                                                                    setError(t("errorChangingRole"));
                                                                                                 }
                                                                                             }}
-                                                                                            title={t("")}
-                                                                                            description={t("")}
-                                                                                            confirmText={t("")}
+                                                                                            title={t("changeRoleConfirm")}
+                                                                                            description={t("changeRoleDescription")}
+                                                                                            confirmText={t("changeRole")}
                                                                                             cancelText={t("cancel")}
                                                                                             variant="destructive"
                                                                                             icon={<ShieldCheck className="h-6 w-6"/>}
