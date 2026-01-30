@@ -431,7 +431,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                     <img
                                         src={posterPreview}
                                         alt="Poster preview"
-                                        className="w-full h-full object-cover pointer-events-none select-none"
+                                        className="w-full h-full object-contain pointer-events-none select-none"
                                         style={{
                                             transform: `scale(${posterZoom}) translate(${posterPosition.x / posterZoom}px, ${posterPosition.y / posterZoom}px)`,
                                             transformOrigin: 'center center',
@@ -453,7 +453,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                     <ZoomIn className="h-4 w-4 text-muted-foreground"/>
                                     <input
                                         type="range"
-                                        min="1"
+                                        min="0.5"
                                         max="3"
                                         step="0.1"
                                         value={posterZoom}
