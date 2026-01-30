@@ -266,14 +266,16 @@ export default function HomePage() {
                                                 </p>
                                             )}
                                         </div>
-                                        <div className="flex justify-end pt-3 shrink-0">
+                                        <div 
+                                            className="flex justify-end pt-3 shrink-0"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
                                             <ConfirmDialog
                                                 trigger={
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-destructive hover:text-destructive"
-                                                        onClick={(e) => e.stopPropagation()}
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-1"/>
                                                         {t("delete")}
