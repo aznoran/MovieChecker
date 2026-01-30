@@ -383,9 +383,9 @@ export function Header() {
                                     </Button>
                                 </FieldGroup>
                             </div>
-
-                            <FieldSeparator/>
-
+                        </FieldGroup>
+                        <FieldSeparator className="p-6"/>
+                        <FieldGroup className="bg-muted/30 border border-border/50 rounded-xl p-5 gap-5">
                             {/* Join Group Section */}
                             <div className="space-y-4">
                                 <h3 className="text-sm font-semibold text-foreground/90">
@@ -507,7 +507,7 @@ export function Header() {
                                 {error}
                             </div>
                         )}
-
+                        <FieldSeparator className="p-6"/>
                         {/* Group list */}
                         {groups.length > 0 && (
                             <div className="space-y-3">
@@ -522,7 +522,7 @@ export function Header() {
                                         const canManage = isOwner || isAdmin;
 
                                         return (
-                                            <div key={g.id}
+                                            <FieldGroup key={g.id}
                                                  className="bg-muted/30 border border-border/50 rounded-xl p-4 space-y-4 hover:bg-muted/40 transition-colors">
                                                 {/* Group header */}
                                                 <div className="flex items-center justify-between">
@@ -699,7 +699,7 @@ export function Header() {
                                                 <FieldSeparator className="my-1"/>
 
                                                 {/* Members list */}
-                                                <div className="space-y-2">
+                                                <FieldGroup className="space-y-2">
                                                     <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">{t("members")}</p>
                                                     <div className="space-y-1.5">
                                                         {g.members.map((m) => {
@@ -796,11 +796,12 @@ export function Header() {
                                                             </div>
                                                         );
                                                     })}
-                                                </div>
-                                            </div>
-                                        );
+                                                    </div>
+                                                </FieldGroup>
+                                            </FieldGroup>
+                                            );
                                     })}
-                                </div>
+                                </FieldGroup>
                             </div>
                         )}
                     </div>

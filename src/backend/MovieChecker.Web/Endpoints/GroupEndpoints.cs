@@ -242,12 +242,6 @@ public static class GroupEndpoints
         if (member == null)
             return Results.NotFound();
 
-        // Prevent owner from leaving without transferring ownership first
-        if (group.CreatedByUserId == userId)
-        {
-            return Results.BadRequest(new { message = "Owner cannot leave the group. Transfer ownership first." });
-        }
-
         db.GroupMembers.Remove(member);
 
         // If no members left, delete the group
