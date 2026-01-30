@@ -48,7 +48,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
-import { GroupRole, GroupRoleLabels } from "@/types";
+import { GroupRole } from "@/types";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -104,8 +104,8 @@ export function Header() {
       setJoinOtp("");
       setUseOtpMode(false);
       setError("");
-    } catch (err: any) {
-      setError(err?.response?.data?.message || t("invalidCode"));
+    } catch {
+      setError(t("invalidCode"));
     }
   };
 
@@ -309,7 +309,7 @@ export function Header() {
                   <Checkbox
                     id="isPrivate"
                     checked={newGroupIsPrivate}
-                    onCheckedChange={(checked) => setNewGroupIsPrivate(checked as boolean)}
+                    onCheckedChange={(checked: boolean) => setNewGroupIsPrivate(checked)}
                   />
                   <Label
                     htmlFor="isPrivate"
