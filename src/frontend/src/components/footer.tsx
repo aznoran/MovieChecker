@@ -9,7 +9,7 @@ export function Footer() {
 
   return (
     <footer className="border-t bg-background mt-auto">
-      <div className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
+      <div className="container mx-auto mb-4 px-4 py-4 text-center text-sm text-muted-foreground">
         {t("appName")} v{version}
       </div>
     </footer>
