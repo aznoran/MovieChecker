@@ -42,15 +42,18 @@ import {
   UserCog,
   Shield,
   Eye,
+  Key,
+  RefreshCw,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 import { GroupRole, GroupRoleLabels } from "@/types";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 export function Header() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useLocale();
-  const { groups, activeGroupId, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership, updateMemberRole } = useGroup();
+  const { groups, activeGroupId, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership, updateMemberRole, generateOtp, updatePassword } = useGroup();
 
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -58,8 +61,13 @@ export function Header() {
   const [newGroupPassword, setNewGroupPassword] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [joinPassword, setJoinPassword] = useState("");
+  const [joinOtp, setJoinOtp] = useState("");
+  const [useOtpMode, setUseOtpMode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState<{code: string; expiresAt: string} | null>(null);
+  const [changePasswordGroupId, setChangePasswordGroupId] = useState<number | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const links = [
     { href: "/", label: t("navDiary"), icon: Clapperboard },
@@ -73,10 +81,6 @@ export function Header() {
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
-    if (newGroupIsPrivate && !newGroupPassword.trim()) {
-      setError(t("groupPassword") + " " + t("titleRequired"));
-      return;
-    }
     try {
       await createGroup(newGroupName.trim(), newGroupIsPrivate, newGroupPassword || undefined);
       setNewGroupName("");
@@ -91,12 +95,14 @@ export function Header() {
   const handleJoinGroup = async () => {
     if (!joinCode.trim()) return;
     try {
-      await joinGroup(joinCode.trim(), joinPassword || undefined);
+      await joinGroup(joinCode.trim(), joinPassword || undefined, joinOtp || undefined);
       setJoinCode("");
       setJoinPassword("");
+      setJoinOtp("");
+      setUseOtpMode(false);
       setError("");
-    } catch {
-      setError(t("invalidCode"));
+    } catch (err: any) {
+      setError(err?.response?.data?.message || t("invalidCode"));
     }
   };
 
@@ -149,6 +155,26 @@ export function Header() {
       await updateMemberRole(groupId, userId, newRole);
     } catch {
       setError(t("roleUpdateError"));
+    }
+  };
+
+  const handleGenerateOtp = async (groupId: number) => {
+    try {
+      const result = await generateOtp(groupId);
+      setGeneratedOtp(result);
+      setTimeout(() => setGeneratedOtp(null), 30 * 60 * 1000); // Clear after 30 minutes
+    } catch {
+      setError(t("otpGenerateError"));
+    }
+  };
+
+  const handleUpdatePassword = async (groupId: number) => {
+    try {
+      await updatePassword(groupId, newPassword || undefined);
+      setChangePasswordGroupId(null);
+      setNewPassword("");
+    } catch {
+      setError(t("passwordUpdateError"));
     }
   };
 
@@ -275,14 +301,17 @@ export function Header() {
                   </label>
                 </div>
                 {newGroupIsPrivate && (
-                  <Input
-                    type="password"
-                    value={newGroupPassword}
-                    onChange={(e) => setNewGroupPassword(e.target.value)}
-                    placeholder={t("groupPassword")}
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
-                  />
+                  <div className="space-y-1">
+                    <Input
+                      type="password"
+                      value={newGroupPassword}
+                      onChange={(e) => setNewGroupPassword(e.target.value)}
+                      placeholder={t("groupPassword") + " (" + t("optionalPassword").toLowerCase() + ")"}
+                      className="h-8 text-sm"
+                      onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+                    />
+                    <p className="text-xs text-muted-foreground">{t("optionalPassword")}</p>
+                  </div>
                 )}
                 <Button size="sm" className="h-8 w-full" onClick={handleCreateGroup}>
                   <Plus className="h-3.5 w-3.5 mr-1" />
@@ -302,14 +331,58 @@ export function Header() {
                   className="h-8 text-sm font-mono"
                   onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
                 />
-                <Input
-                  type="password"
-                  value={joinPassword}
-                  onChange={(e) => setJoinPassword(e.target.value)}
-                  placeholder={t("enterPassword") + " (" + t("privateGroup").toLowerCase() + ")"}
-                  className="h-8 text-sm"
-                  onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
-                />
+                
+                {/* Toggle between Password and OTP */}
+                <div className="flex gap-2 text-xs">
+                  <Button
+                    variant={!useOtpMode ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 flex-1"
+                    onClick={() => setUseOtpMode(false)}
+                  >
+                    <Lock className="h-3 w-3 mr-1" />
+                    {t("usePassword")}
+                  </Button>
+                  <Button
+                    variant={useOtpMode ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 flex-1"
+                    onClick={() => setUseOtpMode(true)}
+                  >
+                    <Key className="h-3 w-3 mr-1" />
+                    {t("useOtp")}
+                  </Button>
+                </div>
+
+                {!useOtpMode ? (
+                  <Input
+                    type="password"
+                    value={joinPassword}
+                    onChange={(e) => setJoinPassword(e.target.value)}
+                    placeholder={t("enterPassword")}
+                    className="h-8 text-sm"
+                    onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
+                  />
+                ) : (
+                  <div className="space-y-1">
+                    <InputOTP
+                      maxLength={6}
+                      value={joinOtp}
+                      onChange={(value) => setJoinOtp(value)}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                    <p className="text-xs text-muted-foreground">{t("enterOtp")}</p>
+                  </div>
+                )}
+                
                 <Button size="sm" className="h-8 w-full" onClick={handleJoinGroup}>
                   <UserPlus className="h-3.5 w-3.5 mr-1" />
                   {t("joinGroup")}
@@ -373,6 +446,94 @@ export function Header() {
                             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                           </Button>
                         </div>
+
+                        {/* OTP Management for private groups (Owner/Admin only) */}
+                        {g.isPrivate && canManage && (
+                          <div className="space-y-2 pt-2 border-t">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs flex-1"
+                                onClick={() => handleGenerateOtp(g.id)}
+                              >
+                                <Key className="h-3 w-3 mr-1" />
+                                {t("generateOtp")}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs flex-1"
+                                onClick={() => setChangePasswordGroupId(g.id)}
+                              >
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                {t("changePassword")}
+                              </Button>
+                            </div>
+
+                            {/* Show generated OTP */}
+                            {generatedOtp && (
+                              <div className="bg-blue-50 dark:bg-blue-950 p-2 rounded space-y-1">
+                                <p className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                                  {t("otpGenerated")}:
+                                </p>
+                                <code className="text-lg font-mono font-bold text-blue-900 dark:text-blue-100 block text-center tracking-wider">
+                                  {generatedOtp.code}
+                                </code>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 text-center">
+                                  {t("otpExpiresIn")} 30 {t("otpMinutes")}
+                                </p>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-full text-xs"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(generatedOtp.code);
+                                    setCopied(true);
+                                    setTimeout(() => setCopied(false), 2000);
+                                  }}
+                                >
+                                  {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                                  {t("copyCode")}
+                                </Button>
+                              </div>
+                            )}
+
+                            {/* Password change form */}
+                            {changePasswordGroupId === g.id && (
+                              <div className="bg-muted p-2 rounded space-y-2">
+                                <Input
+                                  type="password"
+                                  value={newPassword}
+                                  onChange={(e) => setNewPassword(e.target.value)}
+                                  placeholder={t("newPassword") + " (" + t("optionalPassword").toLowerCase() + ")"}
+                                  className="h-7 text-xs"
+                                />
+                                <p className="text-xs text-muted-foreground">{t("optionalPassword")}</p>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-xs flex-1"
+                                    onClick={() => handleUpdatePassword(g.id)}
+                                  >
+                                    {t("save")}
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs flex-1"
+                                    onClick={() => {
+                                      setChangePasswordGroupId(null);
+                                      setNewPassword("");
+                                    }}
+                                  >
+                                    {t("cancel")}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* Members list */}
                         <div className="space-y-1.5">

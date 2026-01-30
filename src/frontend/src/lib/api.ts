@@ -178,8 +178,8 @@ export const createGroup = async (name: string, isPrivate: boolean = false, pass
   return response.data;
 };
 
-export const joinGroup = async (inviteCode: string, password?: string): Promise<Group> => {
-  const response = await api.post<Group>("/groups/join", { inviteCode, password });
+export const joinGroup = async (inviteCode: string, password?: string, otp?: string): Promise<Group> => {
+  const response = await api.post<Group>("/groups/join", { inviteCode, password, otp });
   return response.data;
 };
 
@@ -197,6 +197,15 @@ export const transferOwnership = async (groupId: number, newOwnerId: number): Pr
 
 export const updateMemberRole = async (groupId: number, userId: number, role: number): Promise<void> => {
   await api.put(`/groups/${groupId}/members/${userId}/role`, { role });
+};
+
+export const generateOtp = async (groupId: number): Promise<{ code: string; expiresAt: string }> => {
+  const response = await api.post(`/groups/${groupId}/generate-otp`);
+  return response.data;
+};
+
+export const updateGroupPassword = async (groupId: number, newPassword?: string): Promise<void> => {
+  await api.put(`/groups/${groupId}/password`, { newPassword });
 };
 
 // Upload
