@@ -10,7 +10,6 @@ interface ImageEditorProps {
     imageSrc: string;
     onSave: (croppedFile: File) => void;
     onCancel: () => void;
-    aspectRatio?: number; // width / height, default is 16/9
 }
 
 interface Position {
@@ -22,7 +21,6 @@ export function ImageEditor({
     imageSrc,
     onSave,
     onCancel,
-    aspectRatio = 16 / 9,
 }: ImageEditorProps) {
     const {t} = useLocale();
     const containerRef = useRef<HTMLDivElement>(null);
@@ -125,9 +123,9 @@ export function ImageEditor({
         const containerWidth = containerRect.width;
         const containerHeight = containerRect.height;
 
-        // Set canvas to the output size (match container aspect ratio)
+        // Set canvas to the output size (use container aspect ratio for consistency)
         const outputWidth = 800;
-        const outputHeight = outputWidth / aspectRatio;
+        const outputHeight = Math.round(outputWidth * containerHeight / containerWidth);
         canvas.width = outputWidth;
         canvas.height = outputHeight;
 
@@ -175,7 +173,7 @@ export function ImageEditor({
                 onSave(file);
             }
         }, "image/png", 0.95);
-    }, [zoom, position, aspectRatio, onSave]);
+    }, [zoom, position, onSave]);
 
     return (
         <div className="flex flex-col gap-3">
@@ -199,14 +197,10 @@ export function ImageEditor({
                     ref={imageRef}
                     src={imageSrc}
                     alt="Edit preview"
-                    className="absolute pointer-events-none"
+                    className="absolute pointer-events-none left-1/2 top-1/2"
                     style={{
-                        transform: `translate(${position.x}px, ${position.y}px) scale(${zoom / 100})`,
+                        transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${zoom / 100})`,
                         transformOrigin: "center center",
-                        left: "50%",
-                        top: "50%",
-                        marginLeft: imageRef.current ? -imageRef.current.naturalWidth / 2 : 0,
-                        marginTop: imageRef.current ? -imageRef.current.naturalHeight / 2 : 0,
                         maxWidth: "none",
                         maxHeight: "none",
                     }}
