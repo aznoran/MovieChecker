@@ -1,3 +1,5 @@
+"use client"
+
 import {useState} from "react";
 import Link from "next/link";
 import {usePathname} from "next/navigation";
@@ -7,13 +9,10 @@ import {useGroup} from "@/context/group-context";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Checkbox} from "@/components/ui/checkbox";
-import {Label} from "@/components/ui/label";
 import {
   Field,
   FieldLabel,
   FieldDescription,
-  FieldError,
-  FieldContent,
   FieldGroup,
   FieldSeparator,
 } from "@/components/ui/field";
@@ -399,8 +398,8 @@ export function Header() {
                                             htmlFor="isPrivate"
                                             className="cursor-pointer flex items-center gap-2 text-sm font-medium"
                                         >
-                                            {newGroupIsPrivate ? <Lock className="h-4 w-4 text-primary"/> :
-                                                <LockOpen className="h-4 w-4 text-muted-foreground"/>}
+                                            {newGroupIsPrivate ? <Lock color="red" className="h-4 w-4 text-primary"/> :
+                                                <LockOpen color="green" className="h-4 w-4 text-muted-foreground"/>}
                                             {newGroupIsPrivate ? t("privateGroup") : t("publicGroup")}
                                         </FieldLabel>
                                     </Field>
@@ -626,12 +625,14 @@ export function Header() {
                                                                 <div
                                                                     className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                                                     <Lock
+                                                                        color="red"
                                                                         className="h-4 w-4 text-primary"/>
                                                                 </div>
                                                             ) : (
                                                                 <div
                                                                     className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
                                                                     <LockOpen
+                                                                        color="green"
                                                                         className="h-4 w-4 text-muted-foreground"/>
                                                                 </div>
                                                             )}

@@ -22,9 +22,9 @@ public static class DependencyInjection
         .AddScoped<ValidationService>();
 
         // Redis
-        var redisConnection = configuration["Redis:ConnectionString"] ?? "localhost:6379";
+        var redisConnection = configuration.GetConnectionString("Redis");
         services.AddSingleton<IConnectionMultiplexer>(sp =>
-            ConnectionMultiplexer.Connect(redisConnection));
+            ConnectionMultiplexer.Connect(redisConnection!));
         services.AddScoped<OtpService>();
 
         // JWT Authentication
