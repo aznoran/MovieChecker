@@ -14,7 +14,6 @@ import {
     getWatchStatusLabels,
     getWatchedByLabels,
 } from "@/lib/i18n/labels";
-import {Navigation} from "@/components/navigation";
 import {AddEntryDialog} from "@/components/add-entry-dialog";
 import {EditEntryDialog} from "@/components/edit-entry-dialog";
 import {Button} from "@/components/ui/button";
@@ -33,6 +32,7 @@ import {
     ImageOff,
     Play,
 } from "lucide-react";
+import {toast} from "sonner";
 
 const statusColors: Record<WatchStatus, string> = {
     [WatchStatus.Planned]: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -67,6 +67,11 @@ export default function HomePage() {
         mutationFn: deleteWatchEntry,
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["watchEntries"]});
+            toast.success(t("deleteSucess"), { position: "top-center"})
+        },
+        onError: () => {
+            queryClient.invalidateQueries({queryKey: ["watchEntries"]});
+            toast.error(t("deleteError"), { position: "top-center"})
         },
     });
 
@@ -79,13 +84,13 @@ export default function HomePage() {
     }
 
     if (!isAuthenticated) {
+        toast.error(t("authError"), { position: "top-center"})
         router.push("/login");
         return null;
     }
 
     return (
         <div className="min-h-screen bg-background">
-            <Navigation/>
             <main className="container mx-auto px-4 py-6">
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-2xl font-bold flex items-center gap-2">

@@ -40,11 +40,11 @@ import {
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 
-export function Navigation() {
+export function Header() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useLocale();
-  const { groups, activeGroupId, activeGroup, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership } = useGroup();
+  const { groups, activeGroupId, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership } = useGroup();
 
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
