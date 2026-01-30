@@ -183,6 +183,40 @@ public static class WatchEntryEndpoints
         db.WatchEntries.Add(entry);
         await db.SaveChangesAsync();
 
+        // If creating in a group, duplicate to user's personal list
+        WatchEntry? personalEntry = null;
+        if (request.GroupId.HasValue)
+        {
+            // Check if user already has this movie in personal list
+            var hasPersonalEntry = await db.WatchEntries.AnyAsync(w =>
+                w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null);
+
+            if (!hasPersonalEntry)
+            {
+                personalEntry = new WatchEntry
+                {
+                    MovieId = request.MovieId,
+                    UserId = userId,
+                    GroupId = null, // Personal entry
+                    Status = request.Status,
+                    WatchedBy = request.WatchedBy,
+                    MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
+                    PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
+                    Emotion = request.Emotion,
+                    Comment = request.Comment,
+                    PrivateComment = request.PrivateComment,
+                    StartedAt = request.StartedAt,
+                    CompletedAt = request.CompletedAt,
+                    CurrentSeason = request.CurrentSeason,
+                    CurrentEpisode = request.CurrentEpisode,
+                    TotalEpisodes = request.TotalEpisodes,
+                    WatchingTime = request.WatchingTime,
+                };
+                db.WatchEntries.Add(personalEntry);
+                await db.SaveChangesAsync();
+            }
+        }
+
         // Add bulk ratings if provided (group mode)
         if (request.Ratings is { Count: > 0 })
         {
@@ -204,6 +238,17 @@ public static class WatchEntryEndpoints
                         UserId = ri.UserId,
                         Rating = Math.Clamp(ri.Rating, 1, 10)
                     });
+                    
+                    // Add rating to personal entry if it exists and rating is for current user
+                    if (personalEntry != null && ri.UserId == userId)
+                    {
+                        db.EntryRatings.Add(new EntryRating
+                        {
+                            WatchEntryId = personalEntry.Id,
+                            UserId = userId,
+                            Rating = Math.Clamp(ri.Rating, 1, 10)
+                        });
+                    }
                 }
             }
 
@@ -218,6 +263,18 @@ public static class WatchEntryEndpoints
                 UserId = userId,
                 Rating = Math.Clamp(request.Rating.Value, 1, 10)
             });
+            
+            // Add rating to personal entry if it exists
+            if (personalEntry != null)
+            {
+                db.EntryRatings.Add(new EntryRating
+                {
+                    WatchEntryId = personalEntry.Id,
+                    UserId = userId,
+                    Rating = Math.Clamp(request.Rating.Value, 1, 10)
+                });
+            }
+            
             await db.SaveChangesAsync();
         }
 
