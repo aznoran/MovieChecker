@@ -259,6 +259,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setComment("");
         setPosterFile(null);
         setPosterPreview(null);
+        setPosterZoom(1); // Reset zoom when form resets
         setError("");
         setCurrentEpisode("");
         setTotalEpisodes("");
@@ -412,6 +413,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                         step="0.1"
                                         value={posterZoom}
                                         onChange={(e) => setPosterZoom(parseFloat(e.target.value))}
+                                        aria-label="Zoom level"
                                         className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
                                     />
                                     <span className="text-sm text-muted-foreground min-w-[3rem] text-right">
