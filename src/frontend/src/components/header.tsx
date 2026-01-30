@@ -39,6 +39,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function Header() {
   const pathname = usePathname();
@@ -173,6 +174,7 @@ export function Header() {
             </Button>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Button
               variant="ghost"
               size="sm"

@@ -152,3 +152,21 @@ export const EmotionEmojis: Record<Emotion, string> = {
   [Emotion.Confused]: "🤔",
   [Emotion.Neutral]: "😐",
 };
+
+export enum NotificationType {
+  GroupInvite = 0,
+  EntryAdded = 1,
+  EntryRated = 2,
+  MemberJoined = 3,
+  System = 4,
+}
+
+export interface Notification {
+  id: number;
+  type: NotificationType;
+  title: string;
+  message: string;
+  isRead: boolean;
+  relatedId?: number;
+  createdAt: string;
+}

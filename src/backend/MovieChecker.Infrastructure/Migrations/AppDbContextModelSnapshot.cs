@@ -178,6 +178,58 @@ namespace MovieChecker.Infrastructure.Migrations
                     b.ToTable("movies", (string)null);
                 });
 
+            modelBuilder.Entity("MovieChecker.Domain.Models.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsRead")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_read");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("message");
+
+                    b.Property<int?>("RelatedId")
+                        .HasColumnType("integer")
+                        .HasColumnName("related_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notifications");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_notifications_user_id_created_at");
+
+                    b.ToTable("notifications", (string)null);
+                });
+
             modelBuilder.Entity("MovieChecker.Domain.Models.PosterImage", b =>
                 {
                     b.Property<int>("Id")
@@ -400,6 +452,18 @@ namespace MovieChecker.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MovieChecker.Domain.Models.Notification", b =>
+                {
+                    b.HasOne("MovieChecker.Domain.Models.User", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notifications_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MovieChecker.Domain.Models.WatchEntry", b =>
                 {
                     b.HasOne("MovieChecker.Domain.Models.Group", "Group")
@@ -442,6 +506,8 @@ namespace MovieChecker.Infrastructure.Migrations
             modelBuilder.Entity("MovieChecker.Domain.Models.User", b =>
                 {
                     b.Navigation("GroupMemberships");
+
+                    b.Navigation("Notifications");
 
                     b.Navigation("Ratings");
 

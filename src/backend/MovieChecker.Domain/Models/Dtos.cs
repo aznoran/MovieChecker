@@ -139,3 +139,22 @@ public record StatsDto(
     Dictionary<string, int> ByEmotion,
     List<MemberRatingDto> MemberRatings
 );
+
+// Notification DTOs
+public record CreateNotificationRequest(
+    int UserId,
+    NotificationType Type,
+    string Title,
+    string Message,
+    int? RelatedId
+);
+
+public record NotificationDto(
+    int Id,
+    NotificationType Type,
+    string Title,
+    string Message,
+    bool IsRead,
+    int? RelatedId,
+    DateTime CreatedAt
+);

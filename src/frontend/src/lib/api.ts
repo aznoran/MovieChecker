@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { AuthResponse, Movie, WatchEntry, Stats, Group } from "@/types";
+import type { AuthResponse, Movie, WatchEntry, Stats, Group, Notification } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -193,6 +193,30 @@ export const kickMember = async (groupId: number, userId: number): Promise<void>
 
 export const transferOwnership = async (groupId: number, newOwnerId: number): Promise<void> => {
   await api.put(`/groups/${groupId}/transfer`, { newOwnerId });
+};
+
+// Notifications
+export const getNotifications = async (limit?: number): Promise<Notification[]> => {
+  const params = limit ? { limit } : {};
+  const response = await api.get<Notification[]>("/notifications", { params });
+  return response.data;
+};
+
+export const getUnreadCount = async (): Promise<number> => {
+  const response = await api.get<{ count: number }>("/notifications/unread-count");
+  return response.data.count;
+};
+
+export const markNotificationAsRead = async (id: number): Promise<void> => {
+  await api.put(`/notifications/${id}/read`);
+};
+
+export const markAllNotificationsAsRead = async (): Promise<void> => {
+  await api.put("/notifications/read-all");
+};
+
+export const deleteNotification = async (id: number): Promise<void> => {
+  await api.delete(`/notifications/${id}`);
 };
 
 // Upload

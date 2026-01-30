@@ -55,6 +55,7 @@ app.MapMovieEndpoints();
 app.MapWatchEntryEndpoints();
 app.MapUploadEndpoints();
 app.MapGroupEndpoints();
+app.MapNotificationEndpoints();
 
 // Health check
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
