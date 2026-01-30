@@ -28,7 +28,7 @@ namespace MovieChecker.Infrastructure.Migrations
                 table: "group_members",
                 type: "integer",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 1);
         }
 
         /// <inheritdoc />

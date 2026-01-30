@@ -36,9 +36,9 @@ public class ValidationService
         {
             errors.Add(new ValidationError("Password", "Password must be at least 8 characters"));
         }
-        else if (password.Length > 128)
+        else if (password.Length > 72)
         {
-            errors.Add(new ValidationError("Password", "Password must not exceed 128 characters"));
+            errors.Add(new ValidationError("Password", "Password must not exceed 72 characters (BCrypt limitation)"));
         }
         else
         {

@@ -95,6 +95,12 @@ public static class GroupEndpoints
     {
         var userId = GetUserId(user);
 
+        // Validate password requirement for private groups
+        if (request.IsPrivate && string.IsNullOrWhiteSpace(request.Password))
+        {
+            return Results.BadRequest(new { message = "Password is required for private groups" });
+        }
+
         var g = new Group
         {
             Name = request.Name,
@@ -203,20 +209,30 @@ public static class GroupEndpoints
     {
         var userId = GetUserId(user);
 
-        var member = await db.GroupMembers
-            .FirstOrDefaultAsync(m => m.GroupId == id && m.UserId == userId);
+        var group = await db.Groups
+            .Include(g => g.Members)
+            .FirstOrDefaultAsync(g => g.Id == id);
 
+        if (group == null)
+            return Results.NotFound();
+
+        var member = group.Members.FirstOrDefault(m => m.UserId == userId);
         if (member == null)
             return Results.NotFound();
+
+        // Prevent owner from leaving without transferring ownership first
+        if (group.CreatedByUserId == userId)
+        {
+            return Results.BadRequest(new { message = "Owner cannot leave the group. Transfer ownership first." });
+        }
 
         db.GroupMembers.Remove(member);
 
         // If no members left, delete the group
-        var remainingMembers = await db.GroupMembers.CountAsync(m => m.GroupId == id && m.UserId != userId);
+        var remainingMembers = group.Members.Count(m => m.UserId != userId);
         if (remainingMembers == 0)
         {
-            var g = await db.Groups.FindAsync(id);
-            if (g != null) db.Groups.Remove(g);
+            db.Groups.Remove(group);
         }
 
         await db.SaveChangesAsync();
@@ -352,8 +368,8 @@ public static class GroupEndpoints
             return Results.BadRequest(new { message = "Cannot change the owner's role. Use transfer ownership instead." });
         }
 
-        // Admins cannot promote to Owner
-        if (currentMember.Role == GroupRole.Admin && request.Role == GroupRole.Owner)
+        // Admins cannot modify other Admins' or Owner's roles
+        if (currentMember.Role == GroupRole.Admin && memberToUpdate.Role >= GroupRole.Admin)
         {
             return Results.Forbid();
         }

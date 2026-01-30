@@ -78,7 +78,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const createMutation = useMutation({
         mutationFn: apiCreateGroup,
         onSuccess: (group) => {
-            toast.error(t("groupCreateSuccess"), { position: "top-center" });
+            toast.success(t("groupCreateSuccess"), { position: "top-center" });
             queryClient.invalidateQueries({queryKey: ["groups"]});
             setActiveGroupId(group.id);
         },
