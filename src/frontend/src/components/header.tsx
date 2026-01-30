@@ -50,6 +50,7 @@ import {
 import type { Locale } from "@/lib/i18n";
 import { GroupRole, GroupRoleLabels } from "@/types";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Header() {
   const pathname = usePathname();
@@ -252,6 +253,7 @@ export function Header() {
             </Button>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="sm"
