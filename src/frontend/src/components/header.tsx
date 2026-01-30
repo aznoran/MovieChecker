@@ -16,6 +16,8 @@ import {
   FieldDescription,
   FieldError,
   FieldContent,
+  FieldGroup,
+  FieldSeparator,
 } from "@/components/ui/field";
 import {
     Select,
@@ -301,184 +303,218 @@ export function Header() {
             </header>
 
             <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
+                        <DialogTitle className="flex items-center gap-2 text-xl">
                             <UsersRound className="h-5 w-5"/>
                             {t("groups")}
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="space-y-6">
-                        {/* Create group */}
-                        <div className="space-y-3">
-                            <p className="text-sm font-semibold">{t("createGroup")}</p>
-                            <div className="space-y-3">
-                                <Field>
-                                    <FieldLabel htmlFor="groupName">
-                                        {t("groupName")}
-                                    </FieldLabel>
-                                    <Input
-                                        id="groupName"
-                                        value={newGroupName}
-                                        onChange={(e) => setNewGroupName(e.target.value)}
-                                        placeholder={t("groupName")}
-                                        className="h-9"
-                                        onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
-                                    />
-                                </Field>
-
-                                <Field orientation="horizontal">
-                                    <Checkbox
-                                        id="isPrivate"
-                                        checked={newGroupIsPrivate}
-                                        onCheckedChange={(checked) => setNewGroupIsPrivate(checked as boolean)}
-                                    />
-                                    <FieldLabel
-                                        htmlFor="isPrivate"
-                                        className="cursor-pointer flex items-center gap-1.5"
-                                    >
-                                        {newGroupIsPrivate ? <Lock className="h-3.5 w-3.5"/> :
-                                            <LockOpen className="h-3.5 w-3.5"/>}
-                                        {newGroupIsPrivate ? t("privateGroup") : t("publicGroup")}
-                                    </FieldLabel>
-                                </Field>
-
-                                {newGroupIsPrivate && (
-                                    <div className="pl-6 border-l-2 border-muted space-y-3">
-                                        <Field>
-                                            <FieldLabel htmlFor="groupPassword">
-                                                {t("groupPassword")}
-                                            </FieldLabel>
-                                            <Input
-                                                id="groupPassword"
-                                                type="password"
-                                                value={newGroupPassword}
-                                                onChange={(e) => setNewGroupPassword(e.target.value)}
-                                                placeholder={t("groupPassword")}
-                                                className="h-9"
-                                                onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
-                                            />
-                                            <FieldDescription>
-                                                {t("optionalPassword")}
-                                            </FieldDescription>
-                                        </Field>
-                                    </div>
-                                )}
-
-                                <Button size="sm" className="w-full h-9" onClick={handleCreateGroup}>
-                                    <Plus className="h-4 w-4 mr-1.5"/>
+                    <div className="space-y-1">
+                        {/* Create and Join Groups - Apple-style card */}
+                        <FieldGroup className="bg-muted/30 border border-border/50 rounded-xl p-5 gap-5">
+                            {/* Create Group Section */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold text-foreground/90">
                                     {t("createGroup")}
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Join group */}
-                        <div className="space-y-3 pt-2 border-t">
-                            <p className="text-sm font-semibold">{t("joinGroup")}</p>
-                            <div className="space-y-3">
-                                <Field>
-                                    <FieldLabel htmlFor="joinCode">
-                                        {t("enterInviteCode")}
-                                    </FieldLabel>
-                                    <Input
-                                        id="joinCode"
-                                        value={joinCode}
-                                        onChange={(e) => setJoinCode(e.target.value)}
-                                        placeholder={t("enterInviteCode")}
-                                        className="h-9 font-mono"
-                                        onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
-                                    />
-                                </Field>
-
-                                {/* Toggle between Password and OTP */}
-                                <Field>
-                                    <FieldLabel>
-                                        {t("usePassword")} / {t("useOtp")}
-                                    </FieldLabel>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant={!useOtpMode ? "default" : "outline"}
-                                            size="sm"
-                                            className="h-9 flex-1"
-                                            onClick={() => setUseOtpMode(false)}
-                                        >
-                                            <Lock className="h-3.5 w-3.5 mr-1.5"/>
-                                            {t("usePassword")}
-                                        </Button>
-                                        <Button
-                                            variant={useOtpMode ? "default" : "outline"}
-                                            size="sm"
-                                            className="h-9 flex-1"
-                                            onClick={() => setUseOtpMode(true)}
-                                        >
-                                            <Key className="h-3.5 w-3.5 mr-1.5"/>
-                                            {t("useOtp")}
-                                        </Button>
-                                    </div>
-                                </Field>
-
-                                {!useOtpMode ? (
+                                </h3>
+                                <FieldGroup className="gap-4">
                                     <Field>
-                                        <FieldLabel htmlFor="joinPassword">
-                                            {t("password")}
+                                        <FieldLabel htmlFor="groupName" className="text-sm font-medium">
+                                            {t("groupName")}
                                         </FieldLabel>
                                         <Input
-                                            id="joinPassword"
-                                            type="password"
-                                            value={joinPassword}
-                                            onChange={(e) => setJoinPassword(e.target.value)}
-                                            placeholder={t("enterPassword")}
-                                            className="h-9"
+                                            id="groupName"
+                                            value={newGroupName}
+                                            onChange={(e) => setNewGroupName(e.target.value)}
+                                            placeholder={t("groupName")}
+                                            className="h-10 bg-background border-border/60 focus-visible:ring-primary/20"
+                                            onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+                                        />
+                                    </Field>
+
+                                    <Field orientation="horizontal" className="items-center py-1">
+                                        <Checkbox
+                                            id="isPrivate"
+                                            checked={newGroupIsPrivate}
+                                            onCheckedChange={(checked) => setNewGroupIsPrivate(checked as boolean)}
+                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                        />
+                                        <FieldLabel
+                                            htmlFor="isPrivate"
+                                            className="cursor-pointer flex items-center gap-2 text-sm font-medium"
+                                        >
+                                            {newGroupIsPrivate ? <Lock className="h-4 w-4 text-primary"/> :
+                                                <LockOpen className="h-4 w-4 text-muted-foreground"/>}
+                                            {newGroupIsPrivate ? t("privateGroup") : t("publicGroup")}
+                                        </FieldLabel>
+                                    </Field>
+
+                                    {newGroupIsPrivate && (
+                                        <div className="pl-5 border-l-2 border-primary/30 space-y-4 animate-in slide-in-from-left-2">
+                                            <Field>
+                                                <FieldLabel htmlFor="groupPassword" className="text-sm font-medium">
+                                                    {t("groupPassword")}
+                                                </FieldLabel>
+                                                <Input
+                                                    id="groupPassword"
+                                                    type="password"
+                                                    value={newGroupPassword}
+                                                    onChange={(e) => setNewGroupPassword(e.target.value)}
+                                                    placeholder={t("groupPassword")}
+                                                    className="h-10 bg-background border-border/60 focus-visible:ring-primary/20"
+                                                    onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+                                                />
+                                                <FieldDescription className="text-xs">
+                                                    {t("optionalPassword")}
+                                                </FieldDescription>
+                                            </Field>
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        size="sm"
+                                        className="w-full h-10 bg-primary hover:bg-primary/90 shadow-sm"
+                                        onClick={handleCreateGroup}
+                                    >
+                                        <Plus className="h-4 w-4 mr-2"/>
+                                        {t("createGroup")}
+                                    </Button>
+                                </FieldGroup>
+                            </div>
+
+                            <FieldSeparator/>
+
+                            {/* Join Group Section */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold text-foreground/90">
+                                    {t("joinGroup")}
+                                </h3>
+                                <FieldGroup className="gap-4">
+                                    <Field>
+                                        <FieldLabel htmlFor="joinCode" className="text-sm font-medium">
+                                            {t("enterInviteCode")}
+                                        </FieldLabel>
+                                        <Input
+                                            id="joinCode"
+                                            value={joinCode}
+                                            onChange={(e) => setJoinCode(e.target.value)}
+                                            placeholder={t("enterInviteCode")}
+                                            className="h-10 font-mono bg-background border-border/60 focus-visible:ring-primary/20"
                                             onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
                                         />
                                     </Field>
-                                ) : (
-                                    <Field>
-                                        <FieldLabel>
-                                            {t("enterOtp")}
-                                        </FieldLabel>
-                                        <div className="flex justify-center bg-muted/50 p-3 rounded-lg">
-                                            <InputOTP
-                                                maxLength={6}
-                                                value={joinOtp}
-                                                onChange={(value) => setJoinOtp(value)}
-                                            >
-                                                <InputOTPGroup>
-                                                    <InputOTPSlot index={0}/>
-                                                    <InputOTPSlot index={1}/>
-                                                    <InputOTPSlot index={2}/>
-                                                    <InputOTPSlot index={3}/>
-                                                    <InputOTPSlot index={4}/>
-                                                    <InputOTPSlot index={5}/>
-                                                </InputOTPGroup>
-                                            </InputOTP>
-                                        </div>
-                                        <FieldDescription className="text-center">
-                                            {t("enterOtp")}
-                                        </FieldDescription>
-                                    </Field>
-                                )}
 
-                                <Button size="sm" className="w-full h-9" onClick={handleJoinGroup}>
-                                    <UserPlus className="h-4 w-4 mr-1.5"/>
-                                    {t("joinGroup")}
-                                </Button>
+                                    {/* Authentication Method Toggle */}
+                                    <Field>
+                                        <FieldLabel className="text-sm font-medium mb-2">
+                                            {t("authenticationMethod")}
+                                        </FieldLabel>
+                                        <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
+                                            <Button
+                                                variant={!useOtpMode ? "default" : "ghost"}
+                                                size="sm"
+                                                className={cn(
+                                                    "h-9 flex-1 transition-all",
+                                                    !useOtpMode && "shadow-sm"
+                                                )}
+                                                onClick={() => setUseOtpMode(false)}
+                                            >
+                                                <Lock className="h-3.5 w-3.5 mr-2"/>
+                                                {t("password")}
+                                            </Button>
+                                            <Button
+                                                variant={useOtpMode ? "default" : "ghost"}
+                                                size="sm"
+                                                className={cn(
+                                                    "h-9 flex-1 transition-all",
+                                                    useOtpMode && "shadow-sm"
+                                                )}
+                                                onClick={() => setUseOtpMode(true)}
+                                            >
+                                                <Key className="h-3.5 w-3.5 mr-2"/>
+                                                {t("otp")}
+                                            </Button>
+                                        </div>
+                                    </Field>
+
+                                    {!useOtpMode ? (
+                                        <Field>
+                                            <FieldLabel htmlFor="joinPassword" className="text-sm font-medium">
+                                                {t("password")}
+                                            </FieldLabel>
+                                            <Input
+                                                id="joinPassword"
+                                                type="password"
+                                                value={joinPassword}
+                                                onChange={(e) => setJoinPassword(e.target.value)}
+                                                placeholder={t("enterPassword")}
+                                                className="h-10 bg-background border-border/60 focus-visible:ring-primary/20"
+                                                onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
+                                            />
+                                        </Field>
+                                    ) : (
+                                        <Field>
+                                            <FieldLabel className="text-sm font-medium">
+                                                {t("enterOtp")}
+                                            </FieldLabel>
+                                            <div
+                                                className="flex justify-center bg-gradient-to-br from-muted/50 to-muted/30 p-4 rounded-xl border border-border/40">
+                                                <InputOTP
+                                                    maxLength={6}
+                                                    value={joinOtp}
+                                                    onChange={(value) => setJoinOtp(value)}
+                                                >
+                                                    <InputOTPGroup>
+                                                        <InputOTPSlot index={0}
+                                                                      className="border-border/60 data-[active=true]:border-primary"/>
+                                                        <InputOTPSlot index={1}
+                                                                      className="border-border/60 data-[active=true]:border-primary"/>
+                                                        <InputOTPSlot index={2}
+                                                                      className="border-border/60 data-[active=true]:border-primary"/>
+                                                        <InputOTPSlot index={3}
+                                                                      className="border-border/60 data-[active=true]:border-primary"/>
+                                                        <InputOTPSlot index={4}
+                                                                      className="border-border/60 data-[active=true]:border-primary"/>
+                                                        <InputOTPSlot index={5}
+                                                                      className="border-border/60 data-[active=true]:border-primary"/>
+                                                    </InputOTPGroup>
+                                                </InputOTP>
+                                            </div>
+                                            <FieldDescription className="text-center text-xs">
+                                                {t("enterSixDigitCode")}
+                                            </FieldDescription>
+                                        </Field>
+                                    )}
+
+                                    <Button
+                                        size="sm"
+                                        className="w-full h-10 bg-primary hover:bg-primary/90 shadow-sm"
+                                        onClick={handleJoinGroup}
+                                    >
+                                        <UserPlus className="h-4 w-4 mr-2"/>
+                                        {t("joinGroup")}
+                                    </Button>
+                                </FieldGroup>
                             </div>
-                        </div>
+                        </FieldGroup>
 
                         {error && (
                             <div
-                                className="bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded-md text-sm text-center">
+                                className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-in slide-in-from-top-2">
+                                <div className="h-2 w-2 rounded-full bg-destructive"/>
                                 {error}
                             </div>
                         )}
 
                         {/* Group list */}
                         {groups.length > 0 && (
-                            <div className="space-y-3 pt-4 border-t">
-                                <p className="text-sm font-semibold">{t("groups")}</p>
-                                <div className="space-y-3">
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-semibold text-foreground/90 px-1">
+                                    {t("yourGroups")}
+                                </h3>
+                                <FieldGroup className="gap-3">
                                     {groups.map((g) => {
                                         const isOwner = user?.id === g.createdByUserId;
                                         const currentUserMember = g.members.find(m => m.userId === user?.id);
@@ -486,72 +522,92 @@ export function Header() {
                                         const canManage = isOwner || isAdmin;
 
                                         return (
-                                            <div key={g.id} className="border rounded-lg p-3 space-y-3">
+                                            <div key={g.id}
+                                                 className="bg-muted/30 border border-border/50 rounded-xl p-4 space-y-4 hover:bg-muted/40 transition-colors">
                                                 {/* Group header */}
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        {g.isPrivate ? (
-                                                            <Lock className="h-3.5 w-3.5 text-muted-foreground"/>
-                                                        ) : (
-                                                            <LockOpen className="h-3.5 w-3.5 text-muted-foreground"/>
-                                                        )}
-                                                        {isOwner && <Crown className="h-3.5 w-3.5 text-yellow-400"/>}
-                                                        <span className="font-medium text-sm">{g.name}</span>
-                                                        {g.isPrivate && (
-                                                            <span
-                                                                className="text-[10px] bg-muted px-1.5 py-0.5 rounded">
-                                {t("privateGroup")}
-                              </span>
-                                                        )}
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            {g.isPrivate ? (
+                                                                <div
+                                                                    className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                                                    <Lock
+                                                                        className="h-4 w-4 text-primary"/>
+                                                                </div>
+                                                            ) : (
+                                                                <div
+                                                                    className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                                                                    <LockOpen
+                                                                        className="h-4 w-4 text-muted-foreground"/>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-2">
+                                                                <span
+                                                                    className="font-semibold text-sm">{g.name}</span>
+                                                                {isOwner &&
+                                                                    <Crown
+                                                                        className="h-3.5 w-3.5 text-yellow-500"/>}
+                                                            </div>
+                                                            {g.isPrivate && (
+                                                                <span
+                                                                    className="text-xs text-muted-foreground">
+                                                                    {t("privateGroup")}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-7 text-xs text-destructive hover:text-destructive"
+                                                        className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
                                                         onClick={() => handleLeaveGroup(g.id)}
                                                     >
-                                                        <DoorOpen className="h-3.5 w-3.5 mr-1"/>
-                                                        {t("leaveGroup")}
+                                                        <DoorOpen className="h-3.5 w-3.5 mr-1.5"/>
+                                                        {t("leave")}
                                                     </Button>
                                                 </div>
 
                                                 {/* Invite code */}
-                                                <div className="flex items-center gap-2">
+                                                <div
+                                                    className="flex items-center gap-2 bg-background/60 p-2.5 rounded-lg border border-border/40">
                                                     <code
-                                                        className="text-xs bg-muted px-2 py-1 rounded font-mono flex-1">
+                                                        className="text-sm font-mono flex-1 font-semibold tracking-wide">
                                                         {g.inviteCode}
                                                     </code>
                                                     <Button
-                                                        variant="outline"
+                                                        variant="ghost"
                                                         size="sm"
-                                                        className="h-7 text-xs"
+                                                        className="h-7 w-7 p-0 hover:bg-primary/10"
                                                         onClick={() => handleCopyCode(g.inviteCode)}
                                                     >
-                                                        {copied ? <Check className="h-3 w-3"/> :
-                                                            <Copy className="h-3 w-3"/>}
+                                                        {copied ? <Check className="h-3.5 w-3.5 text-primary"/> :
+                                                            <Copy className="h-3.5 w-3.5"/>}
                                                     </Button>
                                                 </div>
 
                                                 {/* OTP Management for private groups (Owner/Admin only) */}
                                                 {g.isPrivate && canManage && (
-                                                    <div className="space-y-2 pt-2 border-t">
+                                                    <div className="space-y-3">
+                                                        <FieldSeparator className="my-1"/>
                                                         <div className="flex gap-2">
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="h-7 text-xs flex-1"
+                                                                className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
                                                                 onClick={() => handleGenerateOtp(g.id)}
                                                             >
-                                                                <Key className="h-3 w-3 mr-1"/>
+                                                                <Key className="h-3.5 w-3.5 mr-1.5"/>
                                                                 {t("generateOtp")}
                                                             </Button>
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="h-7 text-xs flex-1"
+                                                                className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
                                                                 onClick={() => setChangePasswordGroupId(g.id)}
                                                             >
-                                                                <RefreshCw className="h-3 w-3 mr-1"/>
+                                                                <RefreshCw className="h-3.5 w-3.5 mr-1.5"/>
                                                                 {t("changePassword")}
                                                             </Button>
                                                         </div>
@@ -559,31 +615,35 @@ export function Header() {
                                                         {/* Show generated OTP */}
                                                         {generatedOtps.get(g.id) && (
                                                             <div
-                                                                className="bg-primary/5 border-2 border-primary/20 p-3 rounded-lg space-y-2">
-                                                                <p className="text-xs font-semibold text-primary text-center">
-                                                                    {t("otpGenerated")}:
+                                                                className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 p-4 rounded-xl space-y-3 animate-in slide-in-from-top-2">
+                                                                <p className="text-xs font-semibold text-primary/90 text-center uppercase tracking-wide">
+                                                                    {t("otpGenerated")}
                                                                 </p>
-                                                                <div className="bg-primary/10 p-3 rounded-md">
+                                                                <div
+                                                                    className="bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
                                                                     <code
-                                                                        className="text-2xl font-mono font-bold text-primary block text-center tracking-[0.3em]">
+                                                                        className="text-3xl font-mono font-bold text-primary block text-center tracking-[0.4em] drop-shadow-sm">
                                                                         {generatedOtps.get(g.id)!.code}
                                                                     </code>
                                                                 </div>
-                                                                <p className="text-xs text-primary/80 text-center font-medium">
-                                                                    {t("otpExpiresIn")} 30 {t("otpMinutes")}
+                                                                <p className="text-xs text-primary/70 text-center font-medium">
+                                                                    {t("expiresIn")} <span
+                                                                    className="font-semibold">30 {t("minutes")}</span>
                                                                 </p>
                                                                 <Button
                                                                     variant="outline"
                                                                     size="sm"
-                                                                    className="h-8 w-full text-xs"
+                                                                    className="h-9 w-full text-xs border-primary/30 hover:bg-primary hover:text-primary-foreground transition-colors"
                                                                     onClick={() => {
                                                                         navigator.clipboard.writeText(generatedOtps.get(g.id)!.code);
                                                                         setCopied(true);
                                                                         setTimeout(() => setCopied(false), 2000);
                                                                     }}
                                                                 >
-                                                                    {copied ? <Check className="h-3.5 w-3.5 mr-1.5"/> :
-                                                                        <Copy className="h-3.5 w-3.5 mr-1.5"/>}
+                                                                    {copied ?
+                                                                        <Check
+                                                                            className="h-4 w-4 mr-2"/> :
+                                                                        <Copy className="h-4 w-4 mr-2"/>}
                                                                     {t("copyCode")}
                                                                 </Button>
                                                             </div>
@@ -592,9 +652,10 @@ export function Header() {
                                                         {/* Password change form */}
                                                         {changePasswordGroupId === g.id && (
                                                             <div
-                                                                className="bg-muted/50 border p-3 rounded-lg space-y-3">
+                                                                className="bg-background/60 border border-border/60 p-4 rounded-xl space-y-3 animate-in slide-in-from-top-2">
                                                                 <Field>
-                                                                    <FieldLabel htmlFor={`newPassword-${g.id}`}>
+                                                                    <FieldLabel htmlFor={`newPassword-${g.id}`}
+                                                                                className="text-sm font-medium">
                                                                         {t("newPassword")}
                                                                     </FieldLabel>
                                                                     <Input
@@ -603,24 +664,25 @@ export function Header() {
                                                                         value={newPassword}
                                                                         onChange={(e) => setNewPassword(e.target.value)}
                                                                         placeholder={t("newPassword")}
-                                                                        className="h-8"
+                                                                        className="h-9 bg-background border-border/60"
                                                                     />
-                                                                    <FieldDescription>
+                                                                    <FieldDescription className="text-xs">
                                                                         {t("optionalPassword")}
                                                                     </FieldDescription>
                                                                 </Field>
                                                                 <div className="flex gap-2">
                                                                     <Button
                                                                         size="sm"
-                                                                        className="h-8 flex-1"
+                                                                        className="h-9 flex-1 bg-primary hover:bg-primary/90"
                                                                         onClick={() => handleUpdatePassword(g.id)}
                                                                     >
+                                                                        <Check className="h-3.5 w-3.5 mr-1.5"/>
                                                                         {t("save")}
                                                                     </Button>
                                                                     <Button
                                                                         variant="outline"
                                                                         size="sm"
-                                                                        className="h-8 flex-1"
+                                                                        className="h-9 flex-1 border-border/60"
                                                                         onClick={() => {
                                                                             setChangePasswordGroupId(null);
                                                                             setNewPassword("");
@@ -634,75 +696,86 @@ export function Header() {
                                                     </div>
                                                 )}
 
+                                                <FieldSeparator className="my-1"/>
+
                                                 {/* Members list */}
-                                                <div className="space-y-1.5">
-                                                    <p className="text-xs font-medium text-muted-foreground">{t("members")}</p>
-                                                    {g.members.map((m) => {
-                                                        const isMemberOwner = m.userId === g.createdByUserId;
-                                                        const isSelf = m.userId === user?.id;
+                                                <div className="space-y-2">
+                                                    <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">{t("members")}</p>
+                                                    <div className="space-y-1.5">
+                                                        {g.members.map((m) => {
+                                                            const isMemberOwner = m.userId === g.createdByUserId;
+                                                            const isSelf = m.userId === user?.id;
 
-                                                        // Icon based on role
-                                                        let roleIcon = <User
-                                                            className="h-3 w-3 text-muted-foreground shrink-0"/>;
-                                                        let roleLabel = t("roleMember");
+                                                            // Icon based on role
+                                                            let roleIcon = <User
+                                                                className="h-3.5 w-3.5 text-muted-foreground shrink-0"/>;
+                                                            let roleLabel = t("roleMember");
 
-                                                        if (m.role === GroupRole.Owner) {
-                                                            roleIcon =
-                                                                <Crown className="h-3 w-3 text-yellow-400 shrink-0"/>;
-                                                            roleLabel = t("roleOwner");
-                                                        } else if (m.role === GroupRole.Admin) {
-                                                            roleIcon =
-                                                                <Shield className="h-3 w-3 text-blue-400 shrink-0"/>;
-                                                            roleLabel = t("roleAdmin");
-                                                        } else if (m.role === GroupRole.Viewer) {
-                                                            roleIcon =
-                                                                <Eye className="h-3 w-3 text-gray-400 shrink-0"/>;
-                                                            roleLabel = t("roleViewer");
-                                                        }
+                                                            if (m.role === GroupRole.Owner) {
+                                                                roleIcon =
+                                                                    <Crown
+                                                                        className="h-4 w-4 text-yellow-500 shrink-0"/>;
+                                                                roleLabel = t("roleOwner");
+                                                            } else if (m.role === GroupRole.Admin) {
+                                                                roleIcon =
+                                                                    <Shield
+                                                                        className="h-4 w-4 text-blue-500 shrink-0"/>;
+                                                                roleLabel = t("roleAdmin");
+                                                            } else if (m.role === GroupRole.Viewer) {
+                                                                roleIcon =
+                                                                    <Eye className="h-4 w-4 text-gray-500 shrink-0"/>;
+                                                                roleLabel = t("roleViewer");
+                                                            }
 
-                                                        return (
-                                                            <div
-                                                                key={m.userId}
-                                                                className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/50"
-                                                            >
+                                                            return (
                                                                 <div
-                                                                    className="flex items-center gap-2 text-sm min-w-0">
-                                                                    {roleIcon}
-                                                                    <span className="truncate">
-                                    {m.displayName}
-                                                                        {isSelf && (
-                                                                            <span
-                                                                                className="text-muted-foreground ml-1">
-                                        ({t("watchedByMe")})
-                                      </span>
-                                                                        )}
-                                  </span>
-                                                                    <span
-                                                                        className="text-[10px] text-muted-foreground font-medium shrink-0">
-                                    {roleLabel}
-                                  </span>
-                                                                </div>
-
-                                                                {/* Owner/Admin actions on other members */}
-                                                                {canManage && !isSelf && !isMemberOwner && (
+                                                                    key={m.userId}
+                                                                    className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-background/60 border border-border/40 hover:bg-background/80 transition-colors"
+                                                                >
                                                                     <div
-                                                                        className="flex items-center gap-1 shrink-0 ml-2">
-                                                                        {isOwner && (
-                                                                            <>
-                                                                                <Button
-                                                                                    variant="ghost"
-                                                                                    size="sm"
-                                                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-blue-500"
-                                                                                    title={t("changeRole")}
-                                                                                    onClick={() => handleChangeRole(g.id, m.userId, m.role)}
-                                                                                >
-                                                                                    <UserCog className="h-3 w-3"/>
-                                                                                </Button>
-                                                                                <Button
-                                                                                    variant="ghost"
-                                                                                    size="sm"
-                                                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                                                                                    title={t("transferOwnership")}
+                                                                        className="flex items-center gap-2.5 text-sm min-w-0 flex-1">
+                                                                        <div
+                                                                            className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                                            {roleIcon}
+                                                                        </div>
+                                                                        <div className="flex flex-col min-w-0 flex-1">
+                                                                            <span className="truncate font-medium">
+                                                                                {m.displayName}
+                                                                                {isSelf && (
+                                                                                    <span
+                                                                                        className="text-muted-foreground text-xs ml-1.5 font-normal">
+                                                                                        ({t("you")})
+                                                                                    </span>
+                                                                                )}
+                                                                            </span>
+                                                                            <span
+                                                                                className="text-xs text-muted-foreground">
+                                                                                {roleLabel}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Owner/Admin actions on other members */}
+                                                                    {canManage && !isSelf && !isMemberOwner && (
+                                                                        <div
+                                                                            className="flex items-center gap-1 shrink-0 ml-2">
+                                                                            {isOwner && (
+                                                                                <>
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        className="h-7 w-7 p-0 hover:bg-blue-500/10 hover:text-blue-500 rounded-md"
+                                                                                        title={t("changeRole")}
+                                                                                        onClick={() => handleChangeRole(g.id, m.userId, m.role)}
+                                                                                    >
+                                                                                        <UserCog
+                                                                                            className="h-3.5 w-3.5"/>
+                                                                                    </Button>
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary rounded-md"
+                                                                                        title={t("transferOwnership")}
                                                                                     onClick={() => handleTransferOwnership(g.id, m.userId)}
                                                                                 >
                                                                                     <ShieldCheck className="h-3 w-3"/>
