@@ -6,7 +6,7 @@ import {usePathname} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
-import {useConfirmDialog, ConfirmDialog} from "@/components/confirm-dialog";
+import {ConfirmDialog} from "@/components/confirm-dialog";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {
@@ -56,21 +56,6 @@ export function Header() {
         transferOwnership
     } = useGroup();
 
-    const {isOpen: leaveDialogOpen, openDialog: openLeaveDialog, closeDialog: closeLeaveDialog} = useConfirmDialog();
-    const {isOpen: kickDialogOpen, openDialog: openKickDialog, closeDialog: closeKickDialog} = useConfirmDialog();
-    const {
-        isOpen: transferDialogOpen,
-        openDialog: openTransferDialog,
-        closeDialog: closeTransferDialog
-    } = useConfirmDialog();
-
-    const [groupToLeave, setGroupToLeave] = useState<number | null>(null);
-    const [memberToKick, setMemberToKick] = useState<{ groupId: number; userId: number } | null>(null);
-    const [ownershipToTransfer, setOwnershipToTransfer] = useState<{
-        groupId: number;
-        newOwnerId: number
-    } | null>(null);
-
     const [groupDialogOpen, setGroupDialogOpen] = useState(false);
     const [newGroupName, setNewGroupName] = useState("");
     const [joinCode, setJoinCode] = useState("");
@@ -106,51 +91,6 @@ export function Header() {
             setError("");
         } catch {
             setError(t("invalidCode"));
-        }
-    };
-
-    const handleLeaveGroup = (id: number) => {
-        setGroupToLeave(id);
-        openLeaveDialog();
-    };
-
-    const confirmLeaveGroup = async () => {
-        if (groupToLeave === null) return;
-        try {
-            await leaveGroup(groupToLeave);
-            setGroupToLeave(null);
-        } catch {
-            setError(t("failedToAdd"));
-        }
-    };
-
-    const handleKickMember = (groupId: number, userId: number) => {
-        setMemberToKick({groupId, userId});
-        openKickDialog();
-    };
-
-    const confirmKickMember = async () => {
-        if (memberToKick === null) return;
-        try {
-            await kickMember(memberToKick.groupId, memberToKick.userId);
-            setMemberToKick(null);
-        } catch {
-            setError(t("failedToKick"));
-        }
-    };
-
-    const handleTransferOwnership = (groupId: number, newOwnerId: number) => {
-        setOwnershipToTransfer({groupId, newOwnerId});
-        openTransferDialog();
-    };
-
-    const confirmTransferOwnership = async () => {
-        if (ownershipToTransfer === null) return;
-        try {
-            await transferOwnership(ownershipToTransfer.groupId, ownershipToTransfer.newOwnerId);
-            setOwnershipToTransfer(null);
-        } catch {
-            setError(t("failedToTransfer"));
         }
     };
 
@@ -301,15 +241,31 @@ export function Header() {
                                                         {isOwner && <Crown className="h-3.5 w-3.5 text-yellow-400"/>}
                                                         <span className="font-medium text-sm">{g.name}</span>
                                                     </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-7 text-xs text-destructive hover:text-destructive"
-                                                        onClick={() => handleLeaveGroup(g.id)}
-                                                    >
-                                                        <DoorOpen className="h-3.5 w-3.5 mr-1"/>
-                                                        {t("leaveGroup")}
-                                                    </Button>
+                                                    <ConfirmDialog
+                                                        trigger={
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-7 text-xs text-destructive hover:text-destructive"
+                                                            >
+                                                                <DoorOpen className="h-3.5 w-3.5 mr-1"/>
+                                                                {t("leaveGroup")}
+                                                            </Button>
+                                                        }
+                                                        onConfirm={async () => {
+                                                            try {
+                                                                await leaveGroup(g.id);
+                                                            } catch {
+                                                                setError(t("failedToAdd"));
+                                                            }
+                                                        }}
+                                                        title={t("leaveGroup")}
+                                                        description={t("leaveGroupConfirm")}
+                                                        confirmText={t("leaveGroup")}
+                                                        cancelText={t("cancel")}
+                                                        variant="destructive"
+                                                        icon={<DoorOpen className="h-6 w-6" />}
+                                                    />
                                                 </div>
 
                                                 {/* Invite code */}
@@ -370,24 +326,56 @@ export function Header() {
                                                                 {isOwner && !isSelf && (
                                                                     <div
                                                                         className="flex items-center gap-1 shrink-0 ml-2">
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                                                        <ConfirmDialog
+                                                                            trigger={
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                                                                    title={t("transferOwnership")}
+                                                                                >
+                                                                                    <ShieldCheck className="h-3 w-3"/>
+                                                                                </Button>
+                                                                            }
+                                                                            onConfirm={async () => {
+                                                                                try {
+                                                                                    await transferOwnership(g.id, m.userId);
+                                                                                } catch {
+                                                                                    setError(t("failedToTransfer"));
+                                                                                }
+                                                                            }}
                                                                             title={t("transferOwnership")}
-                                                                            onClick={() => handleTransferOwnership(g.id, m.userId)}
-                                                                        >
-                                                                            <ShieldCheck className="h-3 w-3"/>
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                                                            description={t("transferConfirm")}
+                                                                            confirmText={t("transferOwnership")}
+                                                                            cancelText={t("cancel")}
+                                                                            variant="destructive"
+                                                                            icon={<ShieldCheck className="h-6 w-6" />}
+                                                                        />
+                                                                        <ConfirmDialog
+                                                                            trigger={
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                                                                    title={t("kickMember")}
+                                                                                >
+                                                                                    <UserMinus className="h-3 w-3"/>
+                                                                                </Button>
+                                                                            }
+                                                                            onConfirm={async () => {
+                                                                                try {
+                                                                                    await kickMember(g.id, m.userId);
+                                                                                } catch {
+                                                                                    setError(t("failedToKick"));
+                                                                                }
+                                                                            }}
                                                                             title={t("kickMember")}
-                                                                            onClick={() => handleKickMember(g.id, m.userId)}
-                                                                        >
-                                                                            <UserMinus className="h-3 w-3"/>
-                                                                        </Button>
+                                                                            description={t("kickConfirm")}
+                                                                            confirmText={t("kickMember")}
+                                                                            cancelText={t("cancel")}
+                                                                            variant="destructive"
+                                                                            icon={<UserMinus className="h-6 w-6" />}
+                                                                        />
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -403,42 +391,6 @@ export function Header() {
                     </div>
                 </DialogContent>
             </Dialog>
-
-            <ConfirmDialog
-                open={leaveDialogOpen}
-                onOpenChange={closeLeaveDialog}
-                onConfirm={confirmLeaveGroup}
-                title={t("leaveGroup")}
-                description={t("leaveGroupConfirm")}
-                confirmText={t("leaveGroup")}
-                cancelText={t("cancel")}
-                variant="destructive"
-                icon={<DoorOpen className="h-6 w-6"/>}
-            />
-
-            <ConfirmDialog
-                open={kickDialogOpen}
-                onOpenChange={closeKickDialog}
-                onConfirm={confirmKickMember}
-                title={t("kickMember")}
-                description={t("kickConfirm")}
-                confirmText={t("kickMember")}
-                cancelText={t("cancel")}
-                variant="destructive"
-                icon={<UserMinus className="h-6 w-6"/>}
-            />
-
-            <ConfirmDialog
-                open={transferDialogOpen}
-                onOpenChange={closeTransferDialog}
-                onConfirm={confirmTransferOwnership}
-                title={t("transferOwnership")}
-                description={t("transferConfirm")}
-                confirmText={t("transferOwnership")}
-                cancelText={t("cancel")}
-                variant="destructive"
-                icon={<ShieldCheck className="h-6 w-6"/>}
-            />
         </>
     );
 }

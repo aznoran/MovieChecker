@@ -6,7 +6,7 @@ import {useRouter} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
-import {useConfirmDialog, ConfirmDialog} from "@/components/confirm-dialog";
+import {ConfirmDialog} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
 import {WatchStatus, EmotionEmojis} from "@/types";
 import type {WatchEntry} from "@/types";
@@ -48,8 +48,6 @@ export default function HomePage() {
     const {activeGroupId} = useGroup();
     const router = useRouter();
     const queryClient = useQueryClient();
-    const { isOpen: deleteDialogOpen, openDialog: openDeleteDialog, closeDialog: closeDeleteDialog } = useConfirmDialog();
-    const [entryToDelete, setEntryToDelete] = useState<number | null>(null);
 
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
@@ -269,19 +267,26 @@ export default function HomePage() {
                                             )}
                                         </div>
                                         <div className="flex justify-end pt-3 shrink-0">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-destructive hover:text-destructive"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setEntryToDelete(entry.id);
-                                                    openDeleteDialog();
-                                                }}
-                                            >
-                                                <Trash2 className="h-4 w-4 mr-1"/>
-                                                {t("delete")}
-                                            </Button>
+                                            <ConfirmDialog
+                                                trigger={
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive hover:text-destructive"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-1"/>
+                                                        {t("delete")}
+                                                    </Button>
+                                                }
+                                                onConfirm={() => deleteMutation.mutate(entry.id)}
+                                                title={t("delete")}
+                                                description={t("deleteConfirm")}
+                                                confirmText={t("delete")}
+                                                cancelText={t("cancel")}
+                                                variant="destructive"
+                                                icon={<Trash2 className="h-6 w-6" />}
+                                            />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -300,22 +305,6 @@ export default function HomePage() {
                         }}
                     />
                 )}
-                <ConfirmDialog
-                    open={deleteDialogOpen}
-                    onOpenChange={closeDeleteDialog}
-                    onConfirm={() => {
-                        if (entryToDelete !== null) {
-                            deleteMutation.mutate(entryToDelete);
-                            setEntryToDelete(null);
-                        }
-                    }}
-                    title={t("delete")}
-                    description={t("deleteConfirm")}
-                    confirmText={t("delete")}
-                    cancelText={t("cancel")}
-                    variant="destructive"
-                    icon={<Trash2 className="h-6 w-6" />}
-                />
             </main>
         </div>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,11 +11,11 @@ import {
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 interface ConfirmDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  trigger: React.ReactNode;
   onConfirm: () => void;
   title: string;
   description: string;
@@ -26,8 +26,7 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({
-  open,
-  onOpenChange,
+  trigger,
   onConfirm,
   title,
   description,
@@ -36,13 +35,9 @@ export function ConfirmDialog({
   variant = "default",
   icon,
 }: ConfirmDialogProps) {
-  const handleConfirm = () => {
-    onConfirm();
-    onOpenChange(false);
-  };
-
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           {icon && (
@@ -60,11 +55,9 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => onOpenChange(false)}>
-            {cancelText}
-          </AlertDialogCancel>
+          <AlertDialogCancel>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleConfirm}
+            onClick={onConfirm}
             className={
               variant === "destructive"
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -77,17 +70,4 @@ export function ConfirmDialog({
       </AlertDialogContent>
     </AlertDialog>
   );
-}
-
-export function useConfirmDialog() {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const openDialog = () => setIsOpen(true);
-  const closeDialog = () => setIsOpen(false);
-
-  return {
-    isOpen,
-    openDialog,
-    closeDialog,
-  };
 }
