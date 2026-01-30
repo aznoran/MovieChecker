@@ -147,15 +147,15 @@ export default function HomePage() {
                                     onClick={() => setEditEntry(entry)}
                                 >
                                     {posterSrc ? (
-                                        <div className="w-full aspect-[2/3] overflow-hidden bg-muted">
+                                        <div className="w-full h-44 overflow-hidden bg-muted flex items-center justify-center">
                                             <img
                                                 src={posterSrc}
                                                 alt={entry.movie.title}
-                                                className="w-full h-full object-cover"
+                                                className="w-full h-full object-contain"
                                             />
                                         </div>
                                     ) : (
-                                        <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center">
+                                        <div className="w-full h-44 bg-muted flex items-center justify-center">
                                             <ImageOff className="h-10 w-10 text-muted-foreground/40"/>
                                         </div>
                                     )}
