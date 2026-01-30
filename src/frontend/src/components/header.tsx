@@ -264,7 +264,7 @@ export function Header() {
                                                         confirmText={t("leaveGroup")}
                                                         cancelText={t("cancel")}
                                                         variant="destructive"
-                                                        icon={<DoorOpen className="h-6 w-6" />}
+                                                        icon={<DoorOpen className="h-6 w-6"/>}
                                                     />
                                                 </div>
 
@@ -306,19 +306,19 @@ export function Header() {
                                                                             className="h-3 w-3 text-muted-foreground shrink-0"/>
                                                                     )}
                                                                     <span className="truncate">
-                                    {m.displayName}
+                                                                        {m.displayName}
                                                                         {isSelf && (
                                                                             <span
                                                                                 className="text-muted-foreground ml-1">
-                                        ({t("watchedByMe")})
-                                      </span>
+                                                                                ({t("watchedByMe")})
+                                                                            </span>
                                                                         )}
-                                  </span>
+                                                                    </span>
                                                                     {isMemberOwner && (
                                                                         <span
                                                                             className="text-[10px] text-yellow-500 font-medium shrink-0">
-                                      {t("owner")}
-                                    </span>
+                                                                            {t("owner")}
+                                                                        </span>
                                                                     )}
                                                                 </div>
 
@@ -349,7 +349,7 @@ export function Header() {
                                                                             confirmText={t("transferOwnership")}
                                                                             cancelText={t("cancel")}
                                                                             variant="destructive"
-                                                                            icon={<ShieldCheck className="h-6 w-6" />}
+                                                                            icon={<ShieldCheck className="h-6 w-6"/>}
                                                                         />
                                                                         <ConfirmDialog
                                                                             trigger={
@@ -374,7 +374,7 @@ export function Header() {
                                                                             confirmText={t("kickMember")}
                                                                             cancelText={t("cancel")}
                                                                             variant="destructive"
-                                                                            icon={<UserMinus className="h-6 w-6" />}
+                                                                            icon={<UserMinus className="h-6 w-6"/>}
                                                                         />
                                                                     </div>
                                                                 )}
