@@ -32,7 +32,9 @@ export default function RootLayout({
       >
         <Providers>
             <Header />
-            {children}
+            <div className="md:pl-64">
+              {children}
+            </div>
             <Toaster />
         </Providers>
       </body>

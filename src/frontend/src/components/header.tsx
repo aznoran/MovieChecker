@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
@@ -21,10 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import {
   Clapperboard,
-  BarChart3,
   LogOut,
   User,
   Languages,
@@ -39,9 +36,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
+import { Sidebar } from "@/components/sidebar";
 
 export function Header() {
-  const pathname = usePathname();
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useLocale();
   const { groups, activeGroupId, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership } = useGroup();
@@ -51,11 +48,6 @@ export function Header() {
   const [joinCode, setJoinCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-
-  const links = [
-    { href: "/", label: t("navDiary"), icon: Clapperboard },
-    { href: "/stats", label: t("navStats"), icon: BarChart3 },
-  ];
 
   const toggleLocale = () => {
     const next: Locale = locale === "en" ? "ru" : "en";
@@ -122,30 +114,11 @@ export function Header() {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-4">
+            <Sidebar />
             <Link href="/" className="flex items-center gap-2 text-lg font-bold shrink-0">
               <Clapperboard className="h-5 w-5" />
               <span className="hidden sm:inline">{t("appName")}</span>
             </Link>
-            <nav className="flex items-center gap-1">
-              {links.map((link) => {
-                const Icon = link.icon;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                      pathname === link.href
-                        ? "bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </nav>
             <Select
               value={activeGroupId?.toString() ?? "personal"}
               onValueChange={(v) => setActiveGroupId(v === "personal" ? undefined : parseInt(v))}
