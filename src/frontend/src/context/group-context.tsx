@@ -64,20 +64,27 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         }
     }, []);
 
+    // Track previous auth state to detect actual logout (not initial false state)
+    const [wasAuthenticated, setWasAuthenticated] = useState(false);
+
     // Reset on logout: clear active group and all cached query data
     useEffect(() => {
-        if (!isAuthenticated) {
+        if (isAuthenticated) {
+            setWasAuthenticated(true);
+        } else if (wasAuthenticated) {
+            // Only clear when transitioning from authenticated to not authenticated (actual logout)
             setActiveGroupId(undefined);
             queryClient.clear();
+            setWasAuthenticated(false);
         }
-    }, [isAuthenticated, setActiveGroupId, queryClient]);
+    }, [isAuthenticated, wasAuthenticated, setActiveGroupId, queryClient]);
 
     // If activeGroupId is set but not in groups list, reset to personal
     useEffect(() => {
-        if (!isLoading && activeGroupId !== undefined && !groups.find((g) => g.id === activeGroupId)) {
+        if (isAuthenticated && !isLoading && activeGroupId !== undefined && !groups.find((g) => g.id === activeGroupId)) {
             setActiveGroupId(undefined);
         }
-    }, [groups, activeGroupId, isLoading, setActiveGroupId]);
+    }, [groups, activeGroupId, isLoading, isAuthenticated, setActiveGroupId]);
 
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 

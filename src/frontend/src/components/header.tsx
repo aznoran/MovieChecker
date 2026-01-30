@@ -6,6 +6,13 @@ import {usePathname} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
+import {ConfirmDialog} from "@/components/confirm-dialog";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import {usePathname} from "next/navigation";
+import {useAuth} from "@/context/auth-context";
+import {useLocale} from "@/context/locale-context";
+import {useGroup} from "@/context/group-context";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Checkbox} from "@/components/ui/checkbox";
@@ -45,6 +52,20 @@ import {
     Crown,
     UserMinus,
     ShieldCheck,
+    Clapperboard,
+    BarChart3,
+    LogOut,
+    User,
+    Languages,
+    UsersRound,
+    Plus,
+    UserPlus,
+    Copy,
+    Check,
+    DoorOpen,
+    Crown,
+    UserMinus,
+    ShieldCheck,
     Lock,
     LockOpen,
     UserCog,
@@ -59,6 +80,7 @@ import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {checkInviteCode} from "@/lib/api";
 import {Progress} from "@/components/ui/progress";
+import type {Locale} from "@/lib/i18n";
 
 export function Header() {
     const pathname = usePathname();
@@ -80,6 +102,11 @@ export function Header() {
 
     const [groupDialogOpen, setGroupDialogOpen] = useState(false);
     const [newGroupName, setNewGroupName] = useState("");
+    const [joinCode, setJoinCode] = useState("");
+    const [copied, setCopied] = useState(false);
+    const [error, setError] = useState("");
+    const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+    const [newGroupName, setNewGroupName] = useState("");
     const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
     const [newGroupPassword, setNewGroupPassword] = useState("");
     const [joinCode, setJoinCode] = useState("");
@@ -91,7 +118,7 @@ export function Header() {
     const [generatedOtps, setGeneratedOtps] = useState<Map<number, { code: string; expiresAt: string; remainingSeconds: number }>>(new Map());
     const [changePasswordGroupId, setChangePasswordGroupId] = useState<number | null>(null);
     const [newPassword, setNewPassword] = useState("");
-    
+
     // Two-step join process state
     const [joinStep, setJoinStep] = useState<"code" | "auth">("code");
     const [groupToJoin, setGroupToJoin] = useState<{
@@ -128,12 +155,12 @@ export function Header() {
         try {
             setError("");
             const result = await checkInviteCode(joinCode.trim());
-            
+
             if (!result.exists) {
                 setError(t("invalidCode"));
                 return;
             }
-            
+
             // If group is not private, join directly
             if (!result.isPrivate) {
                 await joinGroup(joinCode.trim());
@@ -142,14 +169,14 @@ export function Header() {
                 setGroupToJoin(null);
                 return;
             }
-            
+
             // Group is private, show auth fields
             setGroupToJoin({
                 name: result.groupName || "",
                 isPrivate: result.isPrivate,
                 hasPassword: result.hasPassword,
             });
-            
+
             // Set default auth mode based on whether password exists
             setUseOtpMode(!result.hasPassword);
             setJoinStep("auth");
@@ -173,7 +200,7 @@ export function Header() {
             setError(err.response?.data?.message || t("invalidCode"));
         }
     };
-    
+
     const handleBackToCode = () => {
         setJoinStep("code");
         setGroupToJoin(null);
@@ -239,7 +266,7 @@ export function Header() {
         try {
             const result = await generateOtp(groupId);
             setGeneratedOtps(prev => new Map(prev).set(groupId, { ...result, remainingSeconds: 10 }));
-            
+
             // Countdown timer - update every second
             const interval = setInterval(() => {
                 setGeneratedOtps(prev => {
@@ -253,7 +280,7 @@ export function Header() {
                     return newMap;
                 });
             }, 1000);
-            
+
             // Clear after 10 seconds
             setTimeout(() => {
                 clearInterval(interval);
@@ -739,13 +766,13 @@ export function Header() {
                                                                         </span>
                                                                     </div>
                                                                 </div>
-                                                                
+
                                                                 {/* Progress bar */}
-                                                                <Progress 
-                                                                    value={(generatedOtps.get(g.id)!.remainingSeconds / 10) * 100} 
+                                                                <Progress
+                                                                    value={(generatedOtps.get(g.id)!.remainingSeconds / 10) * 100}
                                                                     className="h-1.5"
                                                                 />
-                                                                
+
                                                                 <div
                                                                     className="bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
                                                                     <code
