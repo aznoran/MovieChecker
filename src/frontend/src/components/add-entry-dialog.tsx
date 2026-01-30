@@ -194,7 +194,14 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         mutationFn: async () => {
             let posterUrl: string | undefined;
             if (posterFile) {
-                posterUrl = await uploadPoster(posterFile);
+                // Create cropped version of the image based on zoom and position
+                const croppedImage = await createCroppedImage();
+                if (croppedImage) {
+                    posterUrl = await uploadPoster(croppedImage);
+                } else {
+                    // Fallback to original if cropping fails
+                    posterUrl = await uploadPoster(posterFile);
+                }
             }
 
             const movie = await createMovie({
@@ -318,6 +325,90 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setPosterZoom(1); // Reset zoom when poster is removed
         setPosterPosition({x: 0, y: 0}); // Reset position when poster is removed
         if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const createCroppedImage = async (): Promise<File | null> => {
+        if (!posterPreview || !posterFile) return null;
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                // Create canvas with fixed dimensions (e.g., 400x600 for poster aspect ratio)
+                const canvas = document.createElement('canvas');
+                const targetWidth = 400;
+                const targetHeight = 600;
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+                
+                if (!ctx) {
+                    resolve(null);
+                    return;
+                }
+
+                // Calculate the preview container dimensions (matching the dialog preview: 192px height)
+                const previewHeight = 192; // h-48 = 192px
+                const previewWidth = canvas.width; // This would be the dialog width
+                
+                // Calculate actual image dimensions when displayed with object-contain
+                const imageAspect = img.width / img.height;
+                const previewAspect = previewWidth / previewHeight;
+                
+                let displayWidth, displayHeight;
+                if (imageAspect > previewAspect) {
+                    // Image is wider - fit to width
+                    displayWidth = previewWidth;
+                    displayHeight = previewWidth / imageAspect;
+                } else {
+                    // Image is taller - fit to height
+                    displayHeight = previewHeight;
+                    displayWidth = previewHeight * imageAspect;
+                }
+
+                // Apply zoom
+                displayWidth *= posterZoom;
+                displayHeight *= posterZoom;
+
+                // Calculate the source rectangle from the original image
+                // The position is in preview pixels, we need to convert to original image pixels
+                const scaleX = img.width / displayWidth;
+                const scaleY = img.height / displayHeight;
+
+                // Center point in preview space
+                const centerX = previewWidth / 2;
+                const centerY = previewHeight / 2;
+
+                // Calculate what part of the image is visible in the preview after zoom and pan
+                const visibleLeft = (centerX - posterPosition.x) * scaleX;
+                const visibleTop = (centerY - posterPosition.y) * scaleY;
+                const visibleWidth = previewWidth * scaleX;
+                const visibleHeight = previewHeight * scaleY;
+
+                // Draw the visible portion to the canvas, scaled to target size
+                ctx.fillStyle = '#f0f0f0'; // Background color
+                ctx.fillRect(0, 0, targetWidth, targetHeight);
+                
+                ctx.drawImage(
+                    img,
+                    visibleLeft, visibleTop, visibleWidth, visibleHeight, // Source rectangle
+                    0, 0, targetWidth, targetHeight // Destination rectangle
+                );
+
+                // Convert canvas to blob
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const croppedFile = new File([blob], posterFile.name, {
+                            type: posterFile.type || 'image/jpeg'
+                        });
+                        resolve(croppedFile);
+                    } else {
+                        resolve(null);
+                    }
+                }, posterFile.type || 'image/jpeg', 0.95);
+            };
+            
+            img.src = posterPreview;
+        });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
