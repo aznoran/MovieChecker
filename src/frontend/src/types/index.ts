@@ -127,6 +127,7 @@ export const WatchStatusLabels: Record<WatchStatus, string> = {
   [WatchStatus.Watching]: "Watching",
   [WatchStatus.Completed]: "Completed",
   [WatchStatus.Dropped]: "Dropped",
+  [WatchStatus.UnderConsideration]: "Under Consideration",
 };
 
 export const WatchedByLabels: Record<WatchedBy, string> = {
