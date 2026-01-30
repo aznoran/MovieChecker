@@ -2,9 +2,9 @@ import type {TranslationKeys} from "./en";
 
 const ru: Record<TranslationKeys, string> = {
     // Common
-    cancel: "Отмена",
+    cancel: "Отмена", // Used in AlertDialog confirmations
     save: "Сохранить",
-    delete: "Удалить",
+    delete: "Удалить", // Used in AlertDialog confirmations
     add: "Добавить",
     clear: "Очистить",
     loading: "Загрузка...",
@@ -38,7 +38,7 @@ const ru: Record<TranslationKeys, string> = {
     addEntry: "Добавить запись",
     addFirstEntry: "Добавьте первую запись",
     noEntries: "Записей пока нет. Начните отслеживать фильмы!",
-    deleteConfirm: "Удалить эту запись?",
+    deleteConfirm: "Удалить эту запись?", // Used in AlertDialog confirmation
     loadingEntries: "Загрузка записей...",
 
     // Add/Edit Dialog
@@ -160,7 +160,7 @@ const ru: Record<TranslationKeys, string> = {
     copied: "Скопировано!",
     copyCode: "Скопировать код",
     noGroups: "Групп пока нет",
-    leaveGroupConfirm: "Покинуть эту группу?",
+    leaveGroupConfirm: "Покинуть эту группу?", // Used in AlertDialog confirmation
     groupCreated: "Группа создана!",
     joinedGroup: "Вы присоединились!",
     invalidCode: "Неверный код приглашения",
@@ -171,10 +171,10 @@ const ru: Record<TranslationKeys, string> = {
     ratingOf: " оценил(а)",
     memberAvgRatings: "Оценки участников",
     rated: "оценок",
-    kickMember: "Удалить",
-    kickConfirm: "Удалить этого участника из группы?",
-    transferOwnership: "Передать права",
-    transferConfirm: "Передать права владельца этому участнику? Вы потеряете права владельца.",
+    kickMember: "Удалить", // Used in AlertDialog confirmations
+    kickConfirm: "Удалить этого участника из группы?", // Used in AlertDialog confirmation
+    transferOwnership: "Передать права", // Used in AlertDialog confirmations
+    transferConfirm: "Передать права владельца этому участнику? Вы потеряете права владельца.", // Used in AlertDialog confirmation
     owner: "Владелец",
     failedToKick: "Не удалось удалить участника",
     failedToTransfer: "Не удалось передать права",

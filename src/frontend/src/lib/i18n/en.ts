@@ -1,8 +1,8 @@
 const en = {
     // Common
-    cancel: "Cancel",
+    cancel: "Cancel", // Used in AlertDialog confirmations
     save: "Save",
-    delete: "Delete",
+    delete: "Delete", // Used in AlertDialog confirmations
     add: "Add",
     clear: "Clear",
     loading: "Loading...",
@@ -36,7 +36,7 @@ const en = {
     addEntry: "Add Entry",
     addFirstEntry: "Add your first entry",
     noEntries: "No entries yet. Start tracking your movies!",
-    deleteConfirm: "Delete this entry?",
+    deleteConfirm: "Delete this entry?", // Used in AlertDialog confirmation
     loadingEntries: "Loading entries...",
 
     // Add/Edit Dialog
@@ -158,7 +158,7 @@ const en = {
     copied: "Copied!",
     copyCode: "Copy Code",
     noGroups: "No groups yet",
-    leaveGroupConfirm: "Leave this group?",
+    leaveGroupConfirm: "Leave this group?", // Used in AlertDialog confirmation
     groupCreated: "Group created!",
     joinedGroup: "Joined group!",
     invalidCode: "Invalid invite code",
@@ -169,10 +169,10 @@ const en = {
     ratingOf: "'s rating",
     memberAvgRatings: "Member Ratings",
     rated: "rated",
-    kickMember: "Remove",
-    kickConfirm: "Remove this member from the group?",
-    transferOwnership: "Make Owner",
-    transferConfirm: "Transfer group ownership to this member? You will lose owner rights.",
+    kickMember: "Remove", // Used in AlertDialog confirmations
+    kickConfirm: "Remove this member from the group?", // Used in AlertDialog confirmation
+    transferOwnership: "Make Owner", // Used in AlertDialog confirmations
+    transferConfirm: "Transfer group ownership to this member? You will lose owner rights.", // Used in AlertDialog confirmation
     owner: "Owner",
     failedToKick: "Failed to remove member",
     failedToTransfer: "Failed to transfer ownership",
