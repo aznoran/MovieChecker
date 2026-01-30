@@ -1,4 +1,5 @@
 using StackExchange.Redis;
+using System.Security.Cryptography;
 
 namespace MovieChecker.Infrastructure.Services;
 
@@ -36,6 +37,10 @@ public class OtpService
         if (string.IsNullOrWhiteSpace(code) || code.Length != OtpLength)
             return false;
 
+        // Validate that code contains only digits
+        if (!code.All(char.IsDigit))
+            return false;
+
         var key = GetOtpKey(groupId, code);
         var exists = await _redis.KeyExistsAsync(key);
         
@@ -50,8 +55,9 @@ public class OtpService
     }
 
     /// <summary>
-    /// Gets all active OTPs for a group (for admin view)
+    /// Gets all active OTPs for a group (for admin view - unused currently)
     /// </summary>
+    /*
     public async Task<List<(string Code, TimeSpan? TimeLeft)>> GetActiveOtpsAsync(int groupId)
     {
         var pattern = $"otp:group:{groupId}:*";
@@ -69,14 +75,14 @@ public class OtpService
         
         return result;
     }
+    */
 
     private string GenerateRandomCode()
     {
-        var random = new Random();
         var code = "";
         for (int i = 0; i < OtpLength; i++)
         {
-            code += random.Next(0, 10).ToString();
+            code += RandomNumberGenerator.GetInt32(0, 10).ToString();
         }
         return code;
     }

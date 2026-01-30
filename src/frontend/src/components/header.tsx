@@ -65,7 +65,7 @@ export function Header() {
   const [useOtpMode, setUseOtpMode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState<{code: string; expiresAt: string} | null>(null);
+  const [generatedOtps, setGeneratedOtps] = useState<Map<number, {code: string; expiresAt: string}>>(new Map());
   const [changePasswordGroupId, setChangePasswordGroupId] = useState<number | null>(null);
   const [newPassword, setNewPassword] = useState("");
 
@@ -161,8 +161,15 @@ export function Header() {
   const handleGenerateOtp = async (groupId: number) => {
     try {
       const result = await generateOtp(groupId);
-      setGeneratedOtp(result);
-      setTimeout(() => setGeneratedOtp(null), 30 * 60 * 1000); // Clear after 30 minutes
+      setGeneratedOtps(prev => new Map(prev).set(groupId, result));
+      // Clear after 30 minutes
+      setTimeout(() => {
+        setGeneratedOtps(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(groupId);
+          return newMap;
+        });
+      }, 30 * 60 * 1000);
     } catch {
       setError(t("otpGenerateError"));
     }
@@ -472,13 +479,13 @@ export function Header() {
                             </div>
 
                             {/* Show generated OTP */}
-                            {generatedOtp && (
+                            {generatedOtps.get(g.id) && (
                               <div className="bg-blue-50 dark:bg-blue-950 p-2 rounded space-y-1">
                                 <p className="text-xs font-medium text-blue-700 dark:text-blue-300">
                                   {t("otpGenerated")}:
                                 </p>
                                 <code className="text-lg font-mono font-bold text-blue-900 dark:text-blue-100 block text-center tracking-wider">
-                                  {generatedOtp.code}
+                                  {generatedOtps.get(g.id)!.code}
                                 </code>
                                 <p className="text-xs text-blue-600 dark:text-blue-400 text-center">
                                   {t("otpExpiresIn")} 30 {t("otpMinutes")}
@@ -488,7 +495,7 @@ export function Header() {
                                   size="sm"
                                   className="h-6 w-full text-xs"
                                   onClick={() => {
-                                    navigator.clipboard.writeText(generatedOtp.code);
+                                    navigator.clipboard.writeText(generatedOtps.get(g.id)!.code);
                                     setCopied(true);
                                     setTimeout(() => setCopied(false), 2000);
                                   }}
