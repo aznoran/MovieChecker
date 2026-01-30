@@ -11,6 +11,13 @@ import {Input} from "@/components/ui/input";
 import {Checkbox} from "@/components/ui/checkbox";
 import {Label} from "@/components/ui/label";
 import {
+  Field,
+  FieldLabel,
+  FieldDescription,
+  FieldError,
+  FieldContent,
+} from "@/components/ui/field";
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -307,10 +314,10 @@ export function Header() {
                         <div className="space-y-3">
                             <p className="text-sm font-semibold">{t("createGroup")}</p>
                             <div className="space-y-3">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="groupName" className="text-xs text-muted-foreground">
+                                <Field>
+                                    <FieldLabel htmlFor="groupName">
                                         {t("groupName")}
-                                    </Label>
+                                    </FieldLabel>
                                     <Input
                                         id="groupName"
                                         value={newGroupName}
@@ -319,41 +326,43 @@ export function Header() {
                                         className="h-9"
                                         onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
                                     />
-                                </div>
+                                </Field>
 
-                                <div className="flex items-center space-x-2 py-1">
+                                <Field orientation="horizontal">
                                     <Checkbox
                                         id="isPrivate"
                                         checked={newGroupIsPrivate}
-                                        onCheckedChange={(checked: boolean) => setNewGroupIsPrivate(checked)}
+                                        onCheckedChange={(checked) => setNewGroupIsPrivate(checked as boolean)}
                                     />
-                                    <Label
+                                    <FieldLabel
                                         htmlFor="isPrivate"
-                                        className="text-sm font-normal cursor-pointer flex items-center gap-1.5"
+                                        className="cursor-pointer flex items-center gap-1.5"
                                     >
                                         {newGroupIsPrivate ? <Lock className="h-3.5 w-3.5"/> :
                                             <LockOpen className="h-3.5 w-3.5"/>}
                                         {newGroupIsPrivate ? t("privateGroup") : t("publicGroup")}
-                                    </Label>
-                                </div>
+                                    </FieldLabel>
+                                </Field>
 
                                 {newGroupIsPrivate && (
-                                    <div className="space-y-1.5 pl-6 border-l-2 border-muted">
-                                        <Label htmlFor="groupPassword" className="text-xs text-muted-foreground">
-                                            {t("groupPassword")} ({t("optionalPassword").toLowerCase()})
-                                        </Label>
-                                        <Input
-                                            id="groupPassword"
-                                            type="password"
-                                            value={newGroupPassword}
-                                            onChange={(e) => setNewGroupPassword(e.target.value)}
-                                            placeholder={t("groupPassword")}
-                                            className="h-9"
-                                            onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
-                                        />
-                                        <p className="text-xs text-muted-foreground leading-relaxed">
-                                            {t("optionalPassword")}
-                                        </p>
+                                    <div className="pl-6 border-l-2 border-muted space-y-3">
+                                        <Field>
+                                            <FieldLabel htmlFor="groupPassword">
+                                                {t("groupPassword")}
+                                            </FieldLabel>
+                                            <Input
+                                                id="groupPassword"
+                                                type="password"
+                                                value={newGroupPassword}
+                                                onChange={(e) => setNewGroupPassword(e.target.value)}
+                                                placeholder={t("groupPassword")}
+                                                className="h-9"
+                                                onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+                                            />
+                                            <FieldDescription>
+                                                {t("optionalPassword")}
+                                            </FieldDescription>
+                                        </Field>
                                     </div>
                                 )}
 
@@ -368,10 +377,10 @@ export function Header() {
                         <div className="space-y-3 pt-2 border-t">
                             <p className="text-sm font-semibold">{t("joinGroup")}</p>
                             <div className="space-y-3">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="joinCode" className="text-xs text-muted-foreground">
+                                <Field>
+                                    <FieldLabel htmlFor="joinCode">
                                         {t("enterInviteCode")}
-                                    </Label>
+                                    </FieldLabel>
                                     <Input
                                         id="joinCode"
                                         value={joinCode}
@@ -380,13 +389,13 @@ export function Header() {
                                         className="h-9 font-mono"
                                         onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
                                     />
-                                </div>
+                                </Field>
 
                                 {/* Toggle between Password and OTP */}
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs text-muted-foreground">
+                                <Field>
+                                    <FieldLabel>
                                         {t("usePassword")} / {t("useOtp")}
-                                    </Label>
+                                    </FieldLabel>
                                     <div className="flex gap-2">
                                         <Button
                                             variant={!useOtpMode ? "default" : "outline"}
@@ -407,13 +416,13 @@ export function Header() {
                                             {t("useOtp")}
                                         </Button>
                                     </div>
-                                </div>
+                                </Field>
 
                                 {!useOtpMode ? (
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="joinPassword" className="text-xs text-muted-foreground">
+                                    <Field>
+                                        <FieldLabel htmlFor="joinPassword">
                                             {t("password")}
-                                        </Label>
+                                        </FieldLabel>
                                         <Input
                                             id="joinPassword"
                                             type="password"
@@ -423,12 +432,12 @@ export function Header() {
                                             className="h-9"
                                             onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
                                         />
-                                    </div>
+                                    </Field>
                                 ) : (
-                                    <div className="space-y-2">
-                                        <Label className="text-xs text-muted-foreground">
+                                    <Field>
+                                        <FieldLabel>
                                             {t("enterOtp")}
-                                        </Label>
+                                        </FieldLabel>
                                         <div className="flex justify-center bg-muted/50 p-3 rounded-lg">
                                             <InputOTP
                                                 maxLength={6}
@@ -445,10 +454,10 @@ export function Header() {
                                                 </InputOTPGroup>
                                             </InputOTP>
                                         </div>
-                                        <p className="text-xs text-center text-muted-foreground">
+                                        <FieldDescription className="text-center">
                                             {t("enterOtp")}
-                                        </p>
-                                    </div>
+                                        </FieldDescription>
+                                    </Field>
                                 )}
 
                                 <Button size="sm" className="w-full h-9" onClick={handleJoinGroup}>
@@ -584,11 +593,10 @@ export function Header() {
                                                         {changePasswordGroupId === g.id && (
                                                             <div
                                                                 className="bg-muted/50 border p-3 rounded-lg space-y-3">
-                                                                <div className="space-y-1.5">
-                                                                    <Label htmlFor={`newPassword-${g.id}`}
-                                                                           className="text-xs text-muted-foreground">
-                                                                        {t("newPassword")} ({t("optionalPassword").toLowerCase()})
-                                                                    </Label>
+                                                                <Field>
+                                                                    <FieldLabel htmlFor={`newPassword-${g.id}`}>
+                                                                        {t("newPassword")}
+                                                                    </FieldLabel>
                                                                     <Input
                                                                         id={`newPassword-${g.id}`}
                                                                         type="password"
@@ -597,10 +605,10 @@ export function Header() {
                                                                         placeholder={t("newPassword")}
                                                                         className="h-8"
                                                                     />
-                                                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                                                    <FieldDescription>
                                                                         {t("optionalPassword")}
-                                                                    </p>
-                                                                </div>
+                                                                    </FieldDescription>
+                                                                </Field>
                                                                 <div className="flex gap-2">
                                                                     <Button
                                                                         size="sm"
