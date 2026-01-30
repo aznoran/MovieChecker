@@ -245,6 +245,17 @@ public static class GroupEndpoints
         }
 
         await db.SaveChangesAsync();
+
+        // Notify the kicked user
+        await NotificationEndpoints.CreateNotification(
+            db,
+            userId,
+            NotificationType.System,
+            "Removed from group",
+            $"You have been removed from the group \"{group.Name}\"",
+            group.Id
+        );
+
         return Results.NoContent();
     }
 
@@ -272,6 +283,20 @@ public static class GroupEndpoints
         // Action: transfer ownership
         group.CreatedByUserId = request.NewOwnerId;
         await db.SaveChangesAsync();
+
+        // Notify the new owner about admin rights
+        var currentOwner = await db.Users.FindAsync(currentUserId);
+        if (currentOwner != null)
+        {
+            await NotificationEndpoints.CreateNotification(
+                db,
+                request.NewOwnerId,
+                NotificationType.System,
+                "You are now the group owner",
+                $"{currentOwner.DisplayName} transferred ownership of \"{group.Name}\" to you",
+                group.Id
+            );
+        }
 
         // Response: 200 OK with updated group DTO (or change to Results.NoContent() if you prefer 204)
         return Results.Ok(new GroupDto(
