@@ -6,7 +6,7 @@ import {useRouter} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
-import {useConfirm} from "@/components/confirm-dialog";
+import {useConfirmDialog, ConfirmDialog} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
 import {WatchStatus, EmotionEmojis} from "@/types";
 import type {WatchEntry} from "@/types";
@@ -48,7 +48,8 @@ export default function HomePage() {
     const {activeGroupId} = useGroup();
     const router = useRouter();
     const queryClient = useQueryClient();
-    const confirm = useConfirm();
+    const { isOpen: deleteDialogOpen, openDialog: openDeleteDialog, closeDialog: closeDeleteDialog } = useConfirmDialog();
+    const [entryToDelete, setEntryToDelete] = useState<number | null>(null);
 
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
@@ -272,19 +273,10 @@ export default function HomePage() {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="text-destructive hover:text-destructive"
-                                                onClick={async (e) => {
+                                                onClick={(e) => {
                                                     e.stopPropagation();
-                                                    const confirmed = await confirm({
-                                                        title: t("delete"),
-                                                        description: t("deleteConfirm"),
-                                                        confirmText: t("delete"),
-                                                        cancelText: t("cancel"),
-                                                        variant: "destructive",
-                                                        icon: <Trash2 className="h-6 w-6" />,
-                                                    });
-                                                    if (confirmed) {
-                                                        deleteMutation.mutate(entry.id);
-                                                    }
+                                                    setEntryToDelete(entry.id);
+                                                    openDeleteDialog();
                                                 }}
                                             >
                                                 <Trash2 className="h-4 w-4 mr-1"/>
@@ -308,6 +300,22 @@ export default function HomePage() {
                         }}
                     />
                 )}
+                <ConfirmDialog
+                    open={deleteDialogOpen}
+                    onOpenChange={closeDeleteDialog}
+                    onConfirm={() => {
+                        if (entryToDelete !== null) {
+                            deleteMutation.mutate(entryToDelete);
+                            setEntryToDelete(null);
+                        }
+                    }}
+                    title={t("delete")}
+                    description={t("deleteConfirm")}
+                    confirmText={t("delete")}
+                    cancelText={t("cancel")}
+                    variant="destructive"
+                    icon={<Trash2 className="h-6 w-6" />}
+                />
             </main>
         </div>
     );

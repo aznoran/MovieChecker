@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
-import { useConfirm } from "@/components/confirm-dialog";
+import { useConfirmDialog, ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,7 +46,14 @@ export function Header() {
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useLocale();
   const { groups, activeGroupId, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership } = useGroup();
-  const confirm = useConfirm();
+  
+  const { isOpen: leaveDialogOpen, openDialog: openLeaveDialog, closeDialog: closeLeaveDialog } = useConfirmDialog();
+  const { isOpen: kickDialogOpen, openDialog: openKickDialog, closeDialog: closeKickDialog } = useConfirmDialog();
+  const { isOpen: transferDialogOpen, openDialog: openTransferDialog, closeDialog: closeTransferDialog } = useConfirmDialog();
+  
+  const [groupToLeave, setGroupToLeave] = useState<number | null>(null);
+  const [memberToKick, setMemberToKick] = useState<{ groupId: number; userId: number } | null>(null);
+  const [ownershipToTransfer, setOwnershipToTransfer] = useState<{ groupId: number; newOwnerId: number } | null>(null);
 
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -86,52 +93,46 @@ export function Header() {
     }
   };
 
-  const handleLeaveGroup = async (id: number) => {
-    const confirmed = await confirm({
-      title: t("leaveGroup"),
-      description: t("leaveGroupConfirm"),
-      confirmText: t("leaveGroup"),
-      cancelText: t("cancel"),
-      variant: "destructive",
-      icon: <DoorOpen className="h-6 w-6" />,
-    });
-    if (!confirmed) return;
+  const handleLeaveGroup = (id: number) => {
+    setGroupToLeave(id);
+    openLeaveDialog();
+  };
+
+  const confirmLeaveGroup = async () => {
+    if (groupToLeave === null) return;
     try {
-      await leaveGroup(id);
+      await leaveGroup(groupToLeave);
+      setGroupToLeave(null);
     } catch {
       setError(t("failedToAdd"));
     }
   };
 
-  const handleKickMember = async (groupId: number, userId: number) => {
-    const confirmed = await confirm({
-      title: t("kickMember"),
-      description: t("kickConfirm"),
-      confirmText: t("kickMember"),
-      cancelText: t("cancel"),
-      variant: "destructive",
-      icon: <UserMinus className="h-6 w-6" />,
-    });
-    if (!confirmed) return;
+  const handleKickMember = (groupId: number, userId: number) => {
+    setMemberToKick({ groupId, userId });
+    openKickDialog();
+  };
+
+  const confirmKickMember = async () => {
+    if (memberToKick === null) return;
     try {
-      await kickMember(groupId, userId);
+      await kickMember(memberToKick.groupId, memberToKick.userId);
+      setMemberToKick(null);
     } catch {
       setError(t("failedToKick"));
     }
   };
 
-  const handleTransferOwnership = async (groupId: number, newOwnerId: number) => {
-    const confirmed = await confirm({
-      title: t("transferOwnership"),
-      description: t("transferConfirm"),
-      confirmText: t("transferOwnership"),
-      cancelText: t("cancel"),
-      variant: "destructive",
-      icon: <ShieldCheck className="h-6 w-6" />,
-    });
-    if (!confirmed) return;
+  const handleTransferOwnership = (groupId: number, newOwnerId: number) => {
+    setOwnershipToTransfer({ groupId, newOwnerId });
+    openTransferDialog();
+  };
+
+  const confirmTransferOwnership = async () => {
+    if (ownershipToTransfer === null) return;
     try {
-      await transferOwnership(groupId, newOwnerId);
+      await transferOwnership(ownershipToTransfer.groupId, ownershipToTransfer.newOwnerId);
+      setOwnershipToTransfer(null);
     } catch {
       setError(t("failedToTransfer"));
     }
@@ -377,6 +378,42 @@ export function Header() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={leaveDialogOpen}
+        onOpenChange={closeLeaveDialog}
+        onConfirm={confirmLeaveGroup}
+        title={t("leaveGroup")}
+        description={t("leaveGroupConfirm")}
+        confirmText={t("leaveGroup")}
+        cancelText={t("cancel")}
+        variant="destructive"
+        icon={<DoorOpen className="h-6 w-6" />}
+      />
+
+      <ConfirmDialog
+        open={kickDialogOpen}
+        onOpenChange={closeKickDialog}
+        onConfirm={confirmKickMember}
+        title={t("kickMember")}
+        description={t("kickConfirm")}
+        confirmText={t("kickMember")}
+        cancelText={t("cancel")}
+        variant="destructive"
+        icon={<UserMinus className="h-6 w-6" />}
+      />
+
+      <ConfirmDialog
+        open={transferDialogOpen}
+        onOpenChange={closeTransferDialog}
+        onConfirm={confirmTransferOwnership}
+        title={t("transferOwnership")}
+        description={t("transferConfirm")}
+        confirmText={t("transferOwnership")}
+        cancelText={t("cancel")}
+        variant="destructive"
+        icon={<ShieldCheck className="h-6 w-6" />}
+      />
     </>
   );
 }

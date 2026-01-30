@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +13,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface ConfirmDialogOptions {
+interface ConfirmDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
   title: string;
   description: string;
   confirmText: string;
@@ -22,82 +25,69 @@ interface ConfirmDialogOptions {
   icon?: React.ReactNode;
 }
 
-interface ConfirmDialogContextValue {
-  confirm: (options: ConfirmDialogOptions) => Promise<boolean>;
-}
-
-const ConfirmDialogContext = createContext<ConfirmDialogContextValue | null>(null);
-
-export function ConfirmDialogProvider({ children }: { children: React.ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [options, setOptions] = useState<ConfirmDialogOptions | null>(null);
-  const [resolveCallback, setResolveCallback] = useState<((value: boolean) => void) | null>(null);
-
-  const confirm = useCallback((opts: ConfirmDialogOptions): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setOptions(opts);
-      setIsOpen(true);
-      setResolveCallback(() => resolve);
-    });
-  }, []);
-
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  title,
+  description,
+  confirmText,
+  cancelText,
+  variant = "default",
+  icon,
+}: ConfirmDialogProps) {
   const handleConfirm = () => {
-    resolveCallback?.(true);
-    setIsOpen(false);
-    setResolveCallback(null);
-    setOptions(null);
-  };
-
-  const handleCancel = () => {
-    resolveCallback?.(false);
-    setIsOpen(false);
-    setResolveCallback(null);
-    setOptions(null);
+    onConfirm();
+    onOpenChange(false);
   };
 
   return (
-    <ConfirmDialogContext.Provider value={{ confirm }}>
-      {children}
-      <AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            {options?.icon && (
-              <AlertDialogMedia className={
-                options?.variant === "destructive"
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          {icon && (
+            <AlertDialogMedia
+              className={
+                variant === "destructive"
                   ? "bg-destructive/10 text-destructive"
                   : "bg-primary/10 text-primary"
-              }>
-                {options.icon}
-              </AlertDialogMedia>
-            )}
-            <AlertDialogTitle>{options?.title}</AlertDialogTitle>
-            <AlertDialogDescription>{options?.description}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancel}>
-              {options?.cancelText}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirm}
-              className={
-                options?.variant === "destructive"
-                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  : ""
               }
             >
-              {options?.confirmText}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </ConfirmDialogContext.Provider>
+              {icon}
+            </AlertDialogMedia>
+          )}
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => onOpenChange(false)}>
+            {cancelText}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            className={
+              variant === "destructive"
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : ""
+            }
+          >
+            {confirmText}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
-export function useConfirm() {
-  const context = useContext(ConfirmDialogContext);
-  if (!context) {
-    throw new Error("useConfirm must be used within ConfirmDialogProvider");
-  }
-  return context.confirm;
+export function useConfirmDialog() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const openDialog = () => setIsOpen(true);
+  const closeDialog = () => setIsOpen(false);
+
+  return {
+    isOpen,
+    openDialog,
+    closeDialog,
+  };
 }

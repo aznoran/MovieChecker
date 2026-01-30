@@ -5,7 +5,6 @@ import { useState, type ReactNode } from "react";
 import { AuthProvider } from "@/context/auth-context";
 import { LocaleProvider } from "@/context/locale-context";
 import { GroupProvider } from "@/context/group-context";
-import { ConfirmDialogProvider } from "@/components/confirm-dialog";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -24,9 +23,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <LocaleProvider>
         <AuthProvider>
-          <GroupProvider>
-            <ConfirmDialogProvider>{children}</ConfirmDialogProvider>
-          </GroupProvider>
+          <GroupProvider>{children}</GroupProvider>
         </AuthProvider>
       </LocaleProvider>
     </QueryClientProvider>
