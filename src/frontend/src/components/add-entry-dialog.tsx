@@ -333,7 +333,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
-                // Create canvas with fixed dimensions (e.g., 400x600 for poster aspect ratio)
+                // Target dimensions for the cropped poster
                 const canvas = document.createElement('canvas');
                 const targetWidth = 400;
                 const targetHeight = 600;
@@ -346,53 +346,74 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     return;
                 }
 
-                // Calculate the preview container dimensions (matching the dialog preview: 192px height)
-                const previewHeight = 192; // h-48 = 192px
-                const previewWidth = canvas.width; // This would be the dialog width
+                // The preview container is h-48 (192px) - we'll use the same aspect ratio
+                const previewHeight = 192;
+                const previewWidth = previewHeight * (targetWidth / targetHeight); // Keep same aspect as target
                 
-                // Calculate actual image dimensions when displayed with object-contain
+                // Calculate how the image is displayed with object-contain
                 const imageAspect = img.width / img.height;
                 const previewAspect = previewWidth / previewHeight;
                 
-                let displayWidth, displayHeight;
+                let displayWidth, displayHeight, offsetX, offsetY;
                 if (imageAspect > previewAspect) {
                     // Image is wider - fit to width
                     displayWidth = previewWidth;
                     displayHeight = previewWidth / imageAspect;
+                    offsetX = 0;
+                    offsetY = (previewHeight - displayHeight) / 2;
                 } else {
                     // Image is taller - fit to height
                     displayHeight = previewHeight;
                     displayWidth = previewHeight * imageAspect;
+                    offsetX = (previewWidth - displayWidth) / 2;
+                    offsetY = 0;
                 }
 
                 // Apply zoom
                 displayWidth *= posterZoom;
                 displayHeight *= posterZoom;
 
-                // Calculate the source rectangle from the original image
-                // The position is in preview pixels, we need to convert to original image pixels
-                const scaleX = img.width / displayWidth;
-                const scaleY = img.height / displayHeight;
+                // Apply position offset (drag)
+                offsetX += posterPosition.x;
+                offsetY += posterPosition.y;
 
-                // Center point in preview space
-                const centerX = previewWidth / 2;
-                const centerY = previewHeight / 2;
+                // Calculate what portion of the original image to draw
+                // Map from display coordinates back to source image coordinates
+                const scale = img.width / displayWidth;
+                
+                // The visible area in the preview
+                const visibleLeft = -offsetX * scale;
+                const visibleTop = -offsetY * scale;
+                const visibleWidth = previewWidth * scale;
+                const visibleHeight = previewHeight * scale;
 
-                // Calculate what part of the image is visible in the preview after zoom and pan
-                const visibleLeft = (centerX - posterPosition.x) * scaleX;
-                const visibleTop = (centerY - posterPosition.y) * scaleY;
-                const visibleWidth = previewWidth * scaleX;
-                const visibleHeight = previewHeight * scaleY;
-
-                // Draw the visible portion to the canvas, scaled to target size
-                ctx.fillStyle = '#f0f0f0'; // Background color
+                // Fill background
+                ctx.fillStyle = '#f5f5f5';
                 ctx.fillRect(0, 0, targetWidth, targetHeight);
                 
+                // Draw the cropped portion
                 ctx.drawImage(
                     img,
-                    visibleLeft, visibleTop, visibleWidth, visibleHeight, // Source rectangle
-                    0, 0, targetWidth, targetHeight // Destination rectangle
+                    visibleLeft, visibleTop, visibleWidth, visibleHeight,
+                    0, 0, targetWidth, targetHeight
                 );
+
+                // Convert to blob and then to file
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const croppedFile = new File([blob], posterFile.name, {
+                            type: posterFile.type || 'image/jpeg'
+                        });
+                        resolve(croppedFile);
+                    } else {
+                        resolve(null);
+                    }
+                }, posterFile.type || 'image/jpeg', 0.95);
+            };
+            
+            img.src = posterPreview;
+        });
+    };
 
                 // Convert canvas to blob
                 canvas.toBlob((blob) => {
