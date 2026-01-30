@@ -183,6 +183,9 @@ const en = {
     episode: "Episode",
     totalEpisodes: "Total Episodes",
     watchingTime: "Last Watching Time",
+    hours: "Hours",
+    minutes: "Minutes",
+    seconds: "Seconds",
 
     // Field Descriptions
     posterDescription: "Upload a poster or paste from clipboard",

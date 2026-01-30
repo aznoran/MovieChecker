@@ -640,7 +640,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                 setHours(e.target.value);
                                                 handleFieldChange("hours", e.target.value);
                                             }}
-                                            placeholder="Часы"
+                                            placeholder={t("hours")}
                                             className="h-8"
                                             aria-invalid={!!validationErrors.hours}
                                         />
@@ -653,7 +653,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                 setMinutes(e.target.value);
                                                 handleFieldChange("minutes", e.target.value);
                                             }}
-                                            placeholder="Минуты"
+                                            placeholder={t("minutes")}
                                             className="h-8"
                                             aria-invalid={!!validationErrors.minutes}
                                         />
@@ -666,7 +666,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                 setSeconds(e.target.value);
                                                 handleFieldChange("seconds", e.target.value);
                                             }}
-                                            placeholder="Секунды"
+                                            placeholder={t("seconds")}
                                             className="h-8"
                                             aria-invalid={!!validationErrors.seconds}
                                         />
@@ -697,6 +697,126 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                     {validationErrors.myRating && <FieldError>{validationErrors.myRating}</FieldError>}
                                 </Field>
                             )}
+
+                            {/* Episode/Season tracking - only for series/anime/cartoon when watching (personal mode) */}
+                            {status === WatchStatus.Watching && (
+                                entry.movie.type === ContentType.Anime ||
+                                entry.movie.type === ContentType.Series ||
+                                entry.movie.type === ContentType.Cartoon) && (
+                                <FieldSet>
+                                    <FieldLegend variant="label">
+                                        {t("trackingInfo")}
+                                    </FieldLegend>
+                                    <FieldGroup className="gap-4">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Field>
+                                                <FieldLabel htmlFor="currentSeason" className="text-sm">
+                                                    {t("season") || "Сезон"}
+                                                </FieldLabel>
+                                                <Input
+                                                    id="currentSeason"
+                                                    value={currentSeason}
+                                                    onChange={(e) => {
+                                                        setCurrentSeason(e.target.value);
+                                                        handleFieldChange("currentSeason", e.target.value);
+                                                    }}
+                                                    placeholder="1"
+                                                    className="h-8"
+                                                    aria-invalid={!!validationErrors.currentSeason}
+                                                />
+                                                {validationErrors.currentSeason && <FieldError className="text-xs">{validationErrors.currentSeason}</FieldError>}
+                                            </Field>
+                                            <Field>
+                                                <FieldLabel htmlFor="currentEpisode" className="text-sm">
+                                                    {t("episode") || "Серия"}
+                                                </FieldLabel>
+                                                <Input
+                                                    id="currentEpisode"
+                                                    value={currentEpisode}
+                                                    onChange={(e) => {
+                                                        setCurrentEpisode(e.target.value);
+                                                        handleFieldChange("currentEpisode", e.target.value);
+                                                    }}
+                                                    placeholder="1"
+                                                    className="h-8"
+                                                    aria-invalid={!!validationErrors.currentEpisode}
+                                                />
+                                                {validationErrors.currentEpisode && <FieldError className="text-xs">{validationErrors.currentEpisode}</FieldError>}
+                                            </Field>
+                                        </div>
+                                        <Field>
+                                            <FieldLabel htmlFor="totalEpisodes" className="text-sm">
+                                                {t("totalEpisodes") || "Всего серий"}
+                                            </FieldLabel>
+                                            <Input
+                                                id="totalEpisodes"
+                                                value={totalEpisodes}
+                                                onChange={(e) => {
+                                                    setTotalEpisodes(e.target.value);
+                                                    handleFieldChange("totalEpisodes", e.target.value);
+                                                }}
+                                                placeholder="13"
+                                                className="h-8"
+                                                aria-invalid={!!validationErrors.totalEpisodes}
+                                            />
+                                            {validationErrors.totalEpisodes && <FieldError className="text-xs">{validationErrors.totalEpisodes}</FieldError>}
+                                        </Field>
+                                    </FieldGroup>
+                                </FieldSet>
+                            )}
+
+                            {/* Viewing time - available for all content types (personal mode) */}
+                            <Field>
+                                <FieldContent>
+                                    <FieldLabel className="text-sm">
+                                        {t("watchingTime")}
+                                    </FieldLabel>
+                                    <FieldDescription>
+                                        {t("watchingTimeDescription")}
+                                    </FieldDescription>
+                                </FieldContent>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <Input
+                                            value={hours}
+                                            onChange={(e) => {
+                                                setHours(e.target.value);
+                                                handleFieldChange("hours", e.target.value);
+                                            }}
+                                            placeholder={t("hours")}
+                                            className="h-8"
+                                            aria-invalid={!!validationErrors.hours}
+                                        />
+                                        {validationErrors.hours && <FieldError className="text-xs">{validationErrors.hours}</FieldError>}
+                                    </div>
+                                    <div>
+                                        <Input
+                                            value={minutes}
+                                            onChange={(e) => {
+                                                setMinutes(e.target.value);
+                                                handleFieldChange("minutes", e.target.value);
+                                            }}
+                                            placeholder={t("minutes")}
+                                            className="h-8"
+                                            aria-invalid={!!validationErrors.minutes}
+                                        />
+                                        {validationErrors.minutes && <FieldError className="text-xs">{validationErrors.minutes}</FieldError>}
+                                    </div>
+                                    <div>
+                                        <Input
+                                            value={seconds}
+                                            onChange={(e) => {
+                                                setSeconds(e.target.value);
+                                                handleFieldChange("seconds", e.target.value);
+                                            }}
+                                            placeholder={t("seconds")}
+                                            className="h-8"
+                                            aria-invalid={!!validationErrors.seconds}
+                                        />
+                                        {validationErrors.seconds && <FieldError className="text-xs">{validationErrors.seconds}</FieldError>}
+                                    </div>
+                                </div>
+                            </Field>
                         </>
                     )}
 

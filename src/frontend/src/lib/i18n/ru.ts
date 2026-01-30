@@ -185,6 +185,9 @@ const ru: Record<TranslationKeys, string> = {
     episode: "Эпизод",
     totalEpisodes: "Общее кол-во эпизодов",
     watchingTime: "Время последнего просмотра",
+    hours: "Часы",
+    minutes: "Минуты",
+    seconds: "Секунды",
 
     // Field Descriptions
     posterDescription: "Загрузите обложку или вставьте из буфера обмена",
