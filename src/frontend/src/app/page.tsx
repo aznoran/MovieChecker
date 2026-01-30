@@ -3,6 +3,7 @@
 import {useState} from "react";
 import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
 import {useRouter} from "next/navigation";
+import Image from "next/image";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
@@ -147,11 +148,13 @@ export default function HomePage() {
                                     onClick={() => setEditEntry(entry)}
                                 >
                                     {posterSrc ? (
-                                        <div className="w-full h-44 overflow-hidden bg-muted">
-                                            <img
+                                        <div className="w-full h-44 overflow-hidden bg-muted relative">
+                                            <Image
                                                 src={posterSrc}
                                                 alt={entry.movie.title}
-                                                className="w-full h-full object-cover"
+                                                fill
+                                                className="object-cover"
+                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                             />
                                         </div>
                                     ) : (
