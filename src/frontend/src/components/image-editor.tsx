@@ -171,6 +171,8 @@ export function ImageEditor({
             if (blob) {
                 const file = new File([blob], "poster.png", {type: "image/png"});
                 onSave(file);
+            } else {
+                console.error("Failed to create blob from canvas - canvas may be tainted by CORS");
             }
         }, "image/png", 0.95);
     }, [zoom, position, onSave]);
@@ -198,6 +200,7 @@ export function ImageEditor({
                     src={imageSrc}
                     alt="Edit preview"
                     className="absolute pointer-events-none left-1/2 top-1/2"
+                    crossOrigin="anonymous"
                     style={{
                         transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${zoom / 100})`,
                         transformOrigin: "center center",
