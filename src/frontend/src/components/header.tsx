@@ -58,6 +58,7 @@ import {GroupRole} from "@/types";
 import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {checkInviteCode} from "@/lib/api";
+import {Progress} from "@/components/ui/progress";
 
 export function Header() {
     const pathname = usePathname();
@@ -87,7 +88,7 @@ export function Header() {
     const [useOtpMode, setUseOtpMode] = useState(false);
     const [copied, setCopied] = useState(false);
     const [error, setError] = useState("");
-    const [generatedOtps, setGeneratedOtps] = useState<Map<number, { code: string; expiresAt: string }>>(new Map());
+    const [generatedOtps, setGeneratedOtps] = useState<Map<number, { code: string; expiresAt: string; remainingSeconds: number }>>(new Map());
     const [changePasswordGroupId, setChangePasswordGroupId] = useState<number | null>(null);
     const [newPassword, setNewPassword] = useState("");
     
@@ -237,15 +238,31 @@ export function Header() {
     const handleGenerateOtp = async (groupId: number) => {
         try {
             const result = await generateOtp(groupId);
-            setGeneratedOtps(prev => new Map(prev).set(groupId, result));
-            // Clear after 30 minutes
+            setGeneratedOtps(prev => new Map(prev).set(groupId, { ...result, remainingSeconds: 10 }));
+            
+            // Countdown timer - update every second
+            const interval = setInterval(() => {
+                setGeneratedOtps(prev => {
+                    const current = prev.get(groupId);
+                    if (!current || current.remainingSeconds <= 0) {
+                        clearInterval(interval);
+                        return prev;
+                    }
+                    const newMap = new Map(prev);
+                    newMap.set(groupId, { ...current, remainingSeconds: current.remainingSeconds - 1 });
+                    return newMap;
+                });
+            }, 1000);
+            
+            // Clear after 10 seconds
             setTimeout(() => {
+                clearInterval(interval);
                 setGeneratedOtps(prev => {
                     const newMap = new Map(prev);
                     newMap.delete(groupId);
                     return newMap;
                 });
-            }, 30 * 60 * 1000);
+            }, 10 * 1000);
         } catch {
             setError(t("otpGenerateError"));
         }
@@ -711,9 +728,24 @@ export function Header() {
                                                         {generatedOtps.get(g.id) && (
                                                             <div
                                                                 className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 p-4 rounded-xl space-y-3 animate-in slide-in-from-top-2">
-                                                                <p className="text-xs font-semibold text-primary/90 text-center uppercase tracking-wide">
-                                                                    {t("otpGenerated")}
-                                                                </p>
+                                                                <div className="flex items-center justify-between">
+                                                                    <p className="text-xs font-semibold text-primary/90 uppercase tracking-wide">
+                                                                        {t("otpGenerated")}
+                                                                    </p>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse"/>
+                                                                        <span className="text-xs font-bold text-primary tabular-nums">
+                                                                            {generatedOtps.get(g.id)!.remainingSeconds}s
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                {/* Progress bar */}
+                                                                <Progress 
+                                                                    value={(generatedOtps.get(g.id)!.remainingSeconds / 10) * 100} 
+                                                                    className="h-1.5"
+                                                                />
+                                                                
                                                                 <div
                                                                     className="bg-background/80 backdrop-blur-sm p-4 rounded-lg shadow-sm">
                                                                     <code
@@ -721,10 +753,6 @@ export function Header() {
                                                                         {generatedOtps.get(g.id)!.code}
                                                                     </code>
                                                                 </div>
-                                                                <p className="text-xs text-primary/70 text-center font-medium">
-                                                                    {t("expiresIn")} <span
-                                                                    className="font-semibold">30 {t("minutes")}</span>
-                                                                </p>
                                                                 <Button
                                                                     variant="outline"
                                                                     size="sm"
