@@ -16,6 +16,7 @@ public static class GroupEndpoints
         group.MapGet("/", GetMyGroups);
         group.MapGet("/{id:int}", GetGroup);
         group.MapPost("/", CreateGroup);
+        group.MapPost("/check-invite", CheckInviteCode);
         group.MapPost("/join", JoinGroup);
         group.MapDelete("/{id:int}/leave", LeaveGroup);
         group.MapDelete("/{id:int}/members/{userId:int}", DeleteUser);
@@ -132,6 +133,34 @@ public static class GroupEndpoints
             g.IsPrivate,
             [new GroupMemberDto(userId, displayName, GroupRole.Owner, DateTime.UtcNow)],
             g.CreatedAt
+        ));
+    }
+
+    private static async Task<IResult> CheckInviteCode(
+        JoinGroupRequest request,
+        ClaimsPrincipal user,
+        AppDbContext db)
+    {
+        var userId = GetUserId(user);
+
+        // Find the group
+        var group = await db.Groups
+            .FirstOrDefaultAsync(g => 
+                g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
+
+        if (group == null)
+            return Results.Ok(new GroupInfoResponse(false, false, false, null));
+
+        // Check if already a member
+        if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
+            return Results.BadRequest(new { message = "Already a member of this group" });
+
+        // Return group info
+        return Results.Ok(new GroupInfoResponse(
+            true,
+            group.IsPrivate,
+            !string.IsNullOrWhiteSpace(group.PasswordHash),
+            group.Name
         ));
     }
 

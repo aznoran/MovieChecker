@@ -1,5 +1,3 @@
-"use client";
-
 import {useState} from "react";
 import Link from "next/link";
 import {usePathname} from "next/navigation";
@@ -60,6 +58,7 @@ import type {Locale} from "@/lib/i18n";
 import {GroupRole} from "@/types";
 import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
 import {ThemeToggle} from "@/components/theme-toggle";
+import {checkInviteCode} from "@/lib/api";
 
 export function Header() {
     const pathname = usePathname();
@@ -92,6 +91,14 @@ export function Header() {
     const [generatedOtps, setGeneratedOtps] = useState<Map<number, { code: string; expiresAt: string }>>(new Map());
     const [changePasswordGroupId, setChangePasswordGroupId] = useState<number | null>(null);
     const [newPassword, setNewPassword] = useState("");
+    
+    // Two-step join process state
+    const [joinStep, setJoinStep] = useState<"code" | "auth">("code");
+    const [groupToJoin, setGroupToJoin] = useState<{
+        name: string;
+        isPrivate: boolean;
+        hasPassword: boolean;
+    } | null>(null);
 
     const links = [
         {href: "/", label: t("navDiary"), icon: Clapperboard},
@@ -116,6 +123,41 @@ export function Header() {
         }
     };
 
+    const handleCheckInviteCode = async () => {
+        if (!joinCode.trim()) return;
+        try {
+            setError("");
+            const result = await checkInviteCode(joinCode.trim());
+            
+            if (!result.exists) {
+                setError(t("invalidCode"));
+                return;
+            }
+            
+            // If group is not private, join directly
+            if (!result.isPrivate) {
+                await joinGroup(joinCode.trim());
+                setJoinCode("");
+                setJoinStep("code");
+                setGroupToJoin(null);
+                return;
+            }
+            
+            // Group is private, show auth fields
+            setGroupToJoin({
+                name: result.groupName || "",
+                isPrivate: result.isPrivate,
+                hasPassword: result.hasPassword,
+            });
+            
+            // Set default auth mode based on whether password exists
+            setUseOtpMode(!result.hasPassword);
+            setJoinStep("auth");
+        } catch (err: any) {
+            setError(err.response?.data?.message || t("invalidCode"));
+        }
+    };
+
     const handleJoinGroup = async () => {
         if (!joinCode.trim()) return;
         try {
@@ -125,9 +167,20 @@ export function Header() {
             setJoinOtp("");
             setUseOtpMode(false);
             setError("");
-        } catch {
-            setError(t("invalidCode"));
+            setJoinStep("code");
+            setGroupToJoin(null);
+        } catch (err: any) {
+            setError(err.response?.data?.message || t("invalidCode"));
         }
+    };
+    
+    const handleBackToCode = () => {
+        setJoinStep("code");
+        setGroupToJoin(null);
+        setJoinPassword("");
+        setJoinOtp("");
+        setUseOtpMode(false);
+        setError("");
     };
 
     const handleLeaveGroup = async (id: number) => {
@@ -303,7 +356,7 @@ export function Header() {
             </header>
 
             <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
                             <UsersRound className="h-5 w-5"/>
@@ -311,7 +364,8 @@ export function Header() {
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="space-y-1">
+                    <div className="space-y-1 overflow-y-auto pr-2"
+                         style={{maxHeight: "calc(85vh - 120px)"}}>
                         {/* Create and Join Groups - Apple-style card */}
                         <FieldGroup className="bg-muted/30 border border-border/50 rounded-xl p-5 gap-5">
                             {/* Create Group Section */}
@@ -392,110 +446,150 @@ export function Header() {
                                     {t("joinGroup")}
                                 </h3>
                                 <FieldGroup className="gap-4">
-                                    <Field>
-                                        <FieldLabel htmlFor="joinCode" className="text-sm font-medium">
-                                            {t("enterInviteCode")}
-                                        </FieldLabel>
-                                        <Input
-                                            id="joinCode"
-                                            value={joinCode}
-                                            onChange={(e) => setJoinCode(e.target.value)}
-                                            placeholder={t("enterInviteCode")}
-                                            className="h-10 font-mono bg-background border-border/60 focus-visible:ring-primary/20"
-                                            onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
-                                        />
-                                    </Field>
+                                    {joinStep === "code" ? (
+                                        <>
+                                            <Field>
+                                                <FieldLabel htmlFor="joinCode" className="text-sm font-medium">
+                                                    {t("enterInviteCode")}
+                                                </FieldLabel>
+                                                <Input
+                                                    id="joinCode"
+                                                    value={joinCode}
+                                                    onChange={(e) => setJoinCode(e.target.value)}
+                                                    placeholder={t("enterInviteCode")}
+                                                    className="h-10 font-mono bg-background border-border/60 focus-visible:ring-primary/20"
+                                                    onKeyDown={(e) => e.key === "Enter" && handleCheckInviteCode()}
+                                                />
+                                            </Field>
 
-                                    {/* Authentication Method Toggle */}
-                                    <Field>
-                                        <FieldLabel className="text-sm font-medium mb-2">
-                                            {t("authenticationMethod")}
-                                        </FieldLabel>
-                                        <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
                                             <Button
-                                                variant={!useOtpMode ? "default" : "ghost"}
                                                 size="sm"
-                                                className={cn(
-                                                    "h-9 flex-1 transition-all",
-                                                    !useOtpMode && "shadow-sm"
-                                                )}
-                                                onClick={() => setUseOtpMode(false)}
+                                                className="w-full h-10 bg-primary hover:bg-primary/90 shadow-sm"
+                                                onClick={handleCheckInviteCode}
                                             >
-                                                <Lock className="h-3.5 w-3.5 mr-2"/>
-                                                {t("password")}
+                                                <UserPlus className="h-4 w-4 mr-2"/>
+                                                {t("continue")}
                                             </Button>
-                                            <Button
-                                                variant={useOtpMode ? "default" : "ghost"}
-                                                size="sm"
-                                                className={cn(
-                                                    "h-9 flex-1 transition-all",
-                                                    useOtpMode && "shadow-sm"
-                                                )}
-                                                onClick={() => setUseOtpMode(true)}
-                                            >
-                                                <Key className="h-3.5 w-3.5 mr-2"/>
-                                                {t("otp")}
-                                            </Button>
-                                        </div>
-                                    </Field>
-
-                                    {!useOtpMode ? (
-                                        <Field>
-                                            <FieldLabel htmlFor="joinPassword" className="text-sm font-medium">
-                                                {t("password")}
-                                            </FieldLabel>
-                                            <Input
-                                                id="joinPassword"
-                                                type="password"
-                                                value={joinPassword}
-                                                onChange={(e) => setJoinPassword(e.target.value)}
-                                                placeholder={t("enterPassword")}
-                                                className="h-10 bg-background border-border/60 focus-visible:ring-primary/20"
-                                                onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
-                                            />
-                                        </Field>
+                                        </>
                                     ) : (
-                                        <Field>
-                                            <FieldLabel className="text-sm font-medium">
-                                                {t("enterOtp")}
-                                            </FieldLabel>
+                                        <>
+                                            {/* Auth step - show group name and required fields */}
                                             <div
-                                                className="flex justify-center bg-gradient-to-br from-muted/50 to-muted/30 p-4 rounded-xl border border-border/40">
-                                                <InputOTP
-                                                    maxLength={6}
-                                                    value={joinOtp}
-                                                    onChange={(value) => setJoinOtp(value)}
-                                                >
-                                                    <InputOTPGroup>
-                                                        <InputOTPSlot index={0}
-                                                                      className="border-border/60 data-[active=true]:border-primary"/>
-                                                        <InputOTPSlot index={1}
-                                                                      className="border-border/60 data-[active=true]:border-primary"/>
-                                                        <InputOTPSlot index={2}
-                                                                      className="border-border/60 data-[active=true]:border-primary"/>
-                                                        <InputOTPSlot index={3}
-                                                                      className="border-border/60 data-[active=true]:border-primary"/>
-                                                        <InputOTPSlot index={4}
-                                                                      className="border-border/60 data-[active=true]:border-primary"/>
-                                                        <InputOTPSlot index={5}
-                                                                      className="border-border/60 data-[active=true]:border-primary"/>
-                                                    </InputOTPGroup>
-                                                </InputOTP>
+                                                className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <Lock className="h-4 w-4 text-primary"/>
+                                                    <span className="font-medium">{groupToJoin?.name}</span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {groupToJoin?.hasPassword
+                                                        ? t("privateGroupWithPassword")
+                                                        : t("privateGroupOtpOnly")}
+                                                </p>
                                             </div>
-                                            <FieldDescription className="text-center text-xs">
-                                                {t("enterSixDigitCode")}
-                                            </FieldDescription>
-                                        </Field>
-                                    )}
 
-                                    <Button
-                                        size="sm"
-                                        className="w-full h-10 bg-primary hover:bg-primary/90 shadow-sm"
-                                        onClick={handleJoinGroup}
-                                    >
-                                        <UserPlus className="h-4 w-4 mr-2"/>
-                                        {t("joinGroup")}
-                                    </Button>
+                                            {groupToJoin?.hasPassword && (
+                                                <Field>
+                                                    <FieldLabel className="text-sm font-medium mb-2">
+                                                        {t("authenticationMethod")}
+                                                    </FieldLabel>
+                                                    <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
+                                                        <Button
+                                                            variant={!useOtpMode ? "default" : "ghost"}
+                                                            size="sm"
+                                                            className={cn(
+                                                                "h-9 flex-1 transition-all",
+                                                                !useOtpMode && "shadow-sm"
+                                                            )}
+                                                            onClick={() => setUseOtpMode(false)}
+                                                        >
+                                                            <Lock className="h-3.5 w-3.5 mr-2"/>
+                                                            {t("password")}
+                                                        </Button>
+                                                        <Button
+                                                            variant={useOtpMode ? "default" : "ghost"}
+                                                            size="sm"
+                                                            className={cn(
+                                                                "h-9 flex-1 transition-all",
+                                                                useOtpMode && "shadow-sm"
+                                                            )}
+                                                            onClick={() => setUseOtpMode(true)}
+                                                        >
+                                                            <Key className="h-3.5 w-3.5 mr-2"/>
+                                                            {t("otp")}
+                                                        </Button>
+                                                    </div>
+                                                </Field>
+                                            )}
+
+                                            {!useOtpMode && groupToJoin?.hasPassword ? (
+                                                <Field>
+                                                    <FieldLabel htmlFor="joinPassword" className="text-sm font-medium">
+                                                        {t("password")}
+                                                    </FieldLabel>
+                                                    <Input
+                                                        id="joinPassword"
+                                                        type="password"
+                                                        value={joinPassword}
+                                                        onChange={(e) => setJoinPassword(e.target.value)}
+                                                        placeholder={t("enterPassword")}
+                                                        className="h-10 bg-background border-border/60 focus-visible:ring-primary/20"
+                                                        onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
+                                                    />
+                                                </Field>
+                                            ) : (
+                                                <Field>
+                                                    <FieldLabel className="text-sm font-medium">
+                                                        {t("enterOtp")}
+                                                    </FieldLabel>
+                                                    <div
+                                                        className="flex justify-center bg-gradient-to-br from-muted/50 to-muted/30 p-4 rounded-xl border border-border/40">
+                                                        <InputOTP
+                                                            maxLength={6}
+                                                            value={joinOtp}
+                                                            onChange={(value) => setJoinOtp(value)}
+                                                        >
+                                                            <InputOTPGroup>
+                                                                <InputOTPSlot index={0}
+                                                                              className="border-border/60 data-[active=true]:border-primary"/>
+                                                                <InputOTPSlot index={1}
+                                                                              className="border-border/60 data-[active=true]:border-primary"/>
+                                                                <InputOTPSlot index={2}
+                                                                              className="border-border/60 data-[active=true]:border-primary"/>
+                                                                <InputOTPSlot index={3}
+                                                                              className="border-border/60 data-[active=true]:border-primary"/>
+                                                                <InputOTPSlot index={4}
+                                                                              className="border-border/60 data-[active=true]:border-primary"/>
+                                                                <InputOTPSlot index={5}
+                                                                              className="border-border/60 data-[active=true]:border-primary"/>
+                                                            </InputOTPGroup>
+                                                        </InputOTP>
+                                                    </div>
+                                                    <FieldDescription className="text-center text-xs">
+                                                        {t("enterSixDigitCode")}
+                                                    </FieldDescription>
+                                                </Field>
+                                            )}
+
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-10"
+                                                    onClick={handleBackToCode}
+                                                >
+                                                    {t("back")}
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    className="flex-1 h-10 bg-primary hover:bg-primary/90 shadow-sm"
+                                                    onClick={handleJoinGroup}
+                                                >
+                                                    <UserPlus className="h-4 w-4 mr-2"/>
+                                                    {t("joinGroup")}
+                                                </Button>
+                                            </div>
+                                        </>
+                                    )}
                                 </FieldGroup>
                             </div>
                         </FieldGroup>

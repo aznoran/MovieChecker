@@ -134,6 +134,13 @@ public record GroupMemberDto(
     DateTime JoinedAt
 );
 
+public record GroupInfoResponse(
+    bool Exists,
+    bool IsPrivate,
+    bool HasPassword,
+    string? GroupName
+);
+
 public record MemberRatingDto(int UserId, string DisplayName, int AverageRating, int TotalRated);
 // Stats DTOs
 public record StatsDto(

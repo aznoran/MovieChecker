@@ -178,6 +178,16 @@ export const createGroup = async (name: string, isPrivate: boolean = false, pass
   return response.data;
 };
 
+export const checkInviteCode = async (inviteCode: string): Promise<{
+  exists: boolean;
+  isPrivate: boolean;
+  hasPassword: boolean;
+  groupName: string | null;
+}> => {
+  const response = await api.post("/groups/check-invite", { inviteCode });
+  return response.data;
+};
+
 export const joinGroup = async (inviteCode: string, password?: string, otp?: string): Promise<Group> => {
   const response = await api.post<Group>("/groups/join", { inviteCode, password, otp });
   return response.data;
