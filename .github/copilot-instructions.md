@@ -95,6 +95,26 @@ MovieChecker is a full-stack web application for tracking and managing movie wat
 
 ## Development Workflow
 
+### Issue and Pull Request Management
+
+When working on tasks in this repository, follow these important workflow steps:
+
+1. **Always Create an Issue First**:
+   - If there is no existing issue for the task you're working on, create one before starting implementation
+   - Issues should have a clear title and description of what needs to be done
+   - This ensures all work is tracked and documented
+
+2. **Update Issue Status**:
+   - When you begin implementing a task, move the issue status from "Backlog" to "Ready"
+   - This indicates the issue is actively being worked on
+   - Keep the issue updated as you make progress
+
+3. **Create a Draft Pull Request**:
+   - Always create a draft pull request when you start implementing the task
+   - Link the PR to the issue you're working on
+   - Mark the PR as ready for review only after all changes are complete and tested
+   - This allows for early visibility and feedback on your work
+
 ### Running the Application
 ```bash
 # Full stack with Docker Compose
