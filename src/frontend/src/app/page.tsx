@@ -6,6 +6,7 @@ import {useRouter} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
+import {useConfirm} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
 import {WatchStatus, EmotionEmojis} from "@/types";
 import type {WatchEntry} from "@/types";
@@ -47,6 +48,7 @@ export default function HomePage() {
     const {activeGroupId} = useGroup();
     const router = useRouter();
     const queryClient = useQueryClient();
+    const confirm = useConfirm();
 
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
@@ -270,9 +272,15 @@ export default function HomePage() {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="text-destructive hover:text-destructive"
-                                                onClick={(e) => {
+                                                onClick={async (e) => {
                                                     e.stopPropagation();
-                                                    if (confirm(t("deleteConfirm"))) {
+                                                    const confirmed = await confirm({
+                                                        description: t("deleteConfirm"),
+                                                        confirmText: t("delete"),
+                                                        cancelText: t("cancel"),
+                                                        variant: "destructive",
+                                                    });
+                                                    if (confirmed) {
                                                         deleteMutation.mutate(entry.id);
                                                     }
                                                 }}

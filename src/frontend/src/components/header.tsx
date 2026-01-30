@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
+import { useConfirm } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,6 +46,7 @@ export function Header() {
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useLocale();
   const { groups, activeGroupId, setActiveGroupId, createGroup, joinGroup, leaveGroup, kickMember, transferOwnership } = useGroup();
+  const confirm = useConfirm();
 
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -85,7 +87,13 @@ export function Header() {
   };
 
   const handleLeaveGroup = async (id: number) => {
-    if (!confirm(t("leaveGroupConfirm"))) return;
+    const confirmed = await confirm({
+      description: t("leaveGroupConfirm"),
+      confirmText: t("leaveGroup"),
+      cancelText: t("cancel"),
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     try {
       await leaveGroup(id);
     } catch {
@@ -94,7 +102,13 @@ export function Header() {
   };
 
   const handleKickMember = async (groupId: number, userId: number) => {
-    if (!confirm(t("kickConfirm"))) return;
+    const confirmed = await confirm({
+      description: t("kickConfirm"),
+      confirmText: t("kickMember"),
+      cancelText: t("cancel"),
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     try {
       await kickMember(groupId, userId);
     } catch {
@@ -103,7 +117,13 @@ export function Header() {
   };
 
   const handleTransferOwnership = async (groupId: number, newOwnerId: number) => {
-    if (!confirm(t("transferConfirm"))) return;
+    const confirmed = await confirm({
+      description: t("transferConfirm"),
+      confirmText: t("transferOwnership"),
+      cancelText: t("cancel"),
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     try {
       await transferOwnership(groupId, newOwnerId);
     } catch {
