@@ -68,10 +68,10 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
 
     // If activeGroupId is set but not in groups list, reset to personal
     useEffect(() => {
-        if (!isLoading && activeGroupId !== undefined && !groups.find((g) => g.id === activeGroupId)) {
+        if (isAuthenticated && !isLoading && activeGroupId !== undefined && !groups.find((g) => g.id === activeGroupId)) {
             setActiveGroupId(undefined);
         }
-    }, [groups, activeGroupId, isLoading, setActiveGroupId]);
+    }, [groups, activeGroupId, isLoading, isAuthenticated, setActiveGroupId]);
 
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 
