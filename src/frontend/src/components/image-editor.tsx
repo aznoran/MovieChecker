@@ -45,6 +45,23 @@ export function ImageEditor({
         setZoom(clampedZoom);
     }, []);
 
+    // Add non-passive wheel event listener to prevent page scroll
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -10 : 10;
+            setZoom(prevZoom => Math.min(300, Math.max(50, prevZoom + delta)));
+        };
+
+        container.addEventListener("wheel", handleWheel, {passive: false});
+        return () => {
+            container.removeEventListener("wheel", handleWheel);
+        };
+    }, []);
+
     const handleZoomIn = useCallback(() => {
         handleZoomChange(zoom + 10);
     }, [zoom, handleZoomChange]);
@@ -104,12 +121,6 @@ export function ImageEditor({
     const handleTouchEnd = useCallback(() => {
         setIsDragging(false);
     }, []);
-
-    const handleWheel = useCallback((e: React.WheelEvent) => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? -10 : 10;
-        handleZoomChange(zoom + delta);
-    }, [zoom, handleZoomChange]);
 
     const handleSave = useCallback(() => {
         if (!containerRef.current || !imageRef.current || !canvasRef.current) return;
@@ -199,7 +210,6 @@ export function ImageEditor({
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                onWheel={handleWheel}
             >
                 <img
                     ref={imageRef}
