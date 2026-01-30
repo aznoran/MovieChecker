@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using MovieChecker.Domain.Models;
 using MovieChecker.Infrastructure.Data;
+using MovieChecker.Infrastructure.Services;
 
 namespace MovieChecker.Web.Endpoints;
 
@@ -70,10 +71,8 @@ public static class WatchEntryEndpoints
 
         if (groupId.HasValue)
         {
-            // Verify user is a member of this group
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == groupId.Value && m.UserId == userId);
-            if (!isMember)
+            // Verify user can view this group
+            if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
                 return Results.Forbid();
 
             query = db.WatchEntries
@@ -143,10 +142,9 @@ public static class WatchEntryEndpoints
         // Validate group membership if group specified
         if (request.GroupId.HasValue)
         {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == request.GroupId.Value && m.UserId == userId);
-            if (!isMember)
-                return Results.BadRequest(new { message = "Not a member of this group" });
+            // Check if user can create in this group
+            if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
+                return Results.Forbid();
 
             // Check duplicate within group
             if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.GroupId == request.GroupId.Value))
@@ -245,18 +243,9 @@ public static class WatchEntryEndpoints
         if (entry == null)
             return Results.NotFound();
 
-        // Check access
-        if (entry.GroupId.HasValue)
-        {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
-            if (!isMember)
-                return Results.Forbid();
-        }
-        else if (entry.UserId != userId)
-        {
-            return Results.NotFound();
-        }
+        // Check edit permission
+        if (!await PermissionService.CanEditEntry(db, userId, entry))
+            return Results.Forbid();
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
         if (request.WatchedBy.HasValue) entry.WatchedBy = request.WatchedBy.Value;
@@ -350,12 +339,10 @@ public static class WatchEntryEndpoints
         if (entry == null)
             return Results.NotFound();
 
-        // Check access
+        // Check access - members can rate entries in their group
         if (entry.GroupId.HasValue)
         {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
-            if (!isMember)
+            if (!await PermissionService.CanViewGroup(db, userId, entry.GroupId.Value))
                 return Results.Forbid();
         }
         else if (entry.UserId != userId)
@@ -391,18 +378,9 @@ public static class WatchEntryEndpoints
         if (entry == null)
             return Results.NotFound();
 
-        // Only creator or group member can delete
-        if (entry.GroupId.HasValue)
-        {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
-            if (!isMember)
-                return Results.Forbid();
-        }
-        else if (entry.UserId != userId)
-        {
-            return Results.NotFound();
-        }
+        // Check delete permission
+        if (!await PermissionService.CanDeleteEntry(db, userId, entry))
+            return Results.Forbid();
 
         db.WatchEntries.Remove(entry);
         await db.SaveChangesAsync();
@@ -421,9 +399,7 @@ public static class WatchEntryEndpoints
 
         if (groupId.HasValue)
         {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == groupId.Value && m.UserId == userId);
-            if (!isMember)
+            if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
                 return Results.Forbid();
 
             query = db.WatchEntries
