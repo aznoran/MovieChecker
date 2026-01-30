@@ -6,6 +6,10 @@ public record LoginRequest(string Username, string Password);
 public record AuthResponse(string Token, UserDto User);
 public record UserDto(int Id, string Username, string DisplayName);
 
+// Validation result
+public record ValidationError(string Field, string Message);
+public record ValidationResult(bool IsValid, List<ValidationError> Errors);
+
 // Movie DTOs
 public record CreateMovieRequest(
     string Title,
@@ -105,16 +109,18 @@ public record EntryRatingDto(
 );
 
 // Group DTOs
-public record CreateGroupRequest(string Name);
-public record JoinGroupRequest(string InviteCode);
+public record CreateGroupRequest(string Name, bool IsPrivate = false, string? Password = null);
+public record JoinGroupRequest(string InviteCode, string? Password = null);
 
 public sealed record TransferGroupRequest(int NewOwnerId);
+public sealed record UpdateMemberRoleRequest(GroupRole Role);
 
 public record GroupDto(
     int Id,
     string Name,
     string InviteCode,
     int CreatedByUserId,
+    bool IsPrivate,
     List<GroupMemberDto> Members,
     DateTime CreatedAt
 );
@@ -122,6 +128,7 @@ public record GroupDto(
 public record GroupMemberDto(
     int UserId,
     string DisplayName,
+    GroupRole Role,
     DateTime JoinedAt
 );
 

@@ -17,7 +17,8 @@ public static class DependencyInjection
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
         })
-        .AddScoped<JwtService>();
+        .AddScoped<JwtService>()
+        .AddScoped<ValidationService>();
 
         // JWT Authentication
         var jwtKey = configuration["Jwt:Key"] ?? "SuperSecretKey12345678901234567890";

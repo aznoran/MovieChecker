@@ -18,8 +18,24 @@ public static class AuthEndpoints
     private static async Task<IResult> Register(
         RegisterRequest request,
         AppDbContext db,
-        JwtService jwtService)
+        JwtService jwtService,
+        ValidationService validationService)
     {
+        // Validate input
+        var validationResult = validationService.ValidateRegistration(
+            request.Username,
+            request.Password,
+            request.DisplayName
+        );
+
+        if (!validationResult.IsValid)
+        {
+            return Results.BadRequest(new { 
+                message = "Validation failed", 
+                errors = validationResult.Errors 
+            });
+        }
+
         if (await db.Users.AnyAsync(u => u.Username == request.Username))
         {
             return Results.BadRequest(new { message = "Username already exists" });
