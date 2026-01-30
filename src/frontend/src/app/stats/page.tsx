@@ -8,6 +8,7 @@ import { useGroup } from "@/context/group-context";
 import { getStats } from "@/lib/api";
 import { EmotionEmojis } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   BarChart3,
   CheckCircle2,
@@ -23,7 +24,11 @@ import {
   Popcorn,
   TrendingUp,
   Hash,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 function ProgressBar({
   value,
@@ -72,11 +77,19 @@ export default function StatsPage() {
   const router = useRouter();
   const isGroupMode = !!activeGroupId && !!activeGroup;
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, error, refetch } = useQuery({
     queryKey: ["stats", activeGroupId],
     queryFn: () => getStats(activeGroupId),
     enabled: isAuthenticated,
+    retry: false,
   });
+
+  // Show toast notification on error
+  useEffect(() => {
+    if (error) {
+      toast.error(t("errorLoadingStats"), { position: "top-center" });
+    }
+  }, [error, t]);
 
   if (authLoading) {
     return (
@@ -139,6 +152,15 @@ export default function StatsPage() {
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
+            <p className="text-muted-foreground mb-4">{t("errorLoadingStats")}</p>
+            <Button onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-1.5" />
+              {t("retryLoad")}
+            </Button>
           </div>
         ) : !stats ? (
           <div className="text-center py-12">

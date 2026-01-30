@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
 import {useRouter} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
@@ -31,6 +31,8 @@ import {
     Popcorn,
     ImageOff,
     Play,
+    RefreshCw,
+    AlertCircle,
 } from "lucide-react";
 import {toast} from "sonner";
 
@@ -56,11 +58,12 @@ export default function HomePage() {
     const [editEntry, setEditEntry] = useState<WatchEntry | null>(null);
     const [statusFilter, setStatusFilter] = useState<WatchStatus | null>(null);
 
-    const {data: entries = [], isLoading} = useQuery({
+    const {data: entries = [], isLoading, error, refetch} = useQuery({
         queryKey: ["watchEntries", statusFilter, activeGroupId],
         queryFn: () =>
             getWatchEntries(statusFilter !== null ? statusFilter : undefined, undefined, activeGroupId),
         enabled: isAuthenticated,
+        retry: false,
     });
 
     const deleteMutation = useMutation({
@@ -74,6 +77,13 @@ export default function HomePage() {
             toast.error(t("deleteError"), { position: "top-center"})
         },
     });
+
+    // Show toast notification on error
+    useEffect(() => {
+        if (error) {
+            toast.error(t("errorLoadingEntries"), { position: "top-center" });
+        }
+    }, [error, t]);
 
     if (authLoading) {
         return (
@@ -126,6 +136,15 @@ export default function HomePage() {
                 {isLoading ? (
                     <div className="flex justify-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-12">
+                        <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4"/>
+                        <p className="text-muted-foreground mb-4">{t("errorLoadingEntries")}</p>
+                        <Button onClick={() => refetch()}>
+                            <RefreshCw className="h-4 w-4 mr-1.5"/>
+                            {t("retryLoad")}
+                        </Button>
                     </div>
                 ) : entries.length === 0 ? (
                     <div className="text-center py-12">
