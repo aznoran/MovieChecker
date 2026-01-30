@@ -168,8 +168,10 @@ export function ImageEditor({
 
         // Convert canvas to blob and create a File
         canvas.toBlob((blob) => {
+            console.log("toBlob callback, blob:", blob?.size, blob?.type);
             if (blob) {
                 const file = new File([blob], "poster.png", {type: "image/png"});
+                console.log("created file:", file.name, file.size);
                 onSave(file);
             } else {
                 console.error("Failed to create blob from canvas - canvas may be tainted by CORS");

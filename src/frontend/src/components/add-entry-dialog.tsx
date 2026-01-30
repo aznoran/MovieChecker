@@ -191,9 +191,12 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
 
     const mutation = useMutation({
         mutationFn: async () => {
+            console.log("mutation started, posterFile:", posterFile?.name, posterFile?.size);
             let posterUrl: string | undefined;
             if (posterFile) {
+                console.log("uploading poster...");
                 posterUrl = await uploadPoster(posterFile);
+                console.log("uploaded poster, url:", posterUrl);
             }
 
             const movie = await createMovie({
@@ -204,6 +207,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 genre: genre || undefined,
                 posterUrl,
             });
+            console.log("created movie:", movie);
 
             const ratingsArray = isGroupMode
                 ? selectedMembers
@@ -293,6 +297,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     };
 
     const handleImageEditSave = (croppedFile: File) => {
+        console.log("handleImageEditSave called with file:", croppedFile?.name, croppedFile?.size);
         setPosterFile(croppedFile);
         const reader = new FileReader();
         reader.onloadend = () => setPosterPreview(reader.result as string);
