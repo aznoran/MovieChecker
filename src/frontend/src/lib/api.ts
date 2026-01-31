@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { AuthResponse, Movie, WatchEntry, Stats, Group } from "@/types";
+import {AuthResponse, Movie, WatchEntry, Stats, Group} from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -18,8 +18,7 @@ api.interceptors.request.use((config) => {
     }
     
     // Add Accept-Language header based on stored locale
-    const locale = localStorage.getItem("locale") || "en";
-    config.headers["Accept-Language"] = locale;
+    config.headers["Accept-Language"] = localStorage.getItem("locale") || "en";
   }
   return config;
 });
@@ -177,8 +176,9 @@ export const getGroup = async (id: number): Promise<Group> => {
   return response.data;
 };
 
-export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: GroupRole): Promise<Group> => {
-  const response = await api.post<Group>("/groups", { name, isPrivate, password, defaultRole });
+export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: number): Promise<Group> => {
+  console.log(defaultRole);
+    const response = await api.post<Group>("/groups", { name, isPrivate, password, defaultRole });
   return response.data;
 };
 

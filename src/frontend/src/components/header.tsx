@@ -122,6 +122,8 @@ export function Header() {
         try {
             // For public groups, default role is always Viewer
             const defaultRole = newGroupIsPrivate ? newGroupDefaultRole : GroupRole.Viewer;
+            console.log(newGroupDefaultRole)
+            console.log(defaultRole)
             await createGroup(newGroupName.trim(), newGroupIsPrivate, newGroupPassword || undefined, defaultRole);
             setNewGroupName("");
             setNewGroupIsPrivate(false);
