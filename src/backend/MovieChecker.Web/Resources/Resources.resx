@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" use="default" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="MovieNotFound" xml:space="preserve">
+    <value>Movie not found</value>
+  </data>
+  <data name="InsufficientPermissionsEdit" xml:space="preserve">
+    <value>Insufficient permissions to edit this entry</value>
+  </data>
+  <data name="InsufficientPermissionsCreate" xml:space="preserve">
+    <value>Insufficient permissions to create entries in this group</value>
+  </data>
+  <data name="InsufficientPermissionsDelete" xml:space="preserve">
+    <value>Insufficient permissions to delete this entry</value>
+  </data>
+  <data name="InsufficientPermissionsView" xml:space="preserve">
+    <value>Insufficient permissions to view this group</value>
+  </data>
+  <data name="InsufficientPermissionsViewEntry" xml:space="preserve">
+    <value>Insufficient permissions to view this entry</value>
+  </data>
+  <data name="InsufficientPermissionsRate" xml:space="preserve">
+    <value>Insufficient permissions to rate this entry</value>
+  </data>
+  <data name="InsufficientPermissionsStats" xml:space="preserve">
+    <value>Insufficient permissions to view group statistics</value>
+  </data>
+  <data name="InsufficientPermissionsRemove" xml:space="preserve">
+    <value>Insufficient permissions to remove members from this group</value>
+  </data>
+  <data name="InsufficientPermissionsChangeRole" xml:space="preserve">
+    <value>Insufficient permissions to change member roles</value>
+  </data>
+  <data name="InsufficientPermissionsOtp" xml:space="preserve">
+    <value>Insufficient permissions to generate OTP codes</value>
+  </data>
+  <data name="InsufficientPermissionsPassword" xml:space="preserve">
+    <value>Insufficient permissions to change group password</value>
+  </data>
+  <data name="OnlyOwnerTransfer" xml:space="preserve">
+    <value>Only the owner can transfer ownership</value>
+  </data>
+  <data name="AdminsCannotModify" xml:space="preserve">
+    <value>Admins cannot modify other admins' roles</value>
+  </data>
+  <data name="EntryAlreadyExistsGroup" xml:space="preserve">
+    <value>Entry already exists in this group</value>
+  </data>
+  <data name="EntryAlreadyExists" xml:space="preserve">
+    <value>Watch entry already exists for this movie</value>
+  </data>
+  <data name="AlreadyMember" xml:space="preserve">
+    <value>Already a member of this group</value>
+  </data>
+  <data name="InvalidOrExpiredOtp" xml:space="preserve">
+    <value>Invalid or expired OTP code</value>
+  </data>
+  <data name="PasswordOrOtpRequired" xml:space="preserve">
+    <value>Password or OTP is required for this private group</value>
+  </data>
+  <data name="OtpOnlyGroup" xml:space="preserve">
+    <value>This private group requires an OTP code. Password is disabled.</value>
+  </data>
+  <data name="CannotRemoveOwner" xml:space="preserve">
+    <value>Cannot remove the group owner</value>
+  </data>
+  <data name="MustBeMember" xml:space="preserve">
+    <value>newOwnerId must be a member of the group</value>
+  </data>
+  <data name="CannotChangeOwnerRole" xml:space="preserve">
+    <value>Cannot change the owner's role. Use transfer ownership instead.</value>
+  </data>
+  <data name="UseTransferOwnership" xml:space="preserve">
+    <value>Use transfer ownership to make someone owner</value>
+  </data>
+  <data name="OtpOnlyForPrivate" xml:space="preserve">
+    <value>OTP codes can only be generated for private groups</value>
+  </data>
+  <data name="InvalidInviteCode" xml:space="preserve">
+    <value>Invalid invite code</value>
+  </data>
+</root>

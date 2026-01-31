@@ -13,13 +13,30 @@ public static class AuthEndpoints
 
         group.MapPost("/register", Register);
         group.MapPost("/login", Login);
+        group.MapPost("/language", SetLanguage);
     }
 
     private static async Task<IResult> Register(
         RegisterRequest request,
         AppDbContext db,
-        JwtService jwtService)
+        JwtService jwtService,
+        ValidationService validationService)
     {
+        // Validate input
+        var validationResult = validationService.ValidateRegistration(
+            request.Username,
+            request.Password,
+            request.DisplayName
+        );
+
+        if (!validationResult.IsValid)
+        {
+            return Results.BadRequest(new { 
+                message = "Validation failed", 
+                errors = validationResult.Errors 
+            });
+        }
+
         if (await db.Users.AnyAsync(u => u.Username == request.Username))
         {
             return Results.BadRequest(new { message = "Username already exists" });
@@ -60,4 +77,30 @@ public static class AuthEndpoints
             new UserDto(user.Id, user.Username, user.DisplayName)
         ));
     }
+
+    private static IResult SetLanguage(HttpContext context, SetLanguageRequest request)
+    {
+        var culture = request.Language switch
+        {
+            "ru" => "ru",
+            _ => "en"
+        };
+
+        context.Response.Cookies.Append(
+            Microsoft.AspNetCore.Localization.CookieRequestCultureProvider.DefaultCookieName,
+            Microsoft.AspNetCore.Localization.CookieRequestCultureProvider.MakeCookieValue(
+                new Microsoft.AspNetCore.Localization.RequestCulture(culture)),
+            new CookieOptions
+            {
+                Expires = DateTimeOffset.UtcNow.AddYears(1),
+                IsEssential = true,
+                HttpOnly = false,
+                SameSite = SameSiteMode.Lax
+            }
+        );
+
+        return Results.Ok(new { language = culture });
+    }
 }
+
+public record SetLanguageRequest(string Language);

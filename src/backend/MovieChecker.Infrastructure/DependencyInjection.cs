@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
+using StackExchange.Redis;
 
 namespace MovieChecker.Infrastructure;
 
@@ -17,7 +18,14 @@ public static class DependencyInjection
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
         })
-        .AddScoped<JwtService>();
+        .AddScoped<JwtService>()
+        .AddScoped<ValidationService>();
+
+        // Redis
+        var redisConnection = configuration.GetConnectionString("Redis");
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+            ConnectionMultiplexer.Connect(redisConnection!));
+        services.AddScoped<OtpService>();
 
         // JWT Authentication
         var jwtKey = configuration["Jwt:Key"] ?? "SuperSecretKey12345678901234567890";
