@@ -237,9 +237,11 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             resetForm();
             onOpenChange(false);
         },
-        onError: () => {
-            toast.error(t("failedToAdd"), { position: "top-center" })
-            setError(t("failedToAdd"));
+        onError: (error: any) => {
+            // Extract error message from response if available
+            const errorMessage = error?.response?.data?.message || t("failedToAdd");
+            toast.error(errorMessage, { position: "top-center" })
+            setError(errorMessage);
         },
     });
 
