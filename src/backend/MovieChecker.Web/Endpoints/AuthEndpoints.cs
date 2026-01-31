@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using MovieChecker.Domain.Models;
 using MovieChecker.Infrastructure.Data;
@@ -13,6 +14,7 @@ public static class AuthEndpoints
 
         group.MapPost("/register", Register);
         group.MapPost("/login", Login);
+        group.MapPost("/refresh", RefreshToken);
         group.MapPost("/language", SetLanguage);
     }
 
@@ -53,8 +55,13 @@ public static class AuthEndpoints
         await db.SaveChangesAsync();
 
         var token = jwtService.GenerateToken(user);
+        var refreshToken = jwtService.GenerateRefreshToken(user.Id);
+        db.RefreshTokens.Add(refreshToken);
+        await db.SaveChangesAsync();
+
         return Results.Ok(new AuthResponse(
             token,
+            refreshToken.Token,
             new UserDto(user.Id, user.Username, user.DisplayName)
         ));
     }
@@ -72,8 +79,44 @@ public static class AuthEndpoints
         }
 
         var token = jwtService.GenerateToken(user);
+        var refreshToken = jwtService.GenerateRefreshToken(user.Id);
+        db.RefreshTokens.Add(refreshToken);
+        await db.SaveChangesAsync();
+
         return Results.Ok(new AuthResponse(
             token,
+            refreshToken.Token,
+            new UserDto(user.Id, user.Username, user.DisplayName)
+        ));
+    }
+
+    private static async Task<IResult> RefreshToken(
+        RefreshTokenRequest request,
+        AppDbContext db,
+        JwtService jwtService)
+    {
+        var existingRefreshToken = await db.RefreshTokens
+            .Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken);
+
+        if (existingRefreshToken == null || !existingRefreshToken.IsActive)
+        {
+            return Results.Unauthorized();
+        }
+
+        // Revoke the old refresh token
+        existingRefreshToken.RevokedAt = DateTime.UtcNow;
+
+        // Generate new tokens
+        var user = existingRefreshToken.User;
+        var newAccessToken = jwtService.GenerateToken(user);
+        var newRefreshToken = jwtService.GenerateRefreshToken(user.Id);
+        db.RefreshTokens.Add(newRefreshToken);
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new AuthResponse(
+            newAccessToken,
+            newRefreshToken.Token,
             new UserDto(user.Id, user.Username, user.DisplayName)
         ));
     }

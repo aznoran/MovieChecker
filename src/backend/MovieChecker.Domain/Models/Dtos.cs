@@ -3,7 +3,8 @@ namespace MovieChecker.Domain.Models;
 // Auth DTOs
 public record RegisterRequest(string Username, string Password, string DisplayName);
 public record LoginRequest(string Username, string Password);
-public record AuthResponse(string Token, UserDto User);
+public record AuthResponse(string Token, string RefreshToken, UserDto User);
+public record RefreshTokenRequest(string RefreshToken);
 public record UserDto(int Id, string Username, string DisplayName);
 
 // Validation result

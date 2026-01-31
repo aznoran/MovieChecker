@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await apiLogin(username, password);
     setToken(response.token);
     setUser(response.user);
+    localStorage.setItem("refreshToken", response.refreshToken);
   };
 
   const register = async (
@@ -71,11 +72,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await apiRegister(username, password, displayName);
     setToken(response.token);
     setUser(response.user);
+    localStorage.setItem("refreshToken", response.refreshToken);
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
+    localStorage.removeItem("refreshToken");
   };
 
   return (
