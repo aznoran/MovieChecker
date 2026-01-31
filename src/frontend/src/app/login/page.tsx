@@ -81,12 +81,11 @@ export default function LoginPage() {
       }
     }
 
-    // Display name validation
-    const nameToValidate = displayName || username;
-    if (nameToValidate.length > 0) {
-      if (nameToValidate.length < 2) {
+    // Display name validation - only validate if user has entered a display name
+    if (displayName.length > 0) {
+      if (displayName.length < 2) {
         errors.displayName = t("displayNameTooShort");
-      } else if (nameToValidate.length > 100) {
+      } else if (displayName.length > 100) {
         errors.displayName = t("displayNameTooLong");
       }
     }
