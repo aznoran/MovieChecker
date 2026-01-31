@@ -45,14 +45,21 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     
-    // Only handle 401 if not an auth endpoint and not already retried
-    const isAuthRequest = originalRequest?.url?.includes("/auth/");
+    // Check request type
+    const isLoginOrRegister = originalRequest?.url?.includes("/auth/login") || 
+                               originalRequest?.url?.includes("/auth/register");
     const isRefreshRequest = originalRequest?.url?.includes("/auth/refresh");
     
+    // Don't redirect on login/register 401 - let the form handle it
+    if (error.response?.status === 401 && isLoginOrRegister) {
+      return Promise.reject(error);
+    }
+    
+    // Handle 401 for other requests - attempt token refresh
     if (
       error.response?.status === 401 &&
       typeof window !== "undefined" &&
-      !isAuthRequest &&
+      !isRefreshRequest &&
       !originalRequest._retry
     ) {
       if (isRefreshing) {
@@ -109,11 +116,6 @@ api.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
-    }
-    
-    // Handle auth request 401 (login/register failure) - don't redirect
-    if (error.response?.status === 401 && isAuthRequest && !isRefreshRequest) {
-      return Promise.reject(error);
     }
     
     return Promise.reject(error);
