@@ -17,7 +17,7 @@ This document contains findings from reviewing all open issues and pull requests
 | 6 | Адаптировать дефолт группу | Duplicate entries to personal list |
 | 7 | Дополнения к созданию карточек | Add UnderConsideration status + viewing time for movies |
 | 8 | Sidebar | Move tabs to left sidebar for mobile |
-| 10 | Notificaitions | Add user notifications |
+| 10 | Notificaitions | Add user notifications (note: issue title has typo) |
 
 ---
 
