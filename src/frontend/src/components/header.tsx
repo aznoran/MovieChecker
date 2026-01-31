@@ -543,18 +543,12 @@ export function Header() {
                                                                 onChange={(value) => setJoinOtp(value)}
                                                             >
                                                                 <InputOTPGroup>
-                                                                    <InputOTPSlot index={0}
-                                                                                  className="border-border/60 data-[active=true]:border-primary"/>
-                                                                    <InputOTPSlot index={1}
-                                                                                  className="border-border/60 data-[active=true]:border-primary"/>
-                                                                    <InputOTPSlot index={2}
-                                                                                  className="border-border/60 data-[active=true]:border-primary"/>
-                                                                    <InputOTPSlot index={3}
-                                                                                  className="border-border/60 data-[active=true]:border-primary"/>
-                                                                    <InputOTPSlot index={4}
-                                                                                  className="border-border/60 data-[active=true]:border-primary"/>
-                                                                    <InputOTPSlot index={5}
-                                                                                  className="border-border/60 data-[active=true]:border-primary"/>
+                                                                    <InputOTPSlot index={0}/>
+                                                                    <InputOTPSlot index={1}/>
+                                                                    <InputOTPSlot index={2}/>
+                                                                    <InputOTPSlot index={3}/>
+                                                                    <InputOTPSlot index={4}/>
+                                                                    <InputOTPSlot index={5}/>
                                                                 </InputOTPGroup>
                                                             </InputOTP>
                                                         </div>
