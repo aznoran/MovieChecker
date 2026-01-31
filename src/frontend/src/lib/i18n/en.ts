@@ -251,7 +251,21 @@ const en = {
     invalidNumber: "Must be a positive number",
     invalidTimeComponent: "Must be between 0 and 59",
     invalidRating: "Rating must be between 1 and 10",
-    fixValidationErrors: "Please fix validation errors"
+    fixValidationErrors: "Please fix validation errors",
+
+    // Registration Validation Errors
+    usernameRequired: "Username is required",
+    usernameTooShort: "Username must be at least 3 characters",
+    usernameTooLong: "Username must not exceed 50 characters",
+    usernameInvalidChars: "Username can only contain letters, numbers, underscores, and hyphens",
+    passwordRequired: "Password is required",
+    passwordTooShort: "Password must be at least 8 characters",
+    passwordTooLong: "Password must not exceed 72 characters",
+    passwordMissingRequirements: "Password must contain at least one uppercase letter, one lowercase letter, and one digit",
+    displayNameRequired: "Display name is required",
+    displayNameTooShort: "Display name must be at least 2 characters",
+    displayNameTooLong: "Display name must not exceed 100 characters",
+    usernameAlreadyExists: "Username already exists"
 } as const;
 
 export type TranslationKeys = keyof typeof en;

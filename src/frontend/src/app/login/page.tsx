@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { useLocale } from "@/context/locale-context";
@@ -26,6 +26,13 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Locale } from "@/lib/i18n";
+import { AxiosError } from "axios";
+
+interface FieldErrors {
+  username?: string;
+  password?: string;
+  displayName?: string;
+}
 
 export default function LoginPage() {
   const { locale, setLocale, t } = useLocale();
@@ -34,10 +41,63 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
 
   const { login, register, isAuthenticated } = useAuth();
   const router = useRouter();
+
+  // Real-time frontend validation
+  const validationErrors = useMemo((): FieldErrors => {
+    if (!isRegister) return {};
+
+    const errors: FieldErrors = {};
+
+    // Username validation
+    if (username.length > 0) {
+      if (username.length < 3) {
+        errors.username = t("usernameTooShort");
+      } else if (username.length > 50) {
+        errors.username = t("usernameTooLong");
+      } else if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        errors.username = t("usernameInvalidChars");
+      }
+    }
+
+    // Password validation
+    if (password.length > 0) {
+      if (password.length < 8) {
+        errors.password = t("passwordTooShort");
+      } else if (password.length > 72) {
+        errors.password = t("passwordTooLong");
+      } else {
+        const hasUpper = /[A-Z]/.test(password);
+        const hasLower = /[a-z]/.test(password);
+        const hasDigit = /\d/.test(password);
+
+        if (!hasUpper || !hasLower || !hasDigit) {
+          errors.password = t("passwordMissingRequirements");
+        }
+      }
+    }
+
+    // Display name validation - only validate if user has entered a display name
+    if (displayName.length > 0) {
+      if (displayName.length < 2) {
+        errors.displayName = t("displayNameTooShort");
+      } else if (displayName.length > 100) {
+        errors.displayName = t("displayNameTooLong");
+      }
+    }
+
+    return errors;
+  }, [isRegister, username, password, displayName, t]);
+
+  // Get the error for a specific field (server error takes precedence)
+  const getFieldError = (field: keyof FieldErrors): string | undefined => {
+    return fieldErrors[field] || (touched[field] ? validationErrors[field] : undefined);
+  };
 
   if (isAuthenticated) {
     router.push("/");
@@ -49,10 +109,63 @@ export default function LoginPage() {
     setLocale(next);
   };
 
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const parseBackendError = (err: unknown): string => {
+    if (err instanceof AxiosError && err.response?.data) {
+      const data = err.response.data;
+
+      // Handle validation errors with errors array
+      if (data.errors && Array.isArray(data.errors)) {
+        const newFieldErrors: FieldErrors = {};
+
+        for (const validationError of data.errors) {
+          const field = validationError.field?.toLowerCase();
+          const message = validationError.message;
+
+          if (field === "username") {
+            newFieldErrors.username = message;
+          } else if (field === "password") {
+            newFieldErrors.password = message;
+          } else if (field === "displayname") {
+            newFieldErrors.displayName = message;
+          }
+        }
+
+        if (Object.keys(newFieldErrors).length > 0) {
+          setFieldErrors(newFieldErrors);
+          return t("fixValidationErrors");
+        }
+      }
+
+      // Handle simple message (e.g., "Username already exists")
+      if (data.message) {
+        if (data.message.toLowerCase().includes("username already exists")) {
+          setFieldErrors({ username: t("usernameAlreadyExists") });
+          return t("usernameAlreadyExists");
+        }
+        return data.message;
+      }
+    }
+
+    return isRegister ? t("registrationFailed") : t("loginFailed");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
     setLoading(true);
+
+    // Check for frontend validation errors before submitting
+    if (isRegister && Object.keys(validationErrors).length > 0) {
+      setTouched({ username: true, password: true, displayName: true });
+      setError(t("fixValidationErrors"));
+      setLoading(false);
+      return;
+    }
 
     try {
       if (isRegister) {
@@ -61,8 +174,8 @@ export default function LoginPage() {
         await login(username, password);
       }
       router.push("/");
-    } catch {
-      setError(isRegister ? t("registrationFailed") : t("loginFailed"));
+    } catch (err) {
+      setError(parseBackendError(err));
     } finally {
       setLoading(false);
     }
@@ -102,10 +215,20 @@ export default function LoginPage() {
               <Input
                 id="username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (fieldErrors.username) {
+                    setFieldErrors((prev) => ({ ...prev, username: undefined }));
+                  }
+                }}
+                onBlur={() => handleBlur("username")}
                 required
                 autoFocus
+                className={getFieldError("username") ? "border-destructive" : ""}
               />
+              {getFieldError("username") && (
+                <p className="text-xs text-destructive">{getFieldError("username")}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -117,9 +240,19 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                  }
+                }}
+                onBlur={() => handleBlur("password")}
                 required
+                className={getFieldError("password") ? "border-destructive" : ""}
               />
+              {getFieldError("password") && (
+                <p className="text-xs text-destructive">{getFieldError("password")}</p>
+              )}
             </div>
 
             {isRegister && (
@@ -131,9 +264,19 @@ export default function LoginPage() {
                 <Input
                   id="displayName"
                   value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  onChange={(e) => {
+                    setDisplayName(e.target.value);
+                    if (fieldErrors.displayName) {
+                      setFieldErrors((prev) => ({ ...prev, displayName: undefined }));
+                    }
+                  }}
+                  onBlur={() => handleBlur("displayName")}
                   placeholder={t("displayNamePlaceholder")}
+                  className={getFieldError("displayName") ? "border-destructive" : ""}
                 />
+                {getFieldError("displayName") && (
+                  <p className="text-xs text-destructive">{getFieldError("displayName")}</p>
+                )}
               </div>
             )}
 
@@ -171,6 +314,8 @@ export default function LoginPage() {
                 onClick={() => {
                   setIsRegister(!isRegister);
                   setError("");
+                  setFieldErrors({});
+                  setTouched({});
                 }}
               >
                 {isRegister ? t("signIn") : t("register")}
