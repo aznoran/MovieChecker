@@ -8,14 +8,27 @@ public static class MovieEndpoints
 {
     public static void MapMovieEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/movies").RequireAuthorization();
+        var group = app.MapGroup("/api/movies")
+            .RequireAuthorization()
+            .WithTags("Movies");
 
-        group.MapGet("/", GetAll);
-        group.MapGet("/{id:int}", GetById);
-        group.MapPost("/", Create);
-        group.MapPut("/{id:int}", Update);
-        group.MapDelete("/{id:int}", Delete);
-        group.MapGet("/search", Search);
+        group.MapGet("/", GetAll)
+            .WithDescription("Get all movies, optionally filtered by type");
+        
+        group.MapGet("/{id:int}", GetById)
+            .WithDescription("Get a movie by ID");
+        
+        group.MapPost("/", Create)
+            .WithDescription("Create a new movie");
+        
+        group.MapPut("/{id:int}", Update)
+            .WithDescription("Update an existing movie");
+        
+        group.MapDelete("/{id:int}", Delete)
+            .WithDescription("Delete a movie");
+        
+        group.MapGet("/search", Search)
+            .WithDescription("Search movies by title or description");
     }
 
     private static async Task<IResult> GetAll(AppDbContext db, int? type = null)

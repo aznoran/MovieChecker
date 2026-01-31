@@ -9,10 +9,14 @@ public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/auth");
+        var group = app.MapGroup("/api/auth")
+            .WithTags("Authentication");
 
-        group.MapPost("/register", Register);
-        group.MapPost("/login", Login);
+        group.MapPost("/register", Register)
+            .WithDescription("Register a new user");
+        
+        group.MapPost("/login", Login)
+            .WithDescription("Login with username and password");
     }
 
     private static async Task<IResult> Register(

@@ -12,12 +12,18 @@ public static class UploadEndpoints
 
     public static void MapUploadEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/upload").RequireAuthorization();
+        var group = app.MapGroup("/api/upload")
+            .RequireAuthorization()
+            .WithTags("Upload");
 
-        group.MapPost("/poster", UploadPoster).DisableAntiforgery();
+        group.MapPost("/poster", UploadPoster)
+            .DisableAntiforgery()
+            .WithDescription("Upload a movie poster image (max 5MB, supports JPEG, PNG, WebP, GIF)");
 
         // Public endpoint — no auth required to fetch images
-        app.MapGet("/api/posters/{id:int}", GetPoster);
+        app.MapGet("/api/posters/{id:int}", GetPoster)
+            .WithTags("Upload")
+            .WithDescription("Get a poster image by ID (public)");
     }
 
     private static async Task<IResult> UploadPoster(IFormFile file, AppDbContext db)

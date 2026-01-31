@@ -9,15 +9,30 @@ public static class WatchEntryEndpoints
 {
     public static void MapWatchEntryEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/watch-entries").RequireAuthorization();
+        var group = app.MapGroup("/api/watch-entries")
+            .RequireAuthorization()
+            .WithTags("Watch Entries");
 
-        group.MapGet("/", GetAll);
-        group.MapGet("/{id:int}", GetById);
-        group.MapPost("/", Create);
-        group.MapPut("/{id:int}", Update);
-        group.MapDelete("/{id:int}", Delete);
-        group.MapGet("/stats", GetStats);
-        group.MapPost("/{id:int}/rate", Rate);
+        group.MapGet("/", GetAll)
+            .WithDescription("Get all watch entries, optionally filtered by status, watchedBy user, or group");
+        
+        group.MapGet("/{id:int}", GetById)
+            .WithDescription("Get a watch entry by ID");
+        
+        group.MapPost("/", Create)
+            .WithDescription("Create a new watch entry");
+        
+        group.MapPut("/{id:int}", Update)
+            .WithDescription("Update an existing watch entry");
+        
+        group.MapDelete("/{id:int}", Delete)
+            .WithDescription("Delete a watch entry");
+        
+        group.MapGet("/stats", GetStats)
+            .WithDescription("Get watch statistics, optionally filtered by group");
+        
+        group.MapPost("/{id:int}/rate", Rate)
+            .WithDescription("Rate a watch entry");
     }
 
     private static int GetUserId(ClaimsPrincipal user) =>

@@ -10,15 +10,30 @@ public static class GroupEndpoints
 {
     public static void MapGroupEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/groups").RequireAuthorization();
+        var group = app.MapGroup("/api/groups")
+            .RequireAuthorization()
+            .WithTags("Groups");
 
-        group.MapGet("/", GetMyGroups);
-        group.MapGet("/{id:int}", GetGroup);
-        group.MapPost("/", CreateGroup);
-        group.MapPost("/join", JoinGroup);
-        group.MapDelete("/{id:int}/leave", LeaveGroup);
-        group.MapDelete("/{id:int}/members/{userId:int}", DeleteUser);
-        group.MapPut("/{id:int}/transfer", TransferGroup);
+        group.MapGet("/", GetMyGroups)
+            .WithDescription("Get all groups for the current user");
+        
+        group.MapGet("/{id:int}", GetGroup)
+            .WithDescription("Get a specific group by ID");
+        
+        group.MapPost("/", CreateGroup)
+            .WithDescription("Create a new group");
+        
+        group.MapPost("/join", JoinGroup)
+            .WithDescription("Join a group using an invite code");
+        
+        group.MapDelete("/{id:int}/leave", LeaveGroup)
+            .WithDescription("Leave a group");
+        
+        group.MapDelete("/{id:int}/members/{userId:int}", DeleteUser)
+            .WithDescription("Remove a user from a group (owner only)");
+        
+        group.MapPut("/{id:int}/transfer", TransferGroup)
+            .WithDescription("Transfer group ownership to another member");
     }
 
     private static int GetUserId(ClaimsPrincipal user) =>
