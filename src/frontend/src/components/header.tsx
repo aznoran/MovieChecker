@@ -189,33 +189,6 @@ export function Header() {
         setError("");
     };
 
-    const handleLeaveGroup = async (id: number) => {
-        if (!confirm(t("leaveGroupConfirm"))) return;
-        try {
-            await leaveGroup(id);
-        } catch {
-            setError(t("failedToAdd"));
-        }
-    };
-
-    const handleKickMember = async (groupId: number, userId: number) => {
-        if (!confirm(t("kickConfirm"))) return;
-        try {
-            await kickMember(groupId, userId);
-        } catch {
-            setError(t("failedToKick"));
-        }
-    };
-
-    const handleTransferOwnership = async (groupId: number, newOwnerId: number) => {
-        if (!confirm(t("transferConfirm"))) return;
-        try {
-            await transferOwnership(groupId, newOwnerId);
-        } catch {
-            setError(t("failedToTransfer"));
-        }
-    };
-
     const handleChangeRole = async (groupId: number, userId: number, currentRole: GroupRole) => {
         setRoleChangeDialog({ groupId, userId, currentRole });
         setSelectedNewRole(currentRole);
@@ -629,7 +602,7 @@ export function Header() {
                                     <h3 className="text-sm font-semibold text-foreground/90 px-1">
                                         {t("yourGroups")}
                                     </h3>
-                                    <FieldGroup className="gap-3">
+                                    <FieldGroup>
                                         {groups.map((g) => {
                                             const isOwner = user?.id === g.createdByUserId;
                                             const currentUserMember = g.members.find(m => m.userId === user?.id);
@@ -638,9 +611,9 @@ export function Header() {
 
                                             return (
                                                 <FieldGroup key={g.id}
-                                                            className="bg-muted/30 border border-border/50 rounded-xl p-4 space-y-4 hover:bg-muted/40 transition-colors">
+                                                            className="bg-muted/30 border border-border/50 rounded-xl p-4 hover:bg-muted/40 transition-colors">
                                                     {/* Group header */}
-                                                    <div className="flex items-center justify-between">
+                                                    <div className="flex items-center justify-between mb-2">
                                                         <div className="flex items-center gap-2.5">
                                                             <div className="flex items-center gap-1.5">
                                                                 {g.isPrivate ? (
@@ -661,8 +634,8 @@ export function Header() {
                                                             </div>
                                                             <div className="flex flex-col">
                                                                 <div className="flex items-center gap-2">
-                                                                <span
-                                                                    className="font-semibold text-sm">{g.name}</span>
+                                                            <span
+                                                                className="font-semibold text-sm">{g.name}</span>
                                                                     {isOwner &&
                                                                         <Crown
                                                                             className="h-3.5 w-3.5 text-yellow-500"/>}
@@ -670,8 +643,8 @@ export function Header() {
                                                                 {g.isPrivate && (
                                                                     <span
                                                                         className="text-xs text-muted-foreground">
-                                                                    {t("privateGroup")}
-                                                                </span>
+                                                                {t("privateGroup")}
+                                                            </span>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -681,7 +654,6 @@ export function Header() {
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                                                                    onClick={() => handleLeaveGroup(g.id)}
                                                                 >
                                                                     <DoorOpen className="h-3.5 w-3.5 mr-1.5"/>
                                                                     {t("leave")}
@@ -707,8 +679,8 @@ export function Header() {
                                                     <div
                                                         className="flex items-center gap-2 bg-background/60 p-2 rounded-lg border border-border/40">
                                                         <code
-                                                            className="text-sm font-mono flex-1 font-semibold tracking-wide">
-                                                            {g.inviteCode}
+                                                            className="pl-2 text-sm font-mono flex-1 font-semibold tracking-wide">
+                                                            {" " + g.inviteCode}
                                                         </code>
                                                         <Button
                                                             variant="ghost"
@@ -721,123 +693,127 @@ export function Header() {
                                                         </Button>
                                                     </div>
 
+
                                                     {/* OTP Management for private groups (Owner/Admin only) */}
                                                     {g.isPrivate && canManage && (
-                                                        <div className="space-y-2.5">
+                                                        <div className="">
                                                             <FieldSeparator className="my-0.5"/>
-                                                            <div className="flex gap-2">
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
-                                                                    onClick={() => handleGenerateOtp(g.id)}
-                                                                >
-                                                                    <Key className="h-3.5 w-3.5 mr-1.5"/>
-                                                                    {t("generateOtp")}
-                                                                </Button>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
-                                                                    onClick={() => setChangePasswordGroupId(g.id)}
-                                                                >
-                                                                    <RefreshCw className="h-3.5 w-3.5 mr-1.5"/>
-                                                                    {t("changePassword")}
-                                                                </Button>
-                                                            </div>
-
-                                                            {/* Show generated OTP */}
-                                                            {generatedOtps.get(g.id) && (
-                                                                <div
-                                                                    className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <p className="text-xs font-semibold text-primary/90 uppercase tracking-wide">
-                                                                            {t("otpGenerated")}
-                                                                        </p>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="h-2 w-2 rounded-full bg-primary animate-pulse"/>
-                                                                            <span className="text-xs font-bold text-primary tabular-nums">
-                                                                            {generatedOtps.get(g.id)!.remainingSeconds}s
-                                                                        </span>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {/* Progress bar */}
-                                                                    <Progress
-                                                                        value={(generatedOtps.get(g.id)!.remainingSeconds / 10) * 100}
-                                                                        className="h-1.5"
-                                                                    />
-
-                                                                    <div
-                                                                        className="bg-background/80 backdrop-blur-sm p-3 rounded-lg shadow-sm">
-                                                                        <code
-                                                                            className="text-3xl font-mono font-bold text-primary block text-center tracking-[0.4em] drop-shadow-sm">
-                                                                            {generatedOtps.get(g.id)!.code}
-                                                                        </code>
-                                                                    </div>
+                                                            <div className="space-y-4 pt-6">
+                                                                <div className="flex gap-2">
                                                                     <Button
                                                                         variant="outline"
                                                                         size="sm"
-                                                                        className="h-9 w-full text-xs border-primary/30 hover:bg-primary hover:text-primary-foreground transition-colors"
-                                                                        onClick={() => {
-                                                                            navigator.clipboard.writeText(generatedOtps.get(g.id)!.code);
-                                                                            setCopied(true);
-                                                                            setTimeout(() => setCopied(false), 2000);
-                                                                        }}
+                                                                        className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
+                                                                        onClick={() => handleGenerateOtp(g.id)}
                                                                     >
-                                                                        {copied ?
-                                                                            <Check
-                                                                                className="h-4 w-4 mr-2"/> :
-                                                                            <Copy className="h-4 w-4 mr-2"/>}
-                                                                        {t("copyCode")}
+                                                                        <Key className="h-3.5 w-3.5 mr-1.5"/>
+                                                                        {t("generateOtp")}
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
+                                                                        onClick={() => setChangePasswordGroupId(g.id)}
+                                                                    >
+                                                                        <RefreshCw className="h-3.5 w-3.5 mr-1.5"/>
+                                                                        {t("changePassword")}
                                                                     </Button>
                                                                 </div>
-                                                            )}
 
-                                                            {/* Password change form */}
-                                                            {changePasswordGroupId === g.id && (
-                                                                <div
-                                                                    className="bg-background/60 border border-border/60 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
-                                                                    <Field>
-                                                                        <FieldLabel htmlFor={`newPassword-${g.id}`}
-                                                                                    className="text-sm font-medium">
-                                                                            {t("newPassword")}
-                                                                        </FieldLabel>
-                                                                        <Input
-                                                                            id={`newPassword-${g.id}`}
-                                                                            type="password"
-                                                                            value={newPassword}
-                                                                            onChange={(e) => setNewPassword(e.target.value)}
-                                                                            placeholder={t("newPassword")}
-                                                                            className="h-9 bg-background border-border/60"
+                                                                {/* Show generated OTP */}
+                                                                {generatedOtps.get(g.id) && (
+                                                                    <div
+                                                                        className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <p className="text-xs font-semibold text-primary/90 uppercase tracking-wide">
+                                                                                {t("otpGenerated")}
+                                                                            </p>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="h-2 w-2 rounded-full bg-primary animate-pulse"/>
+                                                                                <span className="text-xs font-bold text-primary tabular-nums">
+                                                                            {generatedOtps.get(g.id)!.remainingSeconds}s
+                                                                        </span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Progress bar */}
+                                                                        <Progress
+                                                                            value={(generatedOtps.get(g.id)!.remainingSeconds / 10) * 100}
+                                                                            className="h-1.5"
                                                                         />
-                                                                        <FieldDescription className="text-xs">
-                                                                            {t("optionalPassword")}
-                                                                        </FieldDescription>
-                                                                    </Field>
-                                                                    <div className="flex gap-2">
-                                                                        <Button
-                                                                            size="sm"
-                                                                            className="h-9 flex-1 bg-primary hover:bg-primary/90"
-                                                                            onClick={() => handleUpdatePassword(g.id)}
-                                                                        >
-                                                                            <Check className="h-3.5 w-3.5 mr-1.5"/>
-                                                                            {t("save")}
-                                                                        </Button>
+
+                                                                        <div
+                                                                            className="bg-background/80 backdrop-blur-sm p-3 rounded-lg shadow-sm">
+                                                                            <code
+                                                                                className="text-3xl font-mono font-bold text-primary block text-center tracking-[0.4em] drop-shadow-sm">
+                                                                                {generatedOtps.get(g.id)!.code}
+                                                                            </code>
+                                                                        </div>
                                                                         <Button
                                                                             variant="outline"
                                                                             size="sm"
-                                                                            className="h-9 flex-1 border-border/60"
+                                                                            className="h-9 w-full text-xs border-primary/30 hover:bg-primary hover:text-primary-foreground transition-colors"
                                                                             onClick={() => {
-                                                                                setChangePasswordGroupId(null);
-                                                                                setNewPassword("");
+                                                                                navigator.clipboard.writeText(generatedOtps.get(g.id)!.code);
+                                                                                setCopied(true);
+                                                                                setTimeout(() => setCopied(false), 2000);
                                                                             }}
                                                                         >
-                                                                            {t("cancel")}
+                                                                            {copied ?
+                                                                                <Check
+                                                                                    className="h-4 w-4 mr-2"/> :
+                                                                                <Copy className="h-4 w-4 mr-2"/>}
+                                                                            {t("copyCode")}
                                                                         </Button>
                                                                     </div>
-                                                                </div>
-                                                            )}
+                                                                )}
+
+                                                                {/* Password change form */}
+                                                                {changePasswordGroupId === g.id && (
+                                                                    <div
+                                                                        className="bg-background/60 border border-border/60 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
+                                                                        <Field>
+                                                                            <FieldLabel htmlFor={`newPassword-${g.id}`}
+                                                                                        className="text-sm font-medium">
+                                                                                {t("newPassword")}
+                                                                            </FieldLabel>
+                                                                            <Input
+                                                                                id={`newPassword-${g.id}`}
+                                                                                type="password"
+                                                                                value={newPassword}
+                                                                                onChange={(e) => setNewPassword(e.target.value)}
+                                                                                placeholder={t("newPassword")}
+                                                                                className="h-9 bg-background border-border/60"
+                                                                            />
+                                                                            <FieldDescription className="text-xs">
+                                                                                {t("optionalPassword")}
+                                                                            </FieldDescription>
+                                                                        </Field>
+                                                                        <div className="flex gap-2 pt-4">
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                className="h-9 flex-1 border-border/60"
+                                                                                onClick={() => {
+                                                                                    setChangePasswordGroupId(null);
+                                                                                    setNewPassword("");
+                                                                                }}
+                                                                            >
+                                                                                {t("cancel")}
+                                                                            </Button>
+                                                                            <Button
+                                                                                size="sm"
+                                                                                className="h-9 flex-1 bg-primary hover:bg-primary/90"
+                                                                                onClick={() => handleUpdatePassword(g.id)}
+                                                                            >
+                                                                                <Check className="h-3.5 w-3.5 mr-1.5"/>
+                                                                                {t("save")}
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
                                                         </div>
                                                     )}
 
@@ -944,7 +920,7 @@ export function Header() {
                                                                                             }
                                                                                             onConfirm={async () => {
                                                                                                 try {
-                                                                                                    await handleTransferOwnership(g.id, m.userId);
+                                                                                                    await transferOwnership(g.id, m.userId);
                                                                                                 } catch {
                                                                                                     setError(t("failedToTransfer"));
                                                                                                 }
@@ -965,7 +941,6 @@ export function Header() {
                                                                                             size="sm"
                                                                                             className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                                                                                             title={t("kickMember")}
-                                                                                            onClick={() => handleKickMember(g.id, m.userId)}
                                                                                         >
                                                                                             <UserMinus className="h-3 w-3"/>
                                                                                         </Button>
@@ -1004,7 +979,7 @@ export function Header() {
 
             {/* Role Change Dialog */}
             <Dialog open={roleChangeDialog !== null} onOpenChange={(open) => !open && handleCancelRoleChange()}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{t("changeRole")}</DialogTitle>
                     </DialogHeader>
@@ -1014,9 +989,9 @@ export function Header() {
                                 <div className="space-y-2">
                                     <FieldLabel>{t("currentRole")}</FieldLabel>
                                     <div className="rounded-lg bg-muted/30 px-3 py-2 text-sm">
-                                        {roleChangeDialog.currentRole === GroupRole.Viewer && t("roleViewer")}
-                                        {roleChangeDialog.currentRole === GroupRole.Member && t("roleMember")}
-                                        {roleChangeDialog.currentRole === GroupRole.Admin && t("roleAdmin")}
+                                        {roleChangeDialog.currentRole === GroupRole.Viewer && (<div className="flex items-center gap-2"><Eye /> {t("roleViewer")}</div>)}
+                                        {roleChangeDialog.currentRole === GroupRole.Member && (<div className="flex items-center gap-2"><User /> {t("roleMember")}</div>)}
+                                        {roleChangeDialog.currentRole === GroupRole.Admin && (<div className="flex items-center gap-2"><Shield /> {t("roleAdmin")}</div>)}
                                     </div>
                                 </div>
 
