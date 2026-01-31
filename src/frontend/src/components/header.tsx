@@ -117,6 +117,20 @@ export function Header() {
         void setLocale(next);
     };
 
+    // Helper function to parse API errors and return appropriate translation key
+    const getJoinGroupErrorKey = (err: unknown): "alreadyMember" | "invalidOtp" | "invalidCode" => {
+        const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "";
+        // Check for already member error (both English and Russian versions from backend)
+        if (errorMessage.includes("Already a member") || errorMessage.includes("уже являетесь участником")) {
+            return "alreadyMember";
+        }
+        // Check for invalid OTP error
+        if (errorMessage.includes("Invalid or expired OTP") || errorMessage.includes("Неверный или истекший OTP")) {
+            return "invalidOtp";
+        }
+        return "invalidCode";
+    };
+
     const handleCreateGroup = async () => {
         if (!newGroupName.trim()) return;
         try {
@@ -165,8 +179,8 @@ export function Header() {
             // Set default auth mode based on whether password exists
             setUseOtpMode(!result.hasPassword);
             setJoinStep("auth");
-        } catch {
-            setError(t("invalidCode"));
+        } catch (err) {
+            setError(t(getJoinGroupErrorKey(err)));
         }
     };
 
@@ -181,8 +195,8 @@ export function Header() {
             setError("");
             setJoinStep("code");
             setGroupToJoin(null);
-        } catch {
-            setError(t("invalidCode"));
+        } catch (err) {
+            setError(t(getJoinGroupErrorKey(err)));
         }
     };
 
@@ -355,7 +369,18 @@ export function Header() {
                 </div>
             </header>
 
-            <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
+            <Dialog open={groupDialogOpen} onOpenChange={(open) => {
+                setGroupDialogOpen(open);
+                if (!open) {
+                    // Reset error and join step when dialog is closed
+                    setError("");
+                    setJoinStep("code");
+                    setGroupToJoin(null);
+                    setJoinPassword("");
+                    setJoinOtp("");
+                    setUseOtpMode(false);
+                }
+            }}>
                 <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">

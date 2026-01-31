@@ -214,6 +214,7 @@ const ru: Record<TranslationKeys, string> = {
     joinedGroup: "Вы присоединились!",
     invalidCode: "Неверный код приглашения",
     alreadyMember: "Вы уже участник",
+    invalidOtp: "Неверный или истекший OTP код",
     myRatingLabel: "Моя оценка",
     allRatings: "Все оценки",
     noRatingsYet: "Оценок пока нет",
