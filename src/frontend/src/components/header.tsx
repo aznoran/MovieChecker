@@ -558,7 +558,7 @@ export function Header() {
                                                     </Field>
                                                 )}
 
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-2 pt-2">
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
