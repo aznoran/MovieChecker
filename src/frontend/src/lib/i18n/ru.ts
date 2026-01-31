@@ -245,6 +245,13 @@ const ru: Record<TranslationKeys, string> = {
     emotionDescription: "Какие эмоции вызвал просмотр",
     commentDescription: "Поделитесь своими мыслями о просмотре",
 
+    // Settings
+    settings: "Настройки",
+    privacy: "Приватность",
+    preventAutoAddToPersonal: "Запретить автоматическое добавление в личный список",
+    preventAutoAddToPersonalDescription: "Когда включено, записи не будут автоматически добавляться в ваш личный список, когда вас выбирают в качестве зрителя в группе",
+    back: "Назад",
+
     // Validation Errors
     titleTooLong: "Название слишком длинное (макс. 255 символов)",
     invalidYear: "Некорректный год (1900-2100)",

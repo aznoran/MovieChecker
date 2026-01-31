@@ -243,6 +243,13 @@ const en = {
     emotionDescription: "What emotions did the viewing evoke",
     commentDescription: "Share your thoughts about the viewing",
 
+    // Settings
+    settings: "Settings",
+    privacy: "Privacy",
+    preventAutoAddToPersonal: "Prevent auto-add to personal list",
+    preventAutoAddToPersonalDescription: "When enabled, entries won't be automatically added to your personal list when you're selected as a viewer in a group",
+    back: "Back",
+
     // Validation Errors
     titleTooLong: "Title is too long (max 255 characters)",
     invalidYear: "Invalid year (1900-2100)",

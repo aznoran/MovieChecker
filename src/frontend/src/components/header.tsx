@@ -2,7 +2,7 @@
 
 import {useState} from "react";
 import Link from "next/link";
-import {usePathname} from "next/navigation";
+import {usePathname, useRouter} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
@@ -30,6 +30,15 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {cn} from "@/lib/utils";
 import {
     Clapperboard,
@@ -53,6 +62,7 @@ import {
     Eye,
     Key,
     RefreshCw,
+    Settings,
 } from "lucide-react";
 import type {Locale} from "@/lib/i18n";
 import {GroupRole} from "@/types";
@@ -64,6 +74,7 @@ import {ScrollArea} from "@/components/ui/scroll-area";
 
 export function Header() {
     const pathname = usePathname();
+    const router = useRouter();
     const {user, logout} = useAuth();
     const {locale, setLocale, t} = useLocale();
     const {
@@ -347,15 +358,38 @@ export function Header() {
                             {locale.toUpperCase()}
                         </Button>
                         {user && (
-                            <span className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <User className="h-4 w-4"/>
-                                {user.displayName}
-                              </span>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full p-0">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarFallback className="bg-primary/10 text-primary">
+                                                {user.displayName.substring(0, 2).toUpperCase()}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56" align="end" forceMount>
+                                    <DropdownMenuLabel className="font-normal">
+                                        <div className="flex flex-col space-y-1">
+                                            <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                                            <p className="text-xs leading-none text-muted-foreground">
+                                                @{user.username}
+                                            </p>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => router.push("/settings")}>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>{t("settings")}</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={logout}>
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        <span>{t("logout")}</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         )}
-                        <Button variant="ghost" size="sm" onClick={logout}>
-                            <LogOut className="h-4 w-4 mr-1.5"/>
-                            <span className="hidden sm:inline">{t("logout")}</span>
-                        </Button>
                     </div>
                 </div>
             </header>

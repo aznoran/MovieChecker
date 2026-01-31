@@ -251,4 +251,15 @@ export const getPosterUrl = (posterIdOrPath: string | undefined | null): string 
   return `${base}${posterIdOrPath}`;
 };
 
+// User Settings
+export const getUserSettings = async (): Promise<{ preventAutoAddToPersonal: boolean }> => {
+  const response = await api.get<{ preventAutoAddToPersonal: boolean }>("/user-settings");
+  return response.data;
+};
+
+export const updateUserSettings = async (settings: { preventAutoAddToPersonal?: boolean }): Promise<{ preventAutoAddToPersonal: boolean }> => {
+  const response = await api.put<{ preventAutoAddToPersonal: boolean }>("/user-settings", settings);
+  return response.data;
+};
+
 export default api;
