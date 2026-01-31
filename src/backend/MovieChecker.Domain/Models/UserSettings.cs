@@ -4,7 +4,8 @@ public class UserSettings
 {
     public int Id { get; set; }
     public int UserId { get; set; }
-    public bool PreventAutoAddToPersonal { get; set; } = false;
+    public bool PreventOthersAddingToMyPersonal { get; set; } = false;
+    public bool PreventMeAddingToMyPersonal { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

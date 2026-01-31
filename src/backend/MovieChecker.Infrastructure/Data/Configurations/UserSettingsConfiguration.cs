@@ -12,7 +12,10 @@ public class UserSettingsConfiguration : IEntityTypeConfiguration<UserSettings>
         
         builder.HasIndex(us => us.UserId).IsUnique();
         
-        builder.Property(us => us.PreventAutoAddToPersonal)
+        builder.Property(us => us.PreventOthersAddingToMyPersonal)
+            .IsRequired();
+        
+        builder.Property(us => us.PreventMeAddingToMyPersonal)
             .IsRequired();
         
         builder.Property(us => us.CreatedAt)

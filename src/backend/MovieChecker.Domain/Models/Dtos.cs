@@ -159,9 +159,11 @@ public record StatsDto(
 
 // User Settings DTOs
 public record UserSettingsDto(
-    bool PreventAutoAddToPersonal
+    bool PreventOthersAddingToMyPersonal,
+    bool PreventMeAddingToMyPersonal
 );
 
 public record UpdateUserSettingsRequest(
-    bool? PreventAutoAddToPersonal
+    bool? PreventOthersAddingToMyPersonal,
+    bool? PreventMeAddingToMyPersonal
 );

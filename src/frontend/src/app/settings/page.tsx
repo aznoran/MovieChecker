@@ -6,7 +6,7 @@ import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {getUserSettings, updateUserSettings} from "@/lib/api";
 import {Button} from "@/components/ui/button";
-import {Field, FieldLabel, FieldDescription} from "@/components/ui/field";
+import {Field, FieldLabel, FieldDescription, FieldSeparator} from "@/components/ui/field";
 import {Switch} from "@/components/ui/switch";
 import {ArrowLeft} from "lucide-react";
 
@@ -14,7 +14,8 @@ export default function SettingsPage() {
     const router = useRouter();
     const {isAuthenticated} = useAuth();
     const {t} = useLocale();
-    const [preventAutoAdd, setPreventAutoAdd] = useState(false);
+    const [preventOthersAdding, setPreventOthersAdding] = useState(false);
+    const [preventMeAdding, setPreventMeAdding] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -27,7 +28,8 @@ export default function SettingsPage() {
         const loadSettings = async () => {
             try {
                 const settings = await getUserSettings();
-                setPreventAutoAdd(settings.preventAutoAddToPersonal);
+                setPreventOthersAdding(settings.preventOthersAddingToMyPersonal);
+                setPreventMeAdding(settings.preventMeAddingToMyPersonal);
             } catch (error) {
                 console.error("Failed to load settings:", error);
             } finally {
@@ -38,13 +40,29 @@ export default function SettingsPage() {
         loadSettings();
     }, [isAuthenticated, router]);
 
-    const handleToggle = async (checked: boolean) => {
+    const handleToggleOthers = async (checked: boolean) => {
         setSaving(true);
         try {
             const settings = await updateUserSettings({
-                preventAutoAddToPersonal: checked
+                preventOthersAddingToMyPersonal: checked
             });
-            setPreventAutoAdd(settings.preventAutoAddToPersonal);
+            setPreventOthersAdding(settings.preventOthersAddingToMyPersonal);
+            setPreventMeAdding(settings.preventMeAddingToMyPersonal);
+        } catch (error) {
+            console.error("Failed to update settings:", error);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleToggleMe = async (checked: boolean) => {
+        setSaving(true);
+        try {
+            const settings = await updateUserSettings({
+                preventMeAddingToMyPersonal: checked
+            });
+            setPreventOthersAdding(settings.preventOthersAddingToMyPersonal);
+            setPreventMeAdding(settings.preventMeAddingToMyPersonal);
         } catch (error) {
             console.error("Failed to update settings:", error);
         } finally {
@@ -82,14 +100,32 @@ export default function SettingsPage() {
                     <Field>
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <FieldLabel>{t("preventAutoAddToPersonal")}</FieldLabel>
+                                <FieldLabel>{t("preventOthersAddingToMyPersonal")}</FieldLabel>
                                 <FieldDescription>
-                                    {t("preventAutoAddToPersonalDescription")}
+                                    {t("preventOthersAddingToMyPersonalDescription")}
                                 </FieldDescription>
                             </div>
                             <Switch
-                                checked={preventAutoAdd}
-                                onCheckedChange={handleToggle}
+                                checked={preventOthersAdding}
+                                onCheckedChange={handleToggleOthers}
+                                disabled={saving}
+                            />
+                        </div>
+                    </Field>
+
+                    <FieldSeparator />
+
+                    <Field>
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <FieldLabel>{t("preventMeAddingToMyPersonal")}</FieldLabel>
+                                <FieldDescription>
+                                    {t("preventMeAddingToMyPersonalDescription")}
+                                </FieldDescription>
+                            </div>
+                            <Switch
+                                checked={preventMeAdding}
+                                onCheckedChange={handleToggleMe}
                                 disabled={saving}
                             />
                         </div>

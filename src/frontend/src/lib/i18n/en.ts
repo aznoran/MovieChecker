@@ -246,8 +246,10 @@ const en = {
     // Settings
     settings: "Settings",
     privacy: "Privacy",
-    preventAutoAddToPersonal: "Prevent auto-add to personal list",
-    preventAutoAddToPersonalDescription: "When enabled, entries won't be automatically added to your personal list when you're selected as a viewer in a group",
+    preventOthersAddingToMyPersonal: "Prevent others from adding entries to my personal list",
+    preventOthersAddingToMyPersonalDescription: "When enabled, entries won't be automatically added to your personal list when someone else selects you as a viewer in a group",
+    preventMeAddingToMyPersonal: "Prevent me from adding entries to my personal list in groups",
+    preventMeAddingToMyPersonalDescription: "When enabled, entries won't be automatically added to your personal list when you create entries in groups and include yourself as a viewer",
     back: "Back",
 
     // Validation Errors

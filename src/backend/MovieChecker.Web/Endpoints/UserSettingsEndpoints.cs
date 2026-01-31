@@ -31,13 +31,17 @@ public static class UserSettingsEndpoints
             settings = new UserSettings
             {
                 UserId = userId,
-                PreventAutoAddToPersonal = false
+                PreventOthersAddingToMyPersonal = false,
+                PreventMeAddingToMyPersonal = false
             };
             db.UserSettings.Add(settings);
             await db.SaveChangesAsync();
         }
 
-        return Results.Ok(new UserSettingsDto(settings.PreventAutoAddToPersonal));
+        return Results.Ok(new UserSettingsDto(
+            settings.PreventOthersAddingToMyPersonal,
+            settings.PreventMeAddingToMyPersonal
+        ));
     }
 
     private static async Task<IResult> UpdateSettings(
@@ -55,20 +59,27 @@ public static class UserSettingsEndpoints
             settings = new UserSettings
             {
                 UserId = userId,
-                PreventAutoAddToPersonal = request.PreventAutoAddToPersonal ?? false
+                PreventOthersAddingToMyPersonal = request.PreventOthersAddingToMyPersonal ?? false,
+                PreventMeAddingToMyPersonal = request.PreventMeAddingToMyPersonal ?? false
             };
             db.UserSettings.Add(settings);
         }
         else
         {
-            if (request.PreventAutoAddToPersonal.HasValue)
-                settings.PreventAutoAddToPersonal = request.PreventAutoAddToPersonal.Value;
+            if (request.PreventOthersAddingToMyPersonal.HasValue)
+                settings.PreventOthersAddingToMyPersonal = request.PreventOthersAddingToMyPersonal.Value;
+            
+            if (request.PreventMeAddingToMyPersonal.HasValue)
+                settings.PreventMeAddingToMyPersonal = request.PreventMeAddingToMyPersonal.Value;
             
             settings.UpdatedAt = DateTime.UtcNow;
         }
 
         await db.SaveChangesAsync();
 
-        return Results.Ok(new UserSettingsDto(settings.PreventAutoAddToPersonal));
+        return Results.Ok(new UserSettingsDto(
+            settings.PreventOthersAddingToMyPersonal,
+            settings.PreventMeAddingToMyPersonal
+        ));
     }
 }

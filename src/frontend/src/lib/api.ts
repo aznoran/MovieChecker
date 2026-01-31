@@ -252,13 +252,28 @@ export const getPosterUrl = (posterIdOrPath: string | undefined | null): string 
 };
 
 // User Settings
-export const getUserSettings = async (): Promise<{ preventAutoAddToPersonal: boolean }> => {
-  const response = await api.get<{ preventAutoAddToPersonal: boolean }>("/user-settings");
+export const getUserSettings = async (): Promise<{ 
+  preventOthersAddingToMyPersonal: boolean;
+  preventMeAddingToMyPersonal: boolean;
+}> => {
+  const response = await api.get<{ 
+    preventOthersAddingToMyPersonal: boolean;
+    preventMeAddingToMyPersonal: boolean;
+  }>("/user-settings");
   return response.data;
 };
 
-export const updateUserSettings = async (settings: { preventAutoAddToPersonal?: boolean }): Promise<{ preventAutoAddToPersonal: boolean }> => {
-  const response = await api.put<{ preventAutoAddToPersonal: boolean }>("/user-settings", settings);
+export const updateUserSettings = async (settings: { 
+  preventOthersAddingToMyPersonal?: boolean;
+  preventMeAddingToMyPersonal?: boolean;
+}): Promise<{ 
+  preventOthersAddingToMyPersonal: boolean;
+  preventMeAddingToMyPersonal: boolean;
+}> => {
+  const response = await api.put<{ 
+    preventOthersAddingToMyPersonal: boolean;
+    preventMeAddingToMyPersonal: boolean;
+  }>("/user-settings", settings);
   return response.data;
 };
 

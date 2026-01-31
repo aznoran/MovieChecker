@@ -248,8 +248,10 @@ const ru: Record<TranslationKeys, string> = {
     // Settings
     settings: "Настройки",
     privacy: "Приватность",
-    preventAutoAddToPersonal: "Запретить автоматическое добавление в личный список",
-    preventAutoAddToPersonalDescription: "Когда включено, записи не будут автоматически добавляться в ваш личный список, когда вас выбирают в качестве зрителя в группе",
+    preventOthersAddingToMyPersonal: "Запретить другим добавлять записи в мой личный список",
+    preventOthersAddingToMyPersonalDescription: "Когда включено, записи не будут автоматически добавляться в ваш личный список, когда кто-то другой выбирает вас в качестве зрителя в группе",
+    preventMeAddingToMyPersonal: "Запретить мне добавлять записи в личный список через группы",
+    preventMeAddingToMyPersonalDescription: "Когда включено, записи не будут автоматически добавляться в ваш личный список, когда вы создаёте записи в группах и включаете себя в качестве зрителя",
     back: "Назад",
 
     // Validation Errors

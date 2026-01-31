@@ -195,7 +195,7 @@ public static class WatchEntryEndpoints
             // Get user settings to check privacy preferences
             var userSettings = await db.UserSettings
                 .Where(s => viewerUserIds.Contains(s.UserId))
-                .ToDictionaryAsync(s => s.UserId, s => s.PreventAutoAddToPersonal);
+                .ToDictionaryAsync(s => s.UserId);
             
             // Get existing personal entries for these users for this movie
             var existingPersonalEntries = await db.WatchEntries
@@ -208,8 +208,23 @@ public static class WatchEntryEndpoints
             // Create personal entries for viewers who don't have one yet and haven't disabled it
             foreach (var viewerUserId in viewerUserIds)
             {
-                // Check if user has disabled auto-add to personal (default is false if no settings)
-                var preventAutoAdd = userSettings.GetValueOrDefault(viewerUserId, false);
+                // Check if user has disabled auto-add to personal
+                var settings = userSettings.GetValueOrDefault(viewerUserId);
+                bool preventAutoAdd = false;
+                
+                if (settings != null)
+                {
+                    // If the viewer is the creator (current user), check PreventMeAddingToMyPersonal
+                    // If the viewer is someone else, check PreventOthersAddingToMyPersonal
+                    if (viewerUserId == userId)
+                    {
+                        preventAutoAdd = settings.PreventMeAddingToMyPersonal;
+                    }
+                    else
+                    {
+                        preventAutoAdd = settings.PreventOthersAddingToMyPersonal;
+                    }
+                }
                 
                 if (!existingPersonalEntries.Contains(viewerUserId) && !preventAutoAdd)
                 {
