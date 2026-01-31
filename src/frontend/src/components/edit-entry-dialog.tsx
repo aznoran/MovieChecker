@@ -227,8 +227,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             queryClient.invalidateQueries({queryKey: ["watchEntries"]});
             onOpenChange(false);
         },
-        onError: () => {
-            toast.error(t("failedToUpdate"), { position: "top-center" })
+        onError: (error: any) => {
+            const errorMessage = error?.response?.data?.message || t("failedToUpdate");
+            toast.error(errorMessage, { position: "top-center" })
             setError(t("failedToUpdate"));
         },
     });

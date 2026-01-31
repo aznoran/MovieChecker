@@ -18,6 +18,10 @@ COPY . .
 RUN dotnet publish MovieChecker.Web/MovieChecker.Web.csproj -c Release -o /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
+
+# Install ICU libraries for globalization/localization support
+RUN apk add --no-cache icu-libs
+
 WORKDIR /app
 COPY --from=build /app/publish .
 

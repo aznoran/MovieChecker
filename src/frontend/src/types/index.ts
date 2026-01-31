@@ -78,11 +78,20 @@ export interface WatchEntry {
   watchingTime: number;
 }
 
+export enum GroupRole {
+  Viewer = 0,
+  Member = 1,
+  Admin = 2,
+  Owner = 3,
+}
+
 export interface Group {
   id: number;
   name: string;
   inviteCode: string;
   createdByUserId: number;
+  isPrivate: boolean;
+  defaultRole: GroupRole;
   members: GroupMember[];
   createdAt: string;
 }
@@ -90,6 +99,7 @@ export interface Group {
 export interface GroupMember {
   userId: number;
   displayName: string;
+  role: GroupRole;
   joinedAt: string;
 }
 
@@ -151,4 +161,11 @@ export const EmotionEmojis: Record<Emotion, string> = {
   [Emotion.Cringe]: "😬",
   [Emotion.Confused]: "🤔",
   [Emotion.Neutral]: "😐",
+};
+
+export const GroupRoleLabels: Record<GroupRole, string> = {
+  [GroupRole.Viewer]: "Viewer",
+  [GroupRole.Member]: "Member",
+  [GroupRole.Admin]: "Admin",
+  [GroupRole.Owner]: "Owner",
 };
