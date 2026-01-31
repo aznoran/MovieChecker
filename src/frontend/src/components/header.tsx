@@ -318,7 +318,7 @@ export function Header() {
                             value={activeGroupId?.toString() ?? "personal"}
                             onValueChange={(v) => setActiveGroupId(v === "personal" ? undefined : parseInt(v))}
                         >
-                            <SelectTrigger className="w-[180px] h-16 text-sm">
+                            <SelectTrigger className="w-[180px] h-8 text-sm">
                                 <SelectValue/>
                             </SelectTrigger>
                             <SelectContent>
