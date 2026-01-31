@@ -253,7 +253,21 @@ const ru: Record<TranslationKeys, string> = {
     invalidNumber: "Должно быть положительным числом",
     invalidTimeComponent: "Должно быть от 0 до 59",
     invalidRating: "Оценка должна быть от 1 до 10",
-    fixValidationErrors: "Исправьте ошибки в форме"
+    fixValidationErrors: "Исправьте ошибки в форме",
+
+    // Registration Validation Errors
+    usernameRequired: "Логин обязателен",
+    usernameTooShort: "Логин должен содержать минимум 3 символа",
+    usernameTooLong: "Логин не должен превышать 50 символов",
+    usernameInvalidChars: "Логин может содержать только буквы, цифры, подчёркивания и дефисы",
+    passwordRequired: "Пароль обязателен",
+    passwordTooShort: "Пароль должен содержать минимум 8 символов",
+    passwordTooLong: "Пароль не должен превышать 72 символа",
+    passwordMissingRequirements: "Пароль должен содержать хотя бы одну заглавную букву, одну строчную букву и одну цифру",
+    displayNameRequired: "Имя обязательно",
+    displayNameTooShort: "Имя должно содержать минимум 2 символа",
+    displayNameTooLong: "Имя не должно превышать 100 символов",
+    usernameAlreadyExists: "Логин уже занят"
 };
 
 export default ru;
