@@ -282,6 +282,11 @@ export function Header() {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    // Hide header on login page
+    if (pathname === "/login") {
+        return null;
+    }
+
     return (
         <>
             <header
