@@ -28,7 +28,7 @@ api.interceptors.response.use(
   (error) => {
     // Only redirect to login on 401 if the request was NOT to an auth endpoint
     // (login/register should not trigger redirect on auth failure)
-    const isAuthRequest = error.config?.url?.startsWith("/auth/");
+    const isAuthRequest = error.config?.url?.includes("/auth/");
     if (error.response?.status === 401 && typeof window !== "undefined" && !isAuthRequest) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
