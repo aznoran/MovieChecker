@@ -84,6 +84,7 @@ export function Header() {
     const [newGroupName, setNewGroupName] = useState("");
     const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
     const [newGroupPassword, setNewGroupPassword] = useState("");
+    const [newGroupDefaultRole, setNewGroupDefaultRole] = useState<GroupRole>(GroupRole.Member);
     const [joinCode, setJoinCode] = useState("");
     const [joinPassword, setJoinPassword] = useState("");
     const [joinOtp, setJoinOtp] = useState("");
@@ -119,10 +120,13 @@ export function Header() {
     const handleCreateGroup = async () => {
         if (!newGroupName.trim()) return;
         try {
-            await createGroup(newGroupName.trim(), newGroupIsPrivate, newGroupPassword || undefined);
+            // For public groups, default role is always Viewer
+            const defaultRole = newGroupIsPrivate ? newGroupDefaultRole : GroupRole.Viewer;
+            await createGroup(newGroupName.trim(), newGroupIsPrivate, newGroupPassword || undefined, defaultRole);
             setNewGroupName("");
             setNewGroupIsPrivate(false);
             setNewGroupPassword("");
+            setNewGroupDefaultRole(GroupRole.Member);
             setError("");
         } catch {
             setError(t("failedToAdd"));
@@ -416,6 +420,43 @@ export function Header() {
                                                     />
                                                     <FieldDescription className="text-xs">
                                                         {t("optionalPassword")}
+                                                    </FieldDescription>
+                                                </Field>
+                                                
+                                                <Field>
+                                                    <FieldLabel htmlFor="defaultRole" className="text-sm font-medium">
+                                                        {t("defaultRole")}
+                                                    </FieldLabel>
+                                                    <Select
+                                                        value={String(newGroupDefaultRole)}
+                                                        onValueChange={(value) => setNewGroupDefaultRole(Number(value) as GroupRole)}
+                                                    >
+                                                        <SelectTrigger className="h-10 bg-background border-border/60">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value={String(GroupRole.Viewer)}>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Eye className="h-4 w-4" />
+                                                                    {t("roleViewer")}
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value={String(GroupRole.Member)}>
+                                                                <div className="flex items-center gap-2">
+                                                                    <User className="h-4 w-4" />
+                                                                    {t("roleMember")}
+                                                                </div>
+                                                            </SelectItem>
+                                                            <SelectItem value={String(GroupRole.Admin)}>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Shield className="h-4 w-4" />
+                                                                    {t("roleAdmin")}
+                                                                </div>
+                                                            </SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FieldDescription className="text-xs">
+                                                        {t("defaultRoleDescription")}
                                                     </FieldDescription>
                                                 </Field>
                                             </div>

@@ -91,6 +91,7 @@ export interface Group {
   inviteCode: string;
   createdByUserId: number;
   isPrivate: boolean;
+  defaultRole: GroupRole;
   members: GroupMember[];
   createdAt: string;
 }

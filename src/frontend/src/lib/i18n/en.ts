@@ -112,6 +112,8 @@ const en = {
     invalidRole: "Invalid role",
     selectNewRole: "Select New Role",
     currentRole: "Current Role",
+    defaultRole: "Default Role for New Members",
+    defaultRoleDescription: "Choose the role that new members will get when they join this group",
     changeRoleConfirm: "Change this member's role?",
     changeRoleDescription: "This will update the member's permissions in the group.",
     errorChangingRole: "Failed to change role",

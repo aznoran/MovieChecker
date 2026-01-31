@@ -16,6 +16,7 @@ public class Group
     public int CreatedByUserId { get; set; }
     public bool IsPrivate { get; set; } = false;
     public string? PasswordHash { get; set; }
+    public GroupRole DefaultRole { get; set; } = GroupRole.Member;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public User CreatedBy { get; set; } = null!;

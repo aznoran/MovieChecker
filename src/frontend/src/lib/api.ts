@@ -173,8 +173,8 @@ export const getGroup = async (id: number): Promise<Group> => {
   return response.data;
 };
 
-export const createGroup = async (name: string, isPrivate: boolean = false, password?: string): Promise<Group> => {
-  const response = await api.post<Group>("/groups", { name, isPrivate, password });
+export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: GroupRole): Promise<Group> => {
+  const response = await api.post<Group>("/groups", { name, isPrivate, password, defaultRole });
   return response.data;
 };
 

@@ -56,6 +56,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.DefaultRole,
             g.Members.Select(m => new GroupMemberDto(
                 m.UserId,
                 m.User.DisplayName,
@@ -85,6 +86,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.DefaultRole,
             g.Members.Select(m => new GroupMemberDto(
                 m.UserId,
                 m.User.DisplayName,
@@ -102,6 +104,12 @@ public static class GroupEndpoints
     {
         var userId = GetUserId(user);
 
+        // For public groups, default role must be Viewer
+        // For private groups, use the requested default role or default to Member
+        var defaultRole = request.IsPrivate 
+            ? (request.DefaultRole ?? GroupRole.Member)
+            : GroupRole.Viewer;
+
         // Password is optional for private groups (can use OTP instead)
         var g = new Group
         {
@@ -109,6 +117,7 @@ public static class GroupEndpoints
             InviteCode = GenerateInviteCode(),
             CreatedByUserId = userId,
             IsPrivate = request.IsPrivate,
+            DefaultRole = defaultRole,
             PasswordHash = !string.IsNullOrWhiteSpace(request.Password) 
                 ? BCrypt.Net.BCrypt.HashPassword(request.Password) 
                 : null
@@ -134,6 +143,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.DefaultRole,
             [new GroupMemberDto(userId, displayName, GroupRole.Owner, DateTime.UtcNow)],
             g.CreatedAt
         ));
@@ -229,12 +239,12 @@ public static class GroupEndpoints
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
             return Results.BadRequest(new { message = LocalizationService.Translate("AlreadyMember", GetLanguage(context)) });
 
-        // 4. Add member
+        // 4. Add member with default role
         db.GroupMembers.Add(new GroupMember 
         { 
             GroupId = group.Id, 
             UserId = userId,
-            Role = GroupRole.Member
+            Role = group.DefaultRole
         });
         await db.SaveChangesAsync();
 
@@ -253,6 +263,7 @@ public static class GroupEndpoints
             updatedGroup.InviteCode,
             updatedGroup.CreatedByUserId,
             updatedGroup.IsPrivate,
+            updatedGroup.DefaultRole,
             updatedGroup.Members.Select(m => new GroupMemberDto(
                 m.UserId,
                 m.User.DisplayName ?? m.User.Username,
@@ -381,6 +392,7 @@ public static class GroupEndpoints
             group.InviteCode,
             group.CreatedByUserId,
             group.IsPrivate,
+            group.DefaultRole,
             group.Members.Select(m => new GroupMemberDto(
                 m.UserId,
                 m.User.DisplayName ?? m.User.Username,
@@ -449,6 +461,7 @@ public static class GroupEndpoints
             group.InviteCode,
             group.CreatedByUserId,
             group.IsPrivate,
+            group.DefaultRole,
             group.Members.Select(m => new GroupMemberDto(
                 m.UserId,
                 m.User.DisplayName ?? m.User.Username,

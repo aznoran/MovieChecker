@@ -114,6 +114,8 @@ const ru: Record<TranslationKeys, string> = {
     invalidRole: "Неверная роль",
     selectNewRole: "Выберите новую роль",
     currentRole: "Текущая роль",
+    defaultRole: "Роль по умолчанию для новых участников",
+    defaultRoleDescription: "Выберите роль, которая будет назначена новым участникам при присоединении к группе",
     changeRoleConfirm: "Изменить роль этого участника?",
     changeRoleDescription: "Это обновит права участника в группе.",
     errorChangingRole: "Не удалось изменить роль",
