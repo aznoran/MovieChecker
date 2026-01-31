@@ -61,6 +61,16 @@ export const register = async (
   return response.data;
 };
 
+export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
+  const response = await api.post<{ language: string }>("/auth/language", {
+    language,
+  });
+  // Update localStorage for Accept-Language header
+  if (typeof window !== "undefined") {
+    localStorage.setItem("locale", response.data.language);
+  }
+};
+
 // Movies
 export const getMovies = async (type?: number): Promise<Movie[]> => {
   const params = type !== undefined ? { type } : {};
@@ -177,8 +187,7 @@ export const getGroup = async (id: number): Promise<Group> => {
 };
 
 export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: number): Promise<Group> => {
-  console.log(defaultRole);
-    const response = await api.post<Group>("/groups", { name, isPrivate, password, defaultRole });
+  const response = await api.post<Group>("/groups", { name, isPrivate, password, defaultRole });
   return response.data;
 };
 

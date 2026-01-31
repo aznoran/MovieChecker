@@ -14,7 +14,7 @@ import {
     generateOtp as apiGenerateOtp,
     updateGroupPassword as apiUpdateGroupPassword,
 } from "@/lib/api";
-import {Group, GroupRole} from "@/types";
+import type {Group, GroupRole} from "@/types";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 

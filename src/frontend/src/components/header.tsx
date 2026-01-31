@@ -114,7 +114,7 @@ export function Header() {
 
     const toggleLocale = () => {
         const next: Locale = locale === "en" ? "ru" : "en";
-        setLocale(next);
+        void setLocale(next);
     };
 
     const handleCreateGroup = async () => {
