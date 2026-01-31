@@ -334,7 +334,8 @@ public static class WatchEntryEndpoints
         int id,
         RateRequest request,
         ClaimsPrincipal user,
-        AppDbContext db)
+        AppDbContext db,
+        IStringLocalizer<Resources.Resources> localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -348,7 +349,7 @@ public static class WatchEntryEndpoints
         if (entry.GroupId.HasValue)
         {
             if (!await PermissionService.CanViewGroup(db, userId, entry.GroupId.Value))
-                return Results.BadRequest(new { message = "Insufficient permissions to rate this entry" });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsRate"].Value });
         }
         else if (entry.UserId != userId)
         {
@@ -376,7 +377,7 @@ public static class WatchEntryEndpoints
     }
 
     private static async Task<IResult> Delete(
-        int id, ClaimsPrincipal user, AppDbContext db)
+        int id, ClaimsPrincipal user, AppDbContext db, IStringLocalizer<Resources.Resources> localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries.FirstOrDefaultAsync(w => w.Id == id);
@@ -386,7 +387,7 @@ public static class WatchEntryEndpoints
 
         // Check delete permission
         if (!await PermissionService.CanDeleteEntry(db, userId, entry))
-            return Results.BadRequest(new { message = "Insufficient permissions to delete this entry" });
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsDelete"].Value });
 
         db.WatchEntries.Remove(entry);
         await db.SaveChangesAsync();
@@ -397,6 +398,7 @@ public static class WatchEntryEndpoints
     private static async Task<IResult> GetStats(
         ClaimsPrincipal user,
         AppDbContext db,
+        IStringLocalizer<Resources.Resources> localizer,
         int? groupId = null)
     {
         var userId = GetUserId(user);
@@ -406,7 +408,7 @@ public static class WatchEntryEndpoints
         if (groupId.HasValue)
         {
             if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
-                return Results.BadRequest(new { message = "Insufficient permissions to view group statistics" });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsStats"].Value });
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
