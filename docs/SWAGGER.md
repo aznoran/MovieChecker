@@ -18,6 +18,8 @@ Swagger UI is available in **Development** environment only.
    ```
    http://localhost:5000/swagger
    ```
+   
+   Note: The default port is 5000. If you're running on a different port, adjust the URL accordingly.
 
 ### With Docker
 
@@ -142,8 +144,10 @@ The API defines the following data models:
 
 ## Package Information
 
-**Swashbuckle.AspNetCore**: Version 7.0.0 (resolved from 6.10.2)
+**Swashbuckle.AspNetCore**: Version 6.10.2 (NuGet resolves to 7.0.0 due to availability)
 **Microsoft.OpenApi**: Version 1.6.22
+
+Note: The .csproj specifies Swashbuckle.AspNetCore 6.10.2, but NuGet automatically resolves to 7.0.0 as 6.10.2 is not available in the package repository.
 
 ## References
 
