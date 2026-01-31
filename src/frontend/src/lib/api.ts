@@ -16,6 +16,10 @@ api.interceptors.request.use((config) => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add Accept-Language header based on stored locale
+    const locale = localStorage.getItem("locale") || "en";
+    config.headers["Accept-Language"] = locale;
   }
   return config;
 });
