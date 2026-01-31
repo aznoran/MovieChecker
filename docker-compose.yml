@@ -9,7 +9,7 @@ services:
     networks:
       - backend_network
     healthcheck:
-      test: [ "CMD", "redis-cli", "--user", "ide", "--pass", "fasdfdsafasdwadawdsd", "ping" ]
+      test: [ "CMD", "redis-cli", "--user", "${REDIS_USER}", "--pass", "${REDIS_PASSWORD}", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -43,6 +43,7 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-moviechecker};Username=${POSTGRES_USER:-moviechecker};Password=${POSTGRES_PASSWORD:-moviechecker_secret}"
       ConnectionStrings__Redis: "Host=redis;Port=6379;Database=0;Username=${REDIS_USER};Password=${REDIS_PASSWORD}"
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
       Jwt__Key: ${JWT_KEY:-MovieCheckerSuperSecretKey123456789012345678901234567890}
       Jwt__Issuer: MovieChecker
       Jwt__Audience: MovieChecker
