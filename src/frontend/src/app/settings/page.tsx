@@ -55,7 +55,7 @@ export default function SettingsPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="text-lg">{t("Loading")}...</div>
+                <div className="text-lg">{t("loading")}</div>
             </div>
         );
     }
@@ -70,21 +70,21 @@ export default function SettingsPage() {
                     className="mb-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    {t("Back")}
+                    {t("back")}
                 </Button>
-                <h1 className="text-3xl font-bold">{t("Settings")}</h1>
+                <h1 className="text-3xl font-bold">{t("settings")}</h1>
             </div>
 
             <div className="space-y-6">
                 <div className="rounded-lg border p-6">
-                    <h2 className="text-xl font-semibold mb-4">{t("Privacy")}</h2>
+                    <h2 className="text-xl font-semibold mb-4">{t("privacy")}</h2>
                     
                     <Field>
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <FieldLabel>{t("PreventAutoAddToPersonal")}</FieldLabel>
+                                <FieldLabel>{t("preventAutoAddToPersonal")}</FieldLabel>
                                 <FieldDescription>
-                                    {t("PreventAutoAddToPersonalDescription")}
+                                    {t("preventAutoAddToPersonalDescription")}
                                 </FieldDescription>
                             </div>
                             <Switch
