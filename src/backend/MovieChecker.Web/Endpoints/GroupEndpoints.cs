@@ -300,7 +300,7 @@ public static class GroupEndpoints
         // Only Owner and Admin can delete members
         if (currentMember == null || (currentMember.Role != GroupRole.Owner && currentMember.Role != GroupRole.Admin))
         {
-            return Results.Forbid();
+            return Results.BadRequest(new { message = "Insufficient permissions to remove members from this group" });
         }
 
         // Cannot delete the owner
@@ -341,7 +341,7 @@ public static class GroupEndpoints
 
         // Validation: caller must be current owner
         if (group.CreatedByUserId != currentUserId)
-            return Results.Forbid();
+            return Results.BadRequest(new { message = "Only the owner can transfer ownership" });
 
         // Validation: new owner must be a member of the group
         var newOwnerMember = group.Members.FirstOrDefault(m => m.UserId == request.NewOwnerId);
@@ -400,7 +400,7 @@ public static class GroupEndpoints
         // Only Owner and Admin can update roles
         if (currentMember == null || (currentMember.Role != GroupRole.Owner && currentMember.Role != GroupRole.Admin))
         {
-            return Results.Forbid();
+            return Results.BadRequest(new { message = "Insufficient permissions to change member roles" });
         }
 
         var memberToUpdate = group.Members.FirstOrDefault(m => m.UserId == userId);
@@ -416,7 +416,7 @@ public static class GroupEndpoints
         // Admins cannot modify other Admins' or Owner's roles
         if (currentMember.Role == GroupRole.Admin && memberToUpdate.Role >= GroupRole.Admin)
         {
-            return Results.Forbid();
+            return Results.BadRequest(new { message = "Admins cannot modify other admins' roles" });
         }
 
         // Cannot set role to Owner
@@ -464,7 +464,7 @@ public static class GroupEndpoints
         // Only Owner and Admin can generate OTP
         if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
         {
-            return Results.Forbid();
+            return Results.BadRequest(new { message = "Insufficient permissions to generate OTP codes" });
         }
 
         // Group must be private to generate OTP
@@ -498,7 +498,7 @@ public static class GroupEndpoints
         // Only Owner and Admin can change password
         if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
         {
-            return Results.Forbid();
+            return Results.BadRequest(new { message = "Insufficient permissions to change group password" });
         }
 
         // Group must be private to have a password

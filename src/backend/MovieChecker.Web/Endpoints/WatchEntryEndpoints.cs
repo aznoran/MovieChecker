@@ -73,7 +73,7 @@ public static class WatchEntryEndpoints
         {
             // Verify user can view this group
             if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
-                return Results.Forbid();
+                return Results.BadRequest(new { message = "Insufficient permissions to view this group" });
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
@@ -119,7 +119,7 @@ public static class WatchEntryEndpoints
             var isMember = await db.GroupMembers
                 .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
             if (!isMember)
-                return Results.Forbid();
+                return Results.BadRequest(new { message = "Insufficient permissions to view this entry" });
         }
         else if (entry.UserId != userId)
         {
@@ -144,7 +144,7 @@ public static class WatchEntryEndpoints
         {
             // Check if user can create in this group
             if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
-                return Results.Forbid();
+                return Results.BadRequest(new { message = "Insufficient permissions to create entries in this group" });
 
             // Check duplicate within group
             if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.GroupId == request.GroupId.Value))
@@ -245,7 +245,7 @@ public static class WatchEntryEndpoints
 
         // Check edit permission
         if (!await PermissionService.CanEditEntry(db, userId, entry))
-            return Results.Forbid();
+            return Results.BadRequest(new { message = "Insufficient permissions to edit this entry" });
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
         if (request.WatchedBy.HasValue) entry.WatchedBy = request.WatchedBy.Value;
@@ -343,7 +343,7 @@ public static class WatchEntryEndpoints
         if (entry.GroupId.HasValue)
         {
             if (!await PermissionService.CanViewGroup(db, userId, entry.GroupId.Value))
-                return Results.Forbid();
+                return Results.BadRequest(new { message = "Insufficient permissions to rate this entry" });
         }
         else if (entry.UserId != userId)
         {
@@ -380,7 +380,7 @@ public static class WatchEntryEndpoints
 
         // Check delete permission
         if (!await PermissionService.CanDeleteEntry(db, userId, entry))
-            return Results.Forbid();
+            return Results.BadRequest(new { message = "Insufficient permissions to delete this entry" });
 
         db.WatchEntries.Remove(entry);
         await db.SaveChangesAsync();
@@ -400,7 +400,7 @@ public static class WatchEntryEndpoints
         if (groupId.HasValue)
         {
             if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
-                return Results.Forbid();
+                return Results.BadRequest(new { message = "Insufficient permissions to view group statistics" });
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
