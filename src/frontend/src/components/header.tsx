@@ -318,7 +318,7 @@ export function Header() {
                             value={activeGroupId?.toString() ?? "personal"}
                             onValueChange={(v) => setActiveGroupId(v === "personal" ? undefined : parseInt(v))}
                         >
-                            <SelectTrigger className="w-[180px] h-8 text-sm">
+                            <SelectTrigger className="w-[180px] h-16 text-sm">
                                 <SelectValue/>
                             </SelectTrigger>
                             <SelectContent>
@@ -368,7 +368,7 @@ export function Header() {
                                         </Avatar>
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-56" align="end" forceMount>
+                                <DropdownMenuContent className="w-72" align="end" forceMount>
                                     <DropdownMenuLabel className="font-normal">
                                         <div className="flex flex-col space-y-1">
                                             <p className="text-sm font-medium leading-none">{user.displayName}</p>

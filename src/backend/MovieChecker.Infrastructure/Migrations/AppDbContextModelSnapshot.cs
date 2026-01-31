@@ -279,9 +279,13 @@ namespace MovieChecker.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<bool>("PreventAutoAddToPersonal")
+                    b.Property<bool>("PreventMeAddingToMyPersonal")
                         .HasColumnType("boolean")
-                        .HasColumnName("prevent_auto_add_to_personal");
+                        .HasColumnName("prevent_me_adding_to_my_personal");
+
+                    b.Property<bool>("PreventOthersAddingToMyPersonal")
+                        .HasColumnType("boolean")
+                        .HasColumnName("prevent_others_adding_to_my_personal");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

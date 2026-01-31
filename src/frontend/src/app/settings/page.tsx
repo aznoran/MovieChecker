@@ -79,7 +79,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="container max-w-2xl mx-auto py-8 px-4">
+        <div className="container mx-auto py-8 px-4">
             <div className="mb-6">
                 <Button
                     variant="ghost"
@@ -98,7 +98,7 @@ export default function SettingsPage() {
                     <h2 className="text-xl font-semibold mb-4">{t("privacy")}</h2>
                     
                     <Field>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-24">
                             <div className="space-y-0.5">
                                 <FieldLabel>{t("preventOthersAddingToMyPersonal")}</FieldLabel>
                                 <FieldDescription>
@@ -113,7 +113,7 @@ export default function SettingsPage() {
                         </div>
                     </Field>
 
-                    <FieldSeparator />
+                    <FieldSeparator className="p-8"/>
 
                     <Field>
                         <div className="flex items-center justify-between">

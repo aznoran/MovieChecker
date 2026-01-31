@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MovieChecker.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260131220755_AddUserSettings")]
-    partial class AddUserSettings
+    [Migration("20260131225924_user-settings")]
+    partial class usersettings
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -282,9 +282,13 @@ namespace MovieChecker.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<bool>("PreventAutoAddToPersonal")
+                    b.Property<bool>("PreventMeAddingToMyPersonal")
                         .HasColumnType("boolean")
-                        .HasColumnName("prevent_auto_add_to_personal");
+                        .HasColumnName("prevent_me_adding_to_my_personal");
+
+                    b.Property<bool>("PreventOthersAddingToMyPersonal")
+                        .HasColumnType("boolean")
+                        .HasColumnName("prevent_others_adding_to_my_personal");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

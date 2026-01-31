@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace MovieChecker.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class UpdateUserSettingsToTwoFields : Migration
+    public partial class usersettings : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
