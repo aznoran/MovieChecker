@@ -1,4 +1,21 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --aclfile /usr/local/etc/redis/users.acl
+    volumes:
+      - redis_data:/data
+      - ./redis/users.acl:/usr/local/etc/redis/users.acl:ro
+    networks:
+      - backend_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--user", "ide", "--pass", "fasdfdsafasdwadawdsd", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "6379:6379"
+
   db:
     image: postgres:17-alpine
     restart: unless-stopped
@@ -25,6 +42,7 @@ services:
       - "5000"
     environment:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-moviechecker};Username=${POSTGRES_USER:-moviechecker};Password=${POSTGRES_PASSWORD:-moviechecker_secret}"
+      Redis__ConnectionString: "redis:6379"
       Jwt__Key: ${JWT_KEY:-MovieCheckerSuperSecretKey123456789012345678901234567890}
       Jwt__Issuer: MovieChecker
       Jwt__Audience: MovieChecker
@@ -32,6 +50,8 @@ services:
       Cors__Origins__1: http://xui123qweqwe.org
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - backend_network
@@ -88,6 +108,7 @@ services:
 volumes:
   postgres_data:
   pgadmin_data:
+  redis_data:
 
 networks:
   backend_network:

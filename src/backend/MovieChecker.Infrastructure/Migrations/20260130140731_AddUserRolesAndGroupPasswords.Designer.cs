@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MovieChecker.Infrastructure.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MovieChecker.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260130140731_AddUserRolesAndGroupPasswords")]
+    partial class AddUserRolesAndGroupPasswords
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -76,10 +79,6 @@ namespace MovieChecker.Infrastructure.Migrations
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("integer")
                         .HasColumnName("created_by_user_id");
-
-                    b.Property<int>("DefaultRole")
-                        .HasColumnType("integer")
-                        .HasColumnName("default_role");
 
                     b.Property<string>("InviteCode")
                         .IsRequired()
