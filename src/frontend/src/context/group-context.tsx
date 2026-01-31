@@ -14,7 +14,7 @@ import {
     generateOtp as apiGenerateOtp,
     updateGroupPassword as apiUpdateGroupPassword,
 } from "@/lib/api";
-import type {Group} from "@/types";
+import type {Group, GroupRole} from "@/types";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 
@@ -23,7 +23,7 @@ interface GroupContextValue {
     activeGroupId: number | undefined;
     activeGroup: Group | undefined;
     setActiveGroupId: (id: number | undefined) => void;
-    createGroup: (name: string, isPrivate?: boolean, password?: string) => Promise<Group>;
+    createGroup: (name: string, isPrivate?: boolean, password?: string, defaultRole?: GroupRole) => Promise<Group>;
     joinGroup: (code: string, password?: string, otp?: string) => Promise<Group>;
     leaveGroup: (id: number) => Promise<void>;
     kickMember: (groupId: number, userId: number) => Promise<void>;
@@ -89,8 +89,8 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 
     const createMutation = useMutation({
-        mutationFn: ({ name, isPrivate, password }: { name: string, isPrivate?: boolean, password?: string }) => 
-            apiCreateGroup(name, isPrivate, password),
+        mutationFn: ({ name, isPrivate, password, defaultRole }: { name: string, isPrivate?: boolean, password?: string, defaultRole?: GroupRole }) => 
+            apiCreateGroup(name, isPrivate, password, defaultRole),
         onSuccess: (group) => {
             toast.success(t("groupCreateSuccess"), { position: "top-center" });
             queryClient.invalidateQueries({queryKey: ["groups"]});
@@ -188,7 +188,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
                 activeGroupId,
                 activeGroup,
                 setActiveGroupId,
-                createGroup: (name, isPrivate, password) => createMutation.mutateAsync({ name, isPrivate, password }),
+                createGroup: (name, isPrivate, password, defaultRole) => createMutation.mutateAsync({ name, isPrivate, password, defaultRole }),
                 joinGroup: (code, password, otp) => joinMutation.mutateAsync({ code, password, otp }),
                 leaveGroup: (id) => leaveMutation.mutateAsync(id),
                 kickMember: (groupId, userId) => kickMutation.mutateAsync({groupId, userId}),

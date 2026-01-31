@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { AuthResponse, Movie, WatchEntry, Stats, Group } from "@/types";
+import type { AuthResponse, Movie, WatchEntry, Stats, Group, GroupRole } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -60,6 +60,16 @@ export const register = async (
     displayName,
   });
   return response.data;
+};
+
+export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
+  const response = await api.post<{ language: string }>("/auth/language", {
+    language,
+  });
+  // Update localStorage for Accept-Language header
+  if (typeof window !== "undefined") {
+    localStorage.setItem("locale", response.data.language);
+  }
 };
 
 // Movies
