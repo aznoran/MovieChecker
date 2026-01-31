@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "generate:api": "bash ../../scripts/generate-api-client.sh",
-    "generate:spec": "curl -sf http://localhost:5000/swagger/v1/swagger.json -o openapi.json"
+    "generate:spec": "curl -sf ${BACKEND_URL:-http://localhost:5000}/swagger/v1/swagger.json -o openapi.json"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

@@ -12,18 +12,24 @@ FRONTEND_DIR="$PROJECT_ROOT/src/frontend"
 SPEC_FILE="$FRONTEND_DIR/openapi.json"
 OUTPUT_DIR="$FRONTEND_DIR/src/generated"
 
-echo "📋 Generating API Client for MovieChecker Frontend"
-echo "=================================================="
-
-# Check if backend is running
-BACKEND_URL="http://localhost:5000"
+# Use environment variable or default to localhost
+BACKEND_URL="${BACKEND_URL:-http://localhost:5000}"
 SWAGGER_URL="$BACKEND_URL/swagger/v1/swagger.json"
 
+echo "📋 Generating API Client for MovieChecker Frontend"
+echo "=================================================="
+echo "Backend URL: $BACKEND_URL"
+echo ""
+
+# Check if backend is running
 echo "✓ Downloading OpenAPI specification from $SWAGGER_URL..."
 if ! curl -sf "$SWAGGER_URL" -o "$SPEC_FILE"; then
     echo "❌ Error: Could not download OpenAPI specification."
     echo "   Make sure the backend is running at $BACKEND_URL"
     echo "   You can start it with: cd $BACKEND_DIR && dotnet run"
+    echo ""
+    echo "   To use a different backend URL, set the BACKEND_URL environment variable:"
+    echo "   export BACKEND_URL=http://your-backend:5000"
     exit 1
 fi
 
