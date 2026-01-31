@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using MovieChecker.Domain.Models;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
@@ -61,8 +62,8 @@ public static class WatchEntryEndpoints
 
     private static async Task<IResult> GetAll(
         ClaimsPrincipal user,
-        HttpContext context,
         AppDbContext db,
+        IStringLocalizer<Resources.Resources> localizer,
         WatchStatus? status = null,
         WatchedBy? watchedBy = null,
         int? groupId = null)
@@ -75,7 +76,7 @@ public static class WatchEntryEndpoints
         {
             // Verify user can view this group
             if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
-                return Results.BadRequest(new { message = LocalizationService.Translate("InsufficientPermissionsView", context.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en") });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsView"].Value });
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
@@ -104,7 +105,7 @@ public static class WatchEntryEndpoints
         return Results.Ok(entries.Select(ToDto).ToList());
     }
 
-    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, HttpContext context, AppDbContext db)
+    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, AppDbContext db, IStringLocalizer<Resources.Resources> localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -121,7 +122,7 @@ public static class WatchEntryEndpoints
             var isMember = await db.GroupMembers
                 .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
             if (!isMember)
-                return Results.BadRequest(new { message = LocalizationService.Translate("InsufficientPermissionsViewEntry", context.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en") });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsViewEntry"].Value });
         }
         else if (entry.UserId != userId)
         {
@@ -134,31 +135,31 @@ public static class WatchEntryEndpoints
     private static async Task<IResult> Create(
         CreateWatchEntryRequest request,
         ClaimsPrincipal user,
-        HttpContext context,
-        AppDbContext db)
+        AppDbContext db,
+        IStringLocalizer<Resources.Resources> localizer)
     {
         var userId = GetUserId(user);
 
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
-            return Results.BadRequest(new { message = LocalizationService.Translate("MovieNotFound", context.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en") });
+            return Results.BadRequest(new { message = localizer["MovieNotFound"].Value });
 
         // Validate group membership if group specified
         if (request.GroupId.HasValue)
         {
             // Check if user can create in this group
             if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
-                return Results.BadRequest(new { message = LocalizationService.Translate("InsufficientPermissionsCreate", context.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en") });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsCreate"].Value });
 
             // Check duplicate within group
             if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.GroupId == request.GroupId.Value))
-                return Results.BadRequest(new { message = LocalizationService.Translate("EntryAlreadyExistsGroup", context.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en") });
+                return Results.BadRequest(new { message = localizer["EntryAlreadyExistsGroup"].Value });
         }
         else
         {
             // Check duplicate for personal entries
             if (await db.WatchEntries.AnyAsync(w =>
                     w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
-                return Results.BadRequest(new { message = LocalizationService.Translate("EntryAlreadyExists", context.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en") });
+                return Results.BadRequest(new { message = localizer["EntryAlreadyExists"].Value });
         }
 
         var entry = new WatchEntry
@@ -232,11 +233,11 @@ public static class WatchEntryEndpoints
     }
 
     private static async Task<IResult> Update(
-        HttpContext context,
         int id,
         UpdateWatchEntryRequest request,
         ClaimsPrincipal user,
-        AppDbContext db)
+        AppDbContext db,
+        IStringLocalizer<Resources.Resources> localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -249,7 +250,7 @@ public static class WatchEntryEndpoints
 
         // Check edit permission
         if (!await PermissionService.CanEditEntry(db, userId, entry))
-            return Results.BadRequest(new { message = LocalizationService.Translate("InsufficientPermissionsEdit", context.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en") });
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsEdit"].Value });
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
         if (request.WatchedBy.HasValue) entry.WatchedBy = request.WatchedBy.Value;
@@ -375,7 +376,7 @@ public static class WatchEntryEndpoints
     }
 
     private static async Task<IResult> Delete(
-        HttpContext context,int id, ClaimsPrincipal user, AppDbContext db)
+        int id, ClaimsPrincipal user, AppDbContext db)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries.FirstOrDefaultAsync(w => w.Id == id);
