@@ -13,9 +13,22 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth");
 
-        group.MapPost("/register", Register);
-        group.MapPost("/login", Login);
-        group.MapPost("/language", SetLanguage);
+        group.MapPost("/register", Register)
+            .Produces<AuthResponse>(StatusCodes.Status200OK)
+            .Produces<ValidationErrorResponse>(StatusCodes.Status400BadRequest)
+            .WithSummary("Register a new user")
+            .WithDescription("Creates a new user account and returns a JWT token");
+
+        group.MapPost("/login", Login)
+            .Produces<AuthResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .WithSummary("Login with credentials")
+            .WithDescription("Authenticates a user and returns a JWT token");
+
+        group.MapPost("/language", SetLanguage)
+            .Produces<LanguageResponse>(StatusCodes.Status200OK)
+            .WithSummary("Set preferred language")
+            .WithDescription("Sets the user's preferred language (en or ru)");
     }
 
     private static async Task<IResult> Register(
@@ -34,15 +47,15 @@ public static class AuthEndpoints
 
         if (!validationResult.IsValid)
         {
-            return Results.BadRequest(new { 
-                message = localizer["ValidationFailed"], 
-                errors = validationResult.Errors 
-            });
+            return Results.BadRequest(new ValidationErrorResponse(
+                localizer["ValidationFailed"], 
+                validationResult.Errors
+            ));
         }
 
         if (await db.Users.AnyAsync(u => u.Username == request.Username))
         {
-            return Results.BadRequest(new { message = localizer["UsernameAlreadyExists"] });
+            return Results.BadRequest(new ErrorResponse(localizer["UsernameAlreadyExists"]));
         }
 
         var user = new User
@@ -102,7 +115,7 @@ public static class AuthEndpoints
             }
         );
 
-        return Results.Ok(new { language = culture });
+        return Results.Ok(new LanguageResponse(culture));
     }
 }
 

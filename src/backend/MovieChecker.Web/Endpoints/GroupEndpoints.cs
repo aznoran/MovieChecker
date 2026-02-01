@@ -17,17 +17,76 @@ public static class GroupEndpoints
     {
         var group = app.MapGroup("/api/groups").RequireAuthorization();
 
-        group.MapGet("/", GetMyGroups);
-        group.MapGet("/{id:int}", GetGroup);
-        group.MapPost("/", CreateGroup);
-        group.MapPost("/check-invite", CheckInviteCode);
-        group.MapPost("/join", JoinGroup);
-        group.MapDelete("/{id:int}/leave", LeaveGroup);
-        group.MapDelete("/{id:int}/members/{userId:int}", DeleteUser);
-        group.MapPut("/{id:int}/transfer", TransferGroup);
-        group.MapPut("/{id:int}/members/{userId:int}/role", UpdateMemberRole);
-        group.MapPost("/{id:int}/generate-otp", GenerateOtp);
-        group.MapPut("/{id:int}/password", UpdatePassword);
+        group.MapGet("/", GetMyGroups)
+            .Produces<List<GroupDto>>(StatusCodes.Status200OK)
+            .WithSummary("Get my groups")
+            .WithDescription("Returns all groups the current user is a member of");
+
+        group.MapGet("/{id:int}", GetGroup)
+            .Produces<GroupDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Get group by ID")
+            .WithDescription("Returns a group by its ID if the user is a member");
+
+        group.MapPost("/", CreateGroup)
+            .Produces<GroupDto>(StatusCodes.Status201Created)
+            .WithSummary("Create a new group")
+            .WithDescription("Creates a new group with the current user as owner");
+
+        group.MapPost("/check-invite", CheckInviteCode)
+            .Produces<GroupInfoResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .WithSummary("Check invite code")
+            .WithDescription("Validates an invite code and returns group info");
+
+        group.MapPost("/join", JoinGroup)
+            .Produces<GroupDto>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .WithSummary("Join a group")
+            .WithDescription("Joins a group using an invite code and password/OTP");
+
+        group.MapDelete("/{id:int}/leave", LeaveGroup)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Leave a group")
+            .WithDescription("Leaves a group");
+
+        group.MapDelete("/{id:int}/members/{userId:int}", DeleteUser)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Remove a member from group")
+            .WithDescription("Removes a member from the group (Admin/Owner only)");
+
+        group.MapPut("/{id:int}/transfer", TransferGroup)
+            .Produces<GroupDto>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Transfer group ownership")
+            .WithDescription("Transfers group ownership to another member (Owner only)");
+
+        group.MapPut("/{id:int}/members/{userId:int}/role", UpdateMemberRole)
+            .Produces<GroupDto>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+            .WithSummary("Update member role")
+            .WithDescription("Updates a member's role in the group (Admin/Owner only)");
+
+        group.MapPost("/{id:int}/generate-otp", GenerateOtp)
+            .Produces<GenerateOtpResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Generate OTP for group")
+            .WithDescription("Generates a one-time password for joining a private group");
+
+        group.MapPut("/{id:int}/password", UpdatePassword)
+            .Produces<ErrorResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Update group password")
+            .WithDescription("Updates the password for a private group");
     }
 
     private static int GetUserId(ClaimsPrincipal user) =>
@@ -169,7 +228,7 @@ public static class GroupEndpoints
 
         // Check if already a member
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
-            return Results.BadRequest(new { message = localizer["AlreadyMember"] });
+            return Results.BadRequest(new ErrorResponse(localizer["AlreadyMember"]));
 
         // Return group info
         return Results.Ok(new GroupInfoResponse(
@@ -195,7 +254,7 @@ public static class GroupEndpoints
                 g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
 
         if (group == null)
-            return Results.NotFound(new { message = localizer["InvalidInviteCode"] });
+            return Results.NotFound(new ErrorResponse(localizer["InvalidInviteCode"]));
 
         // 2. Check password or OTP for private groups
         if (group.IsPrivate)
@@ -207,14 +266,14 @@ public static class GroupEndpoints
             {
                 authenticated = await otpService.ValidateOtpAsync(group.Id, request.Otp);
                 if (!authenticated)
-                    return Results.BadRequest(new { message = localizer["InvalidOrExpiredOtp"] });
+                    return Results.BadRequest(new ErrorResponse(localizer["InvalidOrExpiredOtp"]));
             }
             // Then try password if group has one
             else if (!string.IsNullOrWhiteSpace(group.PasswordHash))
             {
                 if (string.IsNullOrWhiteSpace(request.Password))
                 {
-                    return Results.BadRequest(new { message = localizer["PasswordOrOtpRequired"] });
+                    return Results.BadRequest(new ErrorResponse(localizer["PasswordOrOtpRequired"]));
                 }
 
                 if (!BCrypt.Net.BCrypt.Verify(request.Password, group.PasswordHash))
@@ -226,7 +285,7 @@ public static class GroupEndpoints
             // Group is private but has no password (OTP-only)
             else
             {
-                return Results.BadRequest(new { message = localizer["OtpOnlyGroup"] });
+                return Results.BadRequest(new ErrorResponse(localizer["OtpOnlyGroup"]));
             }
 
             if (!authenticated)
@@ -237,7 +296,7 @@ public static class GroupEndpoints
 
         // 3. Check membership
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
-            return Results.BadRequest(new { message = localizer["AlreadyMember"] });
+            return Results.BadRequest(new ErrorResponse(localizer["AlreadyMember"]));
 
         // 4. Add member with default role
         db.GroupMembers.Add(new GroupMember 
@@ -319,7 +378,7 @@ public static class GroupEndpoints
         // Only Owner and Admin can delete members
         if (currentMember == null || (currentMember.Role != GroupRole.Owner && currentMember.Role != GroupRole.Admin))
         {
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsRemove"] });
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRemove"]));
         }
 
         // Cannot delete the owner
@@ -329,7 +388,7 @@ public static class GroupEndpoints
 
         if (memberToDelete.Role == GroupRole.Owner)
         {
-            return Results.BadRequest(new { message = localizer["CannotRemoveOwner"] });
+            return Results.BadRequest(new ErrorResponse(localizer["CannotRemoveOwner"]));
         }
 
         db.GroupMembers.Remove(memberToDelete);
@@ -361,12 +420,12 @@ public static class GroupEndpoints
 
         // Validation: caller must be current owner
         if (group.CreatedByUserId != currentUserId)
-            return Results.BadRequest(new { message = localizer["OnlyOwnerTransfer"] });
+            return Results.BadRequest(new ErrorResponse(localizer["OnlyOwnerTransfer"]));
 
         // Validation: new owner must be a member of the group
         var newOwnerMember = group.Members.FirstOrDefault(m => m.UserId == request.NewOwnerId);
         if (newOwnerMember == null)
-            return Results.BadRequest(new { message = localizer["MustBeMember"] });
+            return Results.BadRequest(new ErrorResponse(localizer["MustBeMember"]));
 
         // Action: transfer ownership
         group.CreatedByUserId = request.NewOwnerId;
@@ -422,29 +481,29 @@ public static class GroupEndpoints
         // Only Owner and Admin can update roles
         if (currentMember == null || (currentMember.Role != GroupRole.Owner && currentMember.Role != GroupRole.Admin))
         {
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsChangeRole"] });
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsChangeRole"]));
         }
 
         var memberToUpdate = group.Members.FirstOrDefault(m => m.UserId == userId);
         if (memberToUpdate == null)
-            return Results.NotFound(new { message = localizer["UserNotGroupMember"] });
+            return Results.NotFound(new ErrorResponse(localizer["UserNotGroupMember"]));
 
         // Cannot change owner's role
         if (memberToUpdate.Role == GroupRole.Owner)
         {
-            return Results.BadRequest(new { message = localizer["CannotChangeOwnerRole"] });
+            return Results.BadRequest(new ErrorResponse(localizer["CannotChangeOwnerRole"]));
         }
 
         // Admins cannot modify other Admins' or Owner's roles
         if (currentMember.Role == GroupRole.Admin && memberToUpdate.Role >= GroupRole.Admin)
         {
-            return Results.BadRequest(new { message = localizer["AdminsCannotModify"] });
+            return Results.BadRequest(new ErrorResponse(localizer["AdminsCannotModify"]));
         }
 
         // Cannot set role to Owner
         if (request.Role == GroupRole.Owner)
         {
-            return Results.BadRequest(new { message = localizer["UseTransferOwnership"] });
+            return Results.BadRequest(new ErrorResponse(localizer["UseTransferOwnership"]));
         }
 
         memberToUpdate.Role = request.Role;
@@ -488,13 +547,13 @@ public static class GroupEndpoints
         // Only Owner and Admin can generate OTP
         if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
         {
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsOtp"] });
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsOtp"]));
         }
 
         // Group must be private to generate OTP
         if (!group.IsPrivate)
         {
-            return Results.BadRequest(new { message = localizer["OtpOnlyForPrivate"] });
+            return Results.BadRequest(new ErrorResponse(localizer["OtpOnlyForPrivate"]));
         }
 
         var (code, expiresAt) = await otpService.GenerateOtpAsync(group.Id);
@@ -523,13 +582,13 @@ public static class GroupEndpoints
         // Only Owner and Admin can change password
         if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
         {
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsPassword"] });
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsPassword"]));
         }
 
         // Group must be private to have a password
         if (!group.IsPrivate)
         {
-            return Results.BadRequest(new { message = localizer["OnlyPrivateGroupsPassword"] });
+            return Results.BadRequest(new ErrorResponse(localizer["OnlyPrivateGroupsPassword"]));
         }
 
         // Update password (null removes it, making group OTP-only)
@@ -539,6 +598,6 @@ public static class GroupEndpoints
 
         await db.SaveChangesAsync();
 
-        return Results.Ok(new { message = localizer["PasswordUpdatedSuccessfully"] });
+        return Results.Ok(new ErrorResponse(localizer["PasswordUpdatedSuccessfully"]));
     }
 }

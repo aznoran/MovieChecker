@@ -81,7 +81,10 @@ app.MapGroupEndpoints();
 app.MapUserSettingsEndpoints();
 
 // Health check
-app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
+app.MapGet("/api/health", () => Results.Ok(new MovieChecker.Domain.Models.Dtos.HealthResponse("healthy")))
+    .Produces<MovieChecker.Domain.Models.Dtos.HealthResponse>(StatusCodes.Status200OK)
+    .WithSummary("Health check")
+    .WithDescription("Returns the health status of the API");
 
 // Test localization endpoint
 app.MapTestLocalizationEndpoints();
