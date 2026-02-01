@@ -58,7 +58,7 @@ public static class AuthEndpoints
         var personalGroup = new Group
         {
             Name = $"{user.DisplayName}'s Personal",
-            InviteCode = GenerateInviteCode(),
+            InviteCode = InviteCodeService.GenerateInviteCode(),
             CreatedByUserId = user.Id,
             IsPrivate = false,
             GroupType = GroupType.Personal,
@@ -125,13 +125,6 @@ public static class AuthEndpoints
         );
 
         return Results.Ok(new { language = culture });
-    }
-    
-    private static string GenerateInviteCode()
-    {
-        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        var random = Random.Shared;
-        return new string(Enumerable.Range(0, 8).Select(_ => chars[random.Next(chars.Length)]).ToArray());
     }
 }
 

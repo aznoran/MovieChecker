@@ -32,13 +32,6 @@ public static class GroupEndpoints
         int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
 
 
-    private static string GenerateInviteCode()
-    {
-        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        var random = Random.Shared;
-        return new string(Enumerable.Range(0, 8).Select(_ => chars[random.Next(chars.Length)]).ToArray());
-    }
-
     private static async Task<IResult> GetMyGroups(ClaimsPrincipal user, AppDbContext db)
     {
         var userId = GetUserId(user);
@@ -119,7 +112,7 @@ public static class GroupEndpoints
         var g = new Group
         {
             Name = request.Name,
-            InviteCode = GenerateInviteCode(),
+            InviteCode = InviteCodeService.GenerateInviteCode(),
             CreatedByUserId = userId,
             IsPrivate = groupType == GroupType.Private,  // Keep for backwards compatibility
             GroupType = groupType,

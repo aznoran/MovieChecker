@@ -267,7 +267,7 @@ public static class WatchEntryEndpoints
                     {
                         MovieId = request.MovieId,
                         UserId = viewerUserId,
-                        GroupId = viewerPersonalGroupId > 0 ? viewerPersonalGroupId : null,
+                        GroupId = viewerPersonalGroupId,
                         Status = request.Status,
                         MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
                         PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,

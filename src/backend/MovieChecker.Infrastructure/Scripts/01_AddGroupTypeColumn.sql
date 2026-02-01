@@ -12,7 +12,7 @@ SET group_type = CASE
     WHEN is_private = true THEN 1 
     ELSE 0 
 END
-WHERE group_type IS NULL OR group_type = 0;
+WHERE group_type IS NULL;
 
 -- Verify the update
 SELECT id, name, is_private, group_type FROM groups;
