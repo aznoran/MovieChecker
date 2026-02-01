@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using MovieChecker.Domain.Models;
+using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
 
@@ -152,7 +153,7 @@ public static class GroupEndpoints
         JoinGroupRequest request,
         ClaimsPrincipal user,
         AppDbContext db,
-        IStringLocalizer<Resources.Resources> localizer)
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
 
@@ -166,7 +167,7 @@ public static class GroupEndpoints
 
         // Check if already a member
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
-            return Results.BadRequest(new { message = localizer["AlreadyMember"].Value });
+            return Results.BadRequest(new { message = localizer["AlreadyMember"] });
 
         // Return group info
         return Results.Ok(new GroupInfoResponse(
@@ -182,7 +183,7 @@ public static class GroupEndpoints
         ClaimsPrincipal user,
         AppDbContext db,
         OtpService otpService,
-        IStringLocalizer<Resources.Resources> localizer)
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
 
@@ -192,7 +193,7 @@ public static class GroupEndpoints
                 g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
 
         if (group == null)
-            return Results.NotFound(new { message = localizer["InvalidInviteCode"].Value });
+            return Results.NotFound(new { message = localizer["InvalidInviteCode"] });
 
         // 2. Check password or OTP for private groups
         if (group.IsPrivate)
@@ -204,14 +205,14 @@ public static class GroupEndpoints
             {
                 authenticated = await otpService.ValidateOtpAsync(group.Id, request.Otp);
                 if (!authenticated)
-                    return Results.BadRequest(new { message = localizer["InvalidOrExpiredOtp"].Value });
+                    return Results.BadRequest(new { message = localizer["InvalidOrExpiredOtp"] });
             }
             // Then try password if group has one
             else if (!string.IsNullOrWhiteSpace(group.PasswordHash))
             {
                 if (string.IsNullOrWhiteSpace(request.Password))
                 {
-                    return Results.BadRequest(new { message = localizer["PasswordOrOtpRequired"].Value });
+                    return Results.BadRequest(new { message = localizer["PasswordOrOtpRequired"] });
                 }
 
                 if (!BCrypt.Net.BCrypt.Verify(request.Password, group.PasswordHash))
@@ -223,7 +224,7 @@ public static class GroupEndpoints
             // Group is private but has no password (OTP-only)
             else
             {
-                return Results.BadRequest(new { message = localizer["OtpOnlyGroup"].Value });
+                return Results.BadRequest(new { message = localizer["OtpOnlyGroup"] });
             }
 
             if (!authenticated)
@@ -234,7 +235,7 @@ public static class GroupEndpoints
 
         // 3. Check membership
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
-            return Results.BadRequest(new { message = localizer["AlreadyMember"].Value });
+            return Results.BadRequest(new { message = localizer["AlreadyMember"] });
 
         // 4. Add member with default role
         db.GroupMembers.Add(new GroupMember 
@@ -300,7 +301,7 @@ public static class GroupEndpoints
     }
 
     private static async Task<IResult> DeleteUser(
-        int id, int userId, ClaimsPrincipal user, AppDbContext db, IStringLocalizer<Resources.Resources> localizer)
+        int id, int userId, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var currentUserId = GetUserId(user);
 
@@ -316,7 +317,7 @@ public static class GroupEndpoints
         // Only Owner and Admin can delete members
         if (currentMember == null || (currentMember.Role != GroupRole.Owner && currentMember.Role != GroupRole.Admin))
         {
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsRemove"].Value });
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsRemove"] });
         }
 
         // Cannot delete the owner
@@ -326,7 +327,7 @@ public static class GroupEndpoints
 
         if (memberToDelete.Role == GroupRole.Owner)
         {
-            return Results.BadRequest(new { message = localizer["CannotRemoveOwner"].Value });
+            return Results.BadRequest(new { message = localizer["CannotRemoveOwner"] });
         }
 
         db.GroupMembers.Remove(memberToDelete);
@@ -344,7 +345,7 @@ public static class GroupEndpoints
     }
 
     private static async Task<IResult> TransferGroup(
-        int id, TransferGroupRequest request, ClaimsPrincipal user, AppDbContext db, IStringLocalizer<Resources.Resources> localizer)
+        int id, TransferGroupRequest request, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var currentUserId = GetUserId(user);
 
@@ -358,12 +359,12 @@ public static class GroupEndpoints
 
         // Validation: caller must be current owner
         if (group.CreatedByUserId != currentUserId)
-            return Results.BadRequest(new { message = localizer["OnlyOwnerTransfer"].Value });
+            return Results.BadRequest(new { message = localizer["OnlyOwnerTransfer"] });
 
         // Validation: new owner must be a member of the group
         var newOwnerMember = group.Members.FirstOrDefault(m => m.UserId == request.NewOwnerId);
         if (newOwnerMember == null)
-            return Results.BadRequest(new { message = localizer["MustBeMember"].Value });
+            return Results.BadRequest(new { message = localizer["MustBeMember"] });
 
         // Action: transfer ownership
         group.CreatedByUserId = request.NewOwnerId;
@@ -402,7 +403,7 @@ public static class GroupEndpoints
         UpdateMemberRoleRequest request,
         ClaimsPrincipal user,
         AppDbContext db,
-        IStringLocalizer<Resources.Resources> localizer)
+        ILocalizationService localizer)
     {
         var currentUserId = GetUserId(user);
 
@@ -419,7 +420,7 @@ public static class GroupEndpoints
         // Only Owner and Admin can update roles
         if (currentMember == null || (currentMember.Role != GroupRole.Owner && currentMember.Role != GroupRole.Admin))
         {
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsChangeRole"].Value });
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsChangeRole"] });
         }
 
         var memberToUpdate = group.Members.FirstOrDefault(m => m.UserId == userId);
@@ -429,19 +430,19 @@ public static class GroupEndpoints
         // Cannot change owner's role
         if (memberToUpdate.Role == GroupRole.Owner)
         {
-            return Results.BadRequest(new { message = localizer["CannotChangeOwnerRole"].Value });
+            return Results.BadRequest(new { message = localizer["CannotChangeOwnerRole"] });
         }
 
         // Admins cannot modify other Admins' or Owner's roles
         if (currentMember.Role == GroupRole.Admin && memberToUpdate.Role >= GroupRole.Admin)
         {
-            return Results.BadRequest(new { message = localizer["AdminsCannotModify"].Value });
+            return Results.BadRequest(new { message = localizer["AdminsCannotModify"] });
         }
 
         // Cannot set role to Owner
         if (request.Role == GroupRole.Owner)
         {
-            return Results.BadRequest(new { message = localizer["UseTransferOwnership"].Value });
+            return Results.BadRequest(new { message = localizer["UseTransferOwnership"] });
         }
 
         memberToUpdate.Role = request.Role;
@@ -469,7 +470,7 @@ public static class GroupEndpoints
         ClaimsPrincipal user,
         AppDbContext db,
         OtpService otpService,
-        IStringLocalizer<Resources.Resources> localizer)
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
 
@@ -485,13 +486,13 @@ public static class GroupEndpoints
         // Only Owner and Admin can generate OTP
         if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
         {
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsOtp"].Value });
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsOtp"] });
         }
 
         // Group must be private to generate OTP
         if (!group.IsPrivate)
         {
-            return Results.BadRequest(new { message = localizer["OtpOnlyForPrivate"].Value });
+            return Results.BadRequest(new { message = localizer["OtpOnlyForPrivate"] });
         }
 
         var (code, expiresAt) = await otpService.GenerateOtpAsync(group.Id);
@@ -504,7 +505,7 @@ public static class GroupEndpoints
         UpdateGroupPasswordRequest request,
         ClaimsPrincipal user,
         AppDbContext db,
-        IStringLocalizer<Resources.Resources> localizer)
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
 
@@ -520,7 +521,7 @@ public static class GroupEndpoints
         // Only Owner and Admin can change password
         if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
         {
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsPassword"].Value });
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsPassword"] });
         }
 
         // Group must be private to have a password

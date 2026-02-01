@@ -13,13 +13,6 @@ export enum WatchStatus {
   Dropped = 3,
 }
 
-export enum WatchedBy {
-  Me = 0,
-  Partner = 1,
-  Together = 2,
-  Separately = 3,
-}
-
 export enum Emotion {
   Joy = 0,
   Sadness = 1,
@@ -63,7 +56,6 @@ export interface WatchEntry {
   movieId: number;
   movie: Movie;
   status: WatchStatus;
-  watchedBy: WatchedBy;
   groupId?: number;
   emotion?: Emotion;
   comment?: string;
@@ -136,13 +128,6 @@ export const WatchStatusLabels: Record<WatchStatus, string> = {
   [WatchStatus.Watching]: "Watching",
   [WatchStatus.Completed]: "Completed",
   [WatchStatus.Dropped]: "Dropped",
-};
-
-export const WatchedByLabels: Record<WatchedBy, string> = {
-  [WatchedBy.Me]: "Me",
-  [WatchedBy.Partner]: "Partner",
-  [WatchedBy.Together]: "Together",
-  [WatchedBy.Separately]: "Separately",
 };
 
 export const EmotionLabels: Record<Emotion, string> = {

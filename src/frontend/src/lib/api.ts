@@ -115,12 +115,10 @@ export const searchMovies = async (query: string): Promise<Movie[]> => {
 // Watch Entries
 export const getWatchEntries = async (
   status?: number,
-  watchedBy?: number,
   groupId?: number
 ): Promise<WatchEntry[]> => {
   const params: Record<string, number> = {};
   if (status !== undefined) params.status = status;
-  if (watchedBy !== undefined) params.watchedBy = watchedBy;
   if (groupId !== undefined) params.groupId = groupId;
   const response = await api.get<WatchEntry[]>("/watch-entries", { params });
   return response.data;
@@ -134,12 +132,12 @@ export const getWatchEntry = async (id: number): Promise<WatchEntry> => {
 export const createWatchEntry = async (entry: {
   movieId: number;
   status: number;
-  watchedBy: number;
   emotion?: number;
   comment?: string;
   groupId?: number;
   rating?: number;
   ratings?: { userId: number; rating: number }[];
+  viewers?: number[];
 }): Promise<WatchEntry> => {
   const response = await api.post<WatchEntry>("/watch-entries", entry);
   return response.data;
@@ -149,11 +147,11 @@ export const updateWatchEntry = async (
   id: number,
   entry: {
     status?: number;
-    watchedBy?: number;
     emotion?: number;
     comment?: string;
     rating?: number;
     ratings?: { userId: number; rating: number }[];
+    viewers?: number[];
   }
 ): Promise<WatchEntry> => {
   const response = await api.put<WatchEntry>(`/watch-entries/${id}`, entry);
@@ -252,6 +250,32 @@ export const getPosterUrl = (posterIdOrPath: string | undefined | null): string 
     return `${base}/api/posters/${posterIdOrPath}`;
   }
   return `${base}${posterIdOrPath}`;
+};
+
+// User Settings
+export const getUserSettings = async (): Promise<{ 
+  preventOthersAddingToMyPersonal: boolean;
+  preventMeAddingToMyPersonal: boolean;
+}> => {
+  const response = await api.get<{ 
+    preventOthersAddingToMyPersonal: boolean;
+    preventMeAddingToMyPersonal: boolean;
+  }>("/user-settings");
+  return response.data;
+};
+
+export const updateUserSettings = async (settings: { 
+  preventOthersAddingToMyPersonal?: boolean;
+  preventMeAddingToMyPersonal?: boolean;
+}): Promise<{ 
+  preventOthersAddingToMyPersonal: boolean;
+  preventMeAddingToMyPersonal: boolean;
+}> => {
+  const response = await api.put<{ 
+    preventOthersAddingToMyPersonal: boolean;
+    preventMeAddingToMyPersonal: boolean;
+  }>("/user-settings", settings);
+  return response.data;
 };
 
 export default api;

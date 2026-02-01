@@ -13,7 +13,6 @@ import type {WatchEntry} from "@/types";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
-    getWatchedByLabels,
 } from "@/lib/i18n/labels";
 import {AddEntryDialog} from "@/components/add-entry-dialog";
 import {EditEntryDialog} from "@/components/edit-entry-dialog";
@@ -53,7 +52,6 @@ export default function HomePage() {
 
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
-    const watchedByLabels = getWatchedByLabels(locale);
 
     const [addOpen, setAddOpen] = useState(false);
     const [editEntry, setEditEntry] = useState<WatchEntry | null>(null);
@@ -62,7 +60,7 @@ export default function HomePage() {
     const {data: entries = [], isLoading, error, refetch} = useQuery({
         queryKey: ["watchEntries", statusFilter, activeGroupId],
         queryFn: () =>
-            getWatchEntries(statusFilter !== null ? statusFilter : undefined, undefined, activeGroupId),
+            getWatchEntries(statusFilter !== null ? statusFilter : undefined, activeGroupId),
         enabled: isAuthenticated,
         retry: false,
     });
@@ -218,11 +216,6 @@ export default function HomePage() {
                                                 >
                                                     {watchStatusLabels[entry.status]}
                                                 </Badge>
-                                                {activeGroupId && (
-                                                    <Badge variant="secondary">
-                                                        {watchedByLabels[entry.watchedBy]}
-                                                    </Badge>
-                                                )}
                                             </div>
                                             {entry.status === WatchStatus.Watching && (
                                                 (entry.currentEpisode || entry.currentSeason || entry.watchingTime) && (

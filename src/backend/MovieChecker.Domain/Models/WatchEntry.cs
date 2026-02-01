@@ -8,14 +8,6 @@ public enum WatchStatus
     Dropped
 }
 
-public enum WatchedBy
-{
-    Me,
-    Partner,
-    Together,
-    Separately
-}
-
 public enum Emotion
 {
     Joy,
@@ -34,7 +26,6 @@ public class WatchEntry
     public int? GroupId { get; set; }
 
     public WatchStatus Status { get; set; } = WatchStatus.Planned;
-    public WatchedBy WatchedBy { get; set; } = WatchedBy.Together;
 
     public int? MyRating { get; set; }
     public int? PartnerRating { get; set; }

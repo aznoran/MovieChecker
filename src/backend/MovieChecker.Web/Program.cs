@@ -66,8 +66,12 @@ app.MapMovieEndpoints();
 app.MapWatchEntryEndpoints();
 app.MapUploadEndpoints();
 app.MapGroupEndpoints();
+app.MapUserSettingsEndpoints();
 
 // Health check
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
+
+// Test localization endpoint
+app.MapTestLocalizationEndpoints();
 
 app.Run();

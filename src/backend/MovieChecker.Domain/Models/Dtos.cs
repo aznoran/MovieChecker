@@ -46,7 +46,6 @@ public record UserRatingInput(int UserId, int Rating);
 public record CreateWatchEntryRequest(
     int MovieId,
     WatchStatus Status,
-    WatchedBy WatchedBy,
     int? MyRating,
     int? PartnerRating,
     Emotion? Emotion,
@@ -60,12 +59,12 @@ public record CreateWatchEntryRequest(
     int? CurrentEpisode,
     int? TotalEpisodes,
     int? WatchingTime,
-    List<UserRatingInput>? Ratings
+    List<UserRatingInput>? Ratings,
+    List<int>? Viewers
 );
 
 public record UpdateWatchEntryRequest(
     WatchStatus? Status,
-    WatchedBy? WatchedBy,
     int? MyRating,
     int? PartnerRating,
     Emotion? Emotion,
@@ -78,7 +77,8 @@ public record UpdateWatchEntryRequest(
     int? CurrentEpisode,
     int? TotalEpisodes,
     int? WatchingTime,
-    List<UserRatingInput>? Ratings
+    List<UserRatingInput>? Ratings,
+    List<int>? Viewers
 );
 
 public record WatchEntryDto(
@@ -86,7 +86,6 @@ public record WatchEntryDto(
     int MovieId,
     MovieDto Movie,
     WatchStatus Status,
-    WatchedBy WatchedBy,
     int? GroupId,
     Emotion? Emotion,
     string? Comment,
@@ -151,8 +150,18 @@ public record StatsDto(
     int TotalDropped,
     double AverageMyRating,
     double AveragePartnerRating,
-    int WatchedTogether,
     Dictionary<string, int> ByType,
     Dictionary<string, int> ByEmotion,
     List<MemberRatingDto> MemberRatings
+);
+
+// User Settings DTOs
+public record UserSettingsDto(
+    bool PreventOthersAddingToMyPersonal,
+    bool PreventMeAddingToMyPersonal
+);
+
+public record UpdateUserSettingsRequest(
+    bool? PreventOthersAddingToMyPersonal,
+    bool? PreventMeAddingToMyPersonal
 );

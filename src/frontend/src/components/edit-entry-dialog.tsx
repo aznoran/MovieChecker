@@ -9,7 +9,6 @@ import {useGroup} from "@/context/group-context";
 import {ContentType, WatchEntry} from "@/types";
 import {
     WatchStatus,
-    WatchedBy,
     Emotion,
     EmotionEmojis,
 } from "@/types";
@@ -202,9 +201,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
             await updateWatchEntry(entry.id, {
                 status,
-                watchedBy: isGroupMode ? WatchedBy.Together : WatchedBy.Me,
                 rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
                 ratings: ratingsArray,
+                viewers: isGroupMode ? selectedMembers : undefined,
                 emotion: emotion ?? undefined,
                 comment: comment || undefined,
                 // Series/Anime tracking
@@ -450,9 +449,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 <FieldContent>
                                     <FieldLabel className="flex items-center gap-1.5">
                                         <Users className="h-3.5 w-3.5"/>
-                                        {status === WatchStatus.Planned || status === WatchStatus.Watching
-                                            ? t("watchingBy")
-                                            : t("watchedBy")}
+                                        {t("viewers")}
                                     </FieldLabel>
                                     <FieldDescription>
                                         {t("membersDescription")}
@@ -541,7 +538,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                                     }
                                                                 }}
                                                                 placeholder="1-10"
-                                                                className="w-24 h-8"
+                                                                className="w-32 h-8"
                                                                 aria-invalid={!!validationErrors[`memberRating_${uid}`]}
                                                             />
                                                             {validationErrors[`memberRating_${uid}`] && (
