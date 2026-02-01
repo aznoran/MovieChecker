@@ -105,16 +105,21 @@ public record EntryRatingDto(
 );
 
 // Group DTOs
-public record CreateGroupRequest(string Name);
-public record JoinGroupRequest(string InviteCode);
+public record CreateGroupRequest(string Name, bool IsPrivate = false, string? Password = null, GroupRole? DefaultRole = null);
+public record JoinGroupRequest(string InviteCode, string? Password = null, string? Otp = null);
+public record UpdateGroupPasswordRequest(string? NewPassword);
+public record GenerateOtpResponse(string Code, DateTime ExpiresAt);
 
 public sealed record TransferGroupRequest(int NewOwnerId);
+public sealed record UpdateMemberRoleRequest(GroupRole Role);
 
 public record GroupDto(
     int Id,
     string Name,
     string InviteCode,
     int CreatedByUserId,
+    bool IsPrivate,
+    GroupRole DefaultRole,
     List<GroupMemberDto> Members,
     DateTime CreatedAt
 );
@@ -122,7 +127,15 @@ public record GroupDto(
 public record GroupMemberDto(
     int UserId,
     string DisplayName,
+    GroupRole Role,
     DateTime JoinedAt
+);
+
+public record GroupInfoResponse(
+    bool Exists,
+    bool IsPrivate,
+    bool HasPassword,
+    string? GroupName
 );
 
 public record MemberRatingDto(int UserId, string DisplayName, int AverageRating, int TotalRated);
@@ -138,4 +151,15 @@ public record StatsDto(
     Dictionary<string, int> ByType,
     Dictionary<string, int> ByEmotion,
     List<MemberRatingDto> MemberRatings
+);
+
+// User Settings DTOs
+public record UserSettingsDto(
+    bool PreventOthersAddingToMyPersonal,
+    bool PreventMeAddingToMyPersonal
+);
+
+public record UpdateUserSettingsRequest(
+    bool? PreventOthersAddingToMyPersonal,
+    bool? PreventMeAddingToMyPersonal
 );
