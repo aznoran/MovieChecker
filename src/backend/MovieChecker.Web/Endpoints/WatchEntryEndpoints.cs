@@ -261,7 +261,9 @@ public static class WatchEntryEndpoints
                 if (!existingPersonalEntries.Contains(viewerUserId) && !preventAutoAdd)
                 {
                     // Get the viewer's personal group ID, or null if they don't have one yet
-                    int? viewerPersonalGroupId = viewerPersonalGroups.GetValueOrDefault(viewerUserId);
+                    int? viewerPersonalGroupId = viewerPersonalGroups.TryGetValue(viewerUserId, out var groupId) 
+                        ? groupId 
+                        : null;
                     
                     var personalEntry = new WatchEntry
                     {
