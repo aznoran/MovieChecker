@@ -60,7 +60,7 @@ import {
     UserCog,
     Shield,
     Eye,
-    Key,
+    KeyRound,
     RefreshCw,
     Settings,
 } from "lucide-react";
@@ -590,7 +590,7 @@ export function Header() {
                                                                 )}
                                                                 onClick={() => setUseOtpMode(true)}
                                                             >
-                                                                <Key className="h-3.5 w-3.5 mr-2"/>
+                                                                <KeyRound className="h-3.5 w-3.5 mr-2"/>
                                                                 {t("otp")}
                                                             </Button>
                                                         </div>

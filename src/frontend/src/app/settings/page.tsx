@@ -87,7 +87,7 @@ export default function SettingsPage() {
                     onClick={() => router.push("/")}
                     className="mb-4"
                 >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeft className="h-4 w-4 mr-2"/>
                     {t("back")}
                 </Button>
                 <h1 className="text-3xl font-bold">{t("settings")}</h1>
@@ -96,7 +96,7 @@ export default function SettingsPage() {
             <div className="space-y-6">
                 <div className="rounded-lg border p-6">
                     <h2 className="text-xl font-semibold mb-4">{t("privacy")}</h2>
-                    
+
                     <Field>
                         <div className="flex items-center justify-between gap-24">
                             <div className="space-y-0.5">
