@@ -46,7 +46,6 @@ public record UserRatingInput(int UserId, int Rating);
 public record CreateWatchEntryRequest(
     int MovieId,
     WatchStatus Status,
-    WatchedBy WatchedBy,
     int? MyRating,
     int? PartnerRating,
     Emotion? Emotion,

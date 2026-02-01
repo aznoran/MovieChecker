@@ -162,13 +162,28 @@ public static class WatchEntryEndpoints
                 return Results.BadRequest(new { message = localizer["EntryAlreadyExists"].Value });
         }
 
+        // Determine WatchedBy based on Ratings list
+        WatchedBy watchedBy = WatchedBy.Together; // Default
+        if (request.Ratings is { Count: > 0 })
+        {
+            var viewerIds = request.Ratings.Select(r => r.UserId).Distinct().ToList();
+            if (viewerIds.Count == 1 && viewerIds[0] == userId)
+            {
+                watchedBy = WatchedBy.Me;
+            }
+            else
+            {
+                watchedBy = WatchedBy.Together;
+            }
+        }
+
         var entry = new WatchEntry
         {
             MovieId = request.MovieId,
             UserId = userId,
             GroupId = request.GroupId,
             Status = request.Status,
-            WatchedBy = request.WatchedBy,
+            WatchedBy = watchedBy,
             MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
             PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
             Emotion = request.Emotion,
@@ -228,13 +243,24 @@ public static class WatchEntryEndpoints
                 
                 if (!existingPersonalEntries.Contains(viewerUserId) && !preventAutoAdd)
                 {
+                    // Calculate WatchedBy for personal entry based on viewers list
+                    WatchedBy personalWatchedBy = WatchedBy.Together; // Default
+                    if (viewerUserIds.Count == 1 && viewerUserIds[0] == viewerUserId)
+                    {
+                        personalWatchedBy = WatchedBy.Me;
+                    }
+                    else
+                    {
+                        personalWatchedBy = WatchedBy.Together;
+                    }
+                    
                     var personalEntry = new WatchEntry
                     {
                         MovieId = request.MovieId,
                         UserId = viewerUserId,
                         GroupId = null, // Personal entry
                         Status = request.Status,
-                        WatchedBy = request.WatchedBy,
+                        WatchedBy = personalWatchedBy,
                         MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
                         PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
                         Emotion = request.Emotion,
