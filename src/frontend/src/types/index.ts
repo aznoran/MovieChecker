@@ -86,7 +86,7 @@ export enum GroupType {
 export interface Group {
   id: number;
   name: string;
-  inviteCode: string;
+  inviteCode?: string;  // Optional - personal groups don't have invite codes
   createdByUserId: number;
   isPrivate: boolean;
   groupType: GroupType;

@@ -19,7 +19,7 @@ public class Group
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string InviteCode { get; set; } = string.Empty;
+    public string? InviteCode { get; set; }  // Nullable - personal groups don't need invite codes
     public int CreatedByUserId { get; set; }
     public bool IsPrivate { get; set; } = false;  // Keep for migration transition
     public GroupType GroupType { get; set; } = GroupType.Public;

@@ -80,5 +80,6 @@ If you need to rollback:
 ## Notes
 
 - New user registrations automatically create a Personal group
+- Personal groups have no invite codes since they cannot be joined by other users
 - The old behavior (entries with `group_id = NULL`) is still supported for backwards compatibility
 - The frontend can now use `groupType` to filter and display groups appropriately

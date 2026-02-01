@@ -54,11 +54,11 @@ public static class AuthEndpoints
         db.Users.Add(user);
         await db.SaveChangesAsync();
         
-        // Create a personal group for the user
+        // Create a personal group for the user (no invite code needed - personal groups can't be joined)
         var personalGroup = new Group
         {
             Name = $"{user.DisplayName}'s Personal",
-            InviteCode = InviteCodeService.GenerateInviteCode(),
+            InviteCode = null,  // Personal groups don't need invite codes
             CreatedByUserId = user.Id,
             IsPrivate = false,
             GroupType = GroupType.Personal,

@@ -119,7 +119,7 @@ public sealed record UpdateMemberRoleRequest(GroupRole Role);
 public record GroupDto(
     int Id,
     string Name,
-    string InviteCode,
+    string? InviteCode,  // Nullable - personal groups don't have invite codes
     int CreatedByUserId,
     bool IsPrivate,
     GroupType GroupType,
