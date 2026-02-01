@@ -73,8 +73,8 @@ public static class DependencyInjection
                             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                             userExists = await dbContext.Users.AnyAsync(u => u.Id == userId);
                             
-                            // Cache the result for 5 minutes
-                            cache.Set(cacheKey, userExists, TimeSpan.FromMinutes(5));
+                            // Cache the result for 1 minute to balance security and performance
+                            cache.Set(cacheKey, userExists, TimeSpan.FromMinutes(1));
                         }
                         
                         if (!userExists)
