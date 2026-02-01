@@ -117,18 +117,9 @@ export function Header() {
         void setLocale(next);
     };
 
-    // Helper function to parse API errors and return appropriate translation key
-    const getJoinGroupErrorKey = (err: unknown): "alreadyMember" | "invalidOtp" | "invalidCode" => {
-        const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "";
-        // Check for already member error (both English and Russian versions from backend)
-        if (errorMessage.includes("Already a member") || errorMessage.includes("уже являетесь участником")) {
-            return "alreadyMember";
-        }
-        // Check for invalid OTP error
-        if (errorMessage.includes("Invalid or expired OTP") || errorMessage.includes("Неверный или истекший OTP")) {
-            return "invalidOtp";
-        }
-        return "invalidCode";
+    // Helper function to extract error message from API response
+    const getApiErrorMessage = (err: unknown): string => {
+        return (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? t("invalidCode");
     };
 
     const handleCreateGroup = async () => {
@@ -180,7 +171,7 @@ export function Header() {
             setUseOtpMode(!result.hasPassword);
             setJoinStep("auth");
         } catch (err) {
-            setError(t(getJoinGroupErrorKey(err)));
+            setError(getApiErrorMessage(err));
         }
     };
 
@@ -196,7 +187,7 @@ export function Header() {
             setJoinStep("code");
             setGroupToJoin(null);
         } catch (err) {
-            setError(t(getJoinGroupErrorKey(err)));
+            setError(getApiErrorMessage(err));
         }
     };
 
