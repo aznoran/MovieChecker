@@ -1,4 +1,4 @@
-import { ContentType, WatchStatus, WatchedBy, Emotion, EmotionEmojis } from "@/types";
+import { ContentType, WatchStatus, Emotion, EmotionEmojis } from "@/types";
 import type { Locale } from "./index";
 import { t } from "./index";
 
@@ -18,15 +18,6 @@ export function getWatchStatusLabels(locale: Locale): Record<WatchStatus, string
     [WatchStatus.Watching]: t("statusWatching", locale),
     [WatchStatus.Completed]: t("statusCompleted", locale),
     [WatchStatus.Dropped]: t("statusDropped", locale),
-  };
-}
-
-export function getWatchedByLabels(locale: Locale): Record<WatchedBy, string> {
-  return {
-    [WatchedBy.Me]: t("watchedByMe", locale),
-    [WatchedBy.Partner]: t("watchedByPartner", locale),
-    [WatchedBy.Together]: t("watchedByTogether", locale),
-    [WatchedBy.Separately]: t("watchedBySeparately", locale),
   };
 }
 

@@ -71,8 +71,7 @@ const ru: Record<TranslationKeys, string> = {
     genreMusical: "Мюзикл",
     description: "Описание",
     status: "Статус",
-    watchedBy: "Кто смотрел",
-    watchingBy: "Кто смотрит",
+    viewers: "Зрители",
     myRating: "Моя оценка (1-10)",
     partnerRating: "Оценка партнёра (1-10)",
     emotion: "Эмоция",
@@ -161,12 +160,6 @@ const ru: Record<TranslationKeys, string> = {
     statusCompleted: "Просмотрено",
     statusDropped: "Брошено",
 
-    // Watched By
-    watchedByMe: "Я",
-    watchedByPartner: "Партнёр",
-    watchedByTogether: "Вместе",
-    watchedBySeparately: "По отдельности",
-
     // Emotions
     emotionJoy: "Радость",
     emotionSadness: "Грусть",
@@ -252,7 +245,6 @@ const ru: Record<TranslationKeys, string> = {
     preventOthersAddingToMyPersonalDescription: "Когда включено, записи не будут автоматически добавляться в ваш личный список, когда кто-то другой выбирает вас в качестве зрителя в группе",
     preventMeAddingToMyPersonal: "Запретить мне добавлять записи в личный список через группы",
     preventMeAddingToMyPersonalDescription: "Когда включено, записи не будут автоматически добавляться в ваш личный список, когда вы создаёте записи в группах и включаете себя в качестве зрителя",
-    back: "Назад",
 
     // Validation Errors
     titleTooLong: "Название слишком длинное (макс. 255 символов)",

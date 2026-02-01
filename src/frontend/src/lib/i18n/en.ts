@@ -69,8 +69,7 @@ const en = {
     genreMusical: "Musical",
     description: "Description",
     status: "Status",
-    watchedBy: "Watched By",
-    watchingBy: "Watching By",
+    viewers: "Viewers",
     myRating: "My Rating (1-10)",
     partnerRating: "Partner Rating (1-10)",
     emotion: "Emotion",
@@ -159,12 +158,6 @@ const en = {
     statusCompleted: "Completed",
     statusDropped: "Dropped",
 
-    // Watched By
-    watchedByMe: "Me",
-    watchedByPartner: "Partner",
-    watchedByTogether: "Together",
-    watchedBySeparately: "Separately",
-
     // Emotions
     emotionJoy: "Joy",
     emotionSadness: "Sadness",
@@ -250,7 +243,6 @@ const en = {
     preventOthersAddingToMyPersonalDescription: "When enabled, entries won't be automatically added to your personal list when someone else selects you as a viewer in a group",
     preventMeAddingToMyPersonal: "Prevent me from adding entries to my personal list in groups",
     preventMeAddingToMyPersonalDescription: "When enabled, entries won't be automatically added to your personal list when you create entries in groups and include yourself as a viewer",
-    back: "Back",
 
     // Validation Errors
     titleTooLong: "Title is too long (max 255 characters)",
