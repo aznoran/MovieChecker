@@ -33,7 +33,7 @@ export default function RootLayout({
             className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
         >
         <Providers>
-            <header className="bg-red-500">СЕВА С ДНЕМ РОЖДЕНИЯ ПОЗДРАВЛЯЮ <Cake /></header>
+            <header className="flex justify-center items-center bg-red-500 gap-3">СЕВА С ДНЕМ РОЖДЕНИЯ ПОЗДРАВЛЯЮ <Cake /></header>
             <Header/>
             <div className="flex-1">
                 {children}
