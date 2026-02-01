@@ -378,10 +378,6 @@ namespace MovieChecker.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("user_id");
 
-                    b.Property<int>("WatchedBy")
-                        .HasColumnType("integer")
-                        .HasColumnName("watched_by");
-
                     b.Property<int?>("WatchingTime")
                         .HasColumnType("integer")
                         .HasColumnName("watching_time");

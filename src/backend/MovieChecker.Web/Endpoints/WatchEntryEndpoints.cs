@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using MovieChecker.Domain.Models;
+using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
 
@@ -62,7 +63,7 @@ public static class WatchEntryEndpoints
     private static async Task<IResult> GetAll(
         ClaimsPrincipal user,
         AppDbContext db,
-        IStringLocalizer<Resources.Resources> localizer,
+        ILocalizationService localizer,
         WatchStatus? status = null,
         int? groupId = null)
     {
@@ -74,7 +75,7 @@ public static class WatchEntryEndpoints
         {
             // Verify user can view this group
             if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsView"].Value });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsView"] });
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
@@ -100,7 +101,7 @@ public static class WatchEntryEndpoints
         return Results.Ok(entries.Select(ToDto).ToList());
     }
 
-    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, AppDbContext db, IStringLocalizer<Resources.Resources> localizer)
+    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -117,7 +118,7 @@ public static class WatchEntryEndpoints
             var isMember = await db.GroupMembers
                 .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
             if (!isMember)
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsViewEntry"].Value });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsViewEntry"] });
         }
         else if (entry.UserId != userId)
         {
@@ -131,30 +132,30 @@ public static class WatchEntryEndpoints
         CreateWatchEntryRequest request,
         ClaimsPrincipal user,
         AppDbContext db,
-        IStringLocalizer<Resources.Resources> localizer)
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
 
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
-            return Results.BadRequest(new { message = localizer["MovieNotFound"].Value });
+            return Results.BadRequest(new { message = localizer["MovieNotFound"] });
 
         // Validate group membership if group specified
         if (request.GroupId.HasValue)
         {
             // Check if user can create in this group
             if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsCreate"].Value });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsCreate"] });
 
             // Check duplicate within group
             if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.GroupId == request.GroupId.Value))
-                return Results.BadRequest(new { message = localizer["EntryAlreadyExistsGroup"].Value });
+                return Results.BadRequest(new { message = localizer["EntryAlreadyExistsGroup"] });
         }
         else
         {
             // Check duplicate for personal entries
             if (await db.WatchEntries.AnyAsync(w =>
                     w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
-                return Results.BadRequest(new { message = localizer["EntryAlreadyExists"].Value });
+                return Results.BadRequest(new { message = localizer["EntryAlreadyExists"] });
         }
 
         var entry = new WatchEntry
@@ -326,7 +327,7 @@ public static class WatchEntryEndpoints
         UpdateWatchEntryRequest request,
         ClaimsPrincipal user,
         AppDbContext db,
-        IStringLocalizer<Resources.Resources> localizer)
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -339,7 +340,7 @@ public static class WatchEntryEndpoints
 
         // Check edit permission
         if (!await PermissionService.CanEditEntry(db, userId, entry))
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsEdit"].Value });
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsEdit"] });
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
         if (request.MyRating.HasValue) entry.MyRating = Math.Clamp(request.MyRating.Value, 1, 10);
@@ -424,7 +425,7 @@ public static class WatchEntryEndpoints
         RateRequest request,
         ClaimsPrincipal user,
         AppDbContext db,
-        IStringLocalizer<Resources.Resources> localizer)
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -438,7 +439,7 @@ public static class WatchEntryEndpoints
         if (entry.GroupId.HasValue)
         {
             if (!await PermissionService.CanViewGroup(db, userId, entry.GroupId.Value))
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsRate"].Value });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsRate"] });
         }
         else if (entry.UserId != userId)
         {
@@ -466,7 +467,7 @@ public static class WatchEntryEndpoints
     }
 
     private static async Task<IResult> Delete(
-        int id, ClaimsPrincipal user, AppDbContext db, IStringLocalizer<Resources.Resources> localizer)
+        int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries.FirstOrDefaultAsync(w => w.Id == id);
@@ -476,7 +477,7 @@ public static class WatchEntryEndpoints
 
         // Check delete permission
         if (!await PermissionService.CanDeleteEntry(db, userId, entry))
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsDelete"].Value });
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsDelete"] });
 
         db.WatchEntries.Remove(entry);
         await db.SaveChangesAsync();
@@ -487,7 +488,7 @@ public static class WatchEntryEndpoints
     private static async Task<IResult> GetStats(
         ClaimsPrincipal user,
         AppDbContext db,
-        IStringLocalizer<Resources.Resources> localizer,
+        ILocalizationService localizer,
         int? groupId = null)
     {
         var userId = GetUserId(user);
@@ -497,7 +498,7 @@ public static class WatchEntryEndpoints
         if (groupId.HasValue)
         {
             if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsStats"].Value });
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsStats"] });
 
             query = db.WatchEntries
                 .Include(w => w.Movie)

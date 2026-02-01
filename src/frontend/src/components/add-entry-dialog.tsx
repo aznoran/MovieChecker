@@ -598,7 +598,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                 const member = activeGroup.members.find((m) => m.userId === uid);
                                                 if (!member) return null;
                                                 return (
-                                                    <Field key={uid} orientation="horizontal">
+                                                    <Field key={uid} orientation="horizontal" className="gap-4">
                                                         <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
                                                             {member.displayName}
                                                         </FieldLabel>
@@ -639,7 +639,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                                     }
                                                                 }}
                                                                 placeholder="1-10"
-                                                                className="w-32 h-8"
+                                                                className="w-20 h-8"
                                                                 aria-invalid={!!validationErrors[`memberRating_${uid}`]}
                                                             />
                                                             {validationErrors[`memberRating_${uid}`] && (

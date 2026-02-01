@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
 using StackExchange.Redis;
@@ -44,6 +45,7 @@ public static class DependencyInjection
                 };
             });
         services.AddAuthorization();
+        services.AddScoped<ILocalizationService, LocalizationService>();
 
         return services;
     }

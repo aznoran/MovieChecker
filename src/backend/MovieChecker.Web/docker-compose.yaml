@@ -47,6 +47,7 @@
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-moviechecker};Username=admin;Password=${POSTGRES_PASSWORD:-moviechecker_secret}"
       ConnectionStrings__Redis: "Host=redis;Port=6379;Database=0;Username=${REDIS_USER};Password=${REDIS_PASSWORD}"
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
       Jwt__Key: ${JWT_KEY:-MovieCheckerSuperSecretKey123456789012345678901234567890}
       Jwt__Issuer: MovieChecker
       Jwt__Audience: MovieChecker
