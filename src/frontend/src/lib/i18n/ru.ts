@@ -254,7 +254,35 @@ const ru: Record<TranslationKeys, string> = {
     invalidNumber: "Должно быть положительным числом",
     invalidTimeComponent: "Должно быть от 0 до 59",
     invalidRating: "Оценка должна быть от 1 до 10",
-    fixValidationErrors: "Исправьте ошибки в форме"
+    fixValidationErrors: "Исправьте ошибки в форме",
+
+    // Backend Error Messages
+    MovieNotFound: "Фильм не найден",
+    InsufficientPermissionsEdit: "Недостаточно прав для редактирования этой записи",
+    InsufficientPermissionsCreate: "Недостаточно прав для создания записей в этой группе",
+    InsufficientPermissionsDelete: "Недостаточно прав для удаления этой записи",
+    InsufficientPermissionsView: "Недостаточно прав для просмотра этой группы",
+    InsufficientPermissionsViewEntry: "Недостаточно прав для просмотра этой записи",
+    InsufficientPermissionsRate: "Недостаточно прав для оценки этой записи",
+    InsufficientPermissionsStats: "Недостаточно прав для просмотра статистики группы",
+    InsufficientPermissionsRemove: "Недостаточно прав для удаления участников из этой группы",
+    InsufficientPermissionsChangeRole: "Недостаточно прав для изменения ролей участников",
+    InsufficientPermissionsOtp: "Недостаточно прав для генерации OTP кодов",
+    InsufficientPermissionsPassword: "Недостаточно прав для изменения пароля группы",
+    OnlyOwnerTransfer: "Только владелец может передать право владения",
+    AdminsCannotModify: "Администраторы не могут изменять роли других администраторов",
+    EntryAlreadyExistsGroup: "Запись уже существует в этой группе",
+    EntryAlreadyExists: "Запись для этого фильма уже существует",
+    AlreadyMember: "Вы уже являетесь участником этой группы",
+    InvalidOrExpiredOtp: "Неверный или истекший OTP код",
+    PasswordOrOtpRequired: "Для этой приватной группы требуется пароль или OTP",
+    OtpOnlyGroup: "Для этой приватной группы требуется OTP код. Пароль отключен.",
+    CannotRemoveOwner: "Нельзя удалить владельца группы",
+    MustBeMember: "newOwnerId должен быть участником группы",
+    CannotChangeOwnerRole: "Нельзя изменить роль владельца. Используйте передачу владения.",
+    UseTransferOwnership: "Используйте передачу владения, чтобы назначить владельцем",
+    OtpOnlyForPrivate: "OTP коды можно генерировать только для приватных групп",
+    InvalidInviteCode: "Неверный код приглашения"
 };
 
 export default ru;

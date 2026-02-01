@@ -252,7 +252,35 @@ const en = {
     invalidNumber: "Must be a positive number",
     invalidTimeComponent: "Must be between 0 and 59",
     invalidRating: "Rating must be between 1 and 10",
-    fixValidationErrors: "Please fix validation errors"
+    fixValidationErrors: "Please fix validation errors",
+
+    // Backend Error Messages
+    MovieNotFound: "Movie not found",
+    InsufficientPermissionsEdit: "Insufficient permissions to edit this entry",
+    InsufficientPermissionsCreate: "Insufficient permissions to create entries in this group",
+    InsufficientPermissionsDelete: "Insufficient permissions to delete this entry",
+    InsufficientPermissionsView: "Insufficient permissions to view this group",
+    InsufficientPermissionsViewEntry: "Insufficient permissions to view this entry",
+    InsufficientPermissionsRate: "Insufficient permissions to rate this entry",
+    InsufficientPermissionsStats: "Insufficient permissions to view group statistics",
+    InsufficientPermissionsRemove: "Insufficient permissions to remove members from this group",
+    InsufficientPermissionsChangeRole: "Insufficient permissions to change member roles",
+    InsufficientPermissionsOtp: "Insufficient permissions to generate OTP codes",
+    InsufficientPermissionsPassword: "Insufficient permissions to change group password",
+    OnlyOwnerTransfer: "Only the owner can transfer ownership",
+    AdminsCannotModify: "Admins cannot modify other admins' roles",
+    EntryAlreadyExistsGroup: "Entry already exists in this group",
+    EntryAlreadyExists: "Watch entry already exists for this movie",
+    AlreadyMember: "Already a member of this group",
+    InvalidOrExpiredOtp: "Invalid or expired OTP code",
+    PasswordOrOtpRequired: "Password or OTP is required for this private group",
+    OtpOnlyGroup: "This private group requires an OTP code. Password is disabled.",
+    CannotRemoveOwner: "Cannot remove the group owner",
+    MustBeMember: "newOwnerId must be a member of the group",
+    CannotChangeOwnerRole: "Cannot change the owner's role. Use transfer ownership instead.",
+    UseTransferOwnership: "Use transfer ownership to make someone owner",
+    OtpOnlyForPrivate: "OTP codes can only be generated for private groups",
+    InvalidInviteCode: "Invalid invite code"
 } as const;
 
 export type TranslationKeys = keyof typeof en;
