@@ -82,7 +82,7 @@ public static class GroupEndpoints
             .WithDescription("Generates a one-time password for joining a private group");
 
         group.MapPut("/{id:int}/password", UpdatePassword)
-            .Produces<ErrorResponse>(StatusCodes.Status200OK)
+            .Produces<SuccessResponse>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
             .WithSummary("Update group password")
@@ -598,6 +598,6 @@ public static class GroupEndpoints
 
         await db.SaveChangesAsync();
 
-        return Results.Ok(new ErrorResponse(localizer["PasswordUpdatedSuccessfully"]));
+        return Results.Ok(new SuccessResponse(localizer["PasswordUpdatedSuccessfully"]));
     }
 }
