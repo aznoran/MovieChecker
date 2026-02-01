@@ -2,6 +2,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -22,6 +23,9 @@ public static class DependencyInjection
         })
         .AddScoped<JwtService>()
         .AddScoped<ValidationService>();
+
+        // Add memory cache for user validation
+        services.AddMemoryCache();
 
         // Redis
         var redisConnection = configuration.GetConnectionString("Redis");
@@ -57,8 +61,21 @@ public static class DependencyInjection
                             return;
                         }
                         
-                        var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-                        var userExists = await dbContext.Users.AnyAsync(u => u.Id == userId);
+                        // Use cache to reduce database hits for user validation
+                        var cache = context.HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+                        var cacheKey = $"user_exists_{userId}";
+                        
+                        if (!cache.TryGetValue(cacheKey, out bool userExists))
+                        {
+                            // Create a scope to properly manage DbContext lifetime
+                            var scopeFactory = context.HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
+                            using var scope = scopeFactory.CreateScope();
+                            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                            userExists = await dbContext.Users.AnyAsync(u => u.Id == userId);
+                            
+                            // Cache the result for 5 minutes
+                            cache.Set(cacheKey, userExists, TimeSpan.FromMinutes(5));
+                        }
                         
                         if (!userExists)
                         {
