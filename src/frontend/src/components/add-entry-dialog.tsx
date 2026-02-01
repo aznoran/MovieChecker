@@ -10,7 +10,6 @@ import {useAuth} from "@/context/auth-context";
 import {
     ContentType,
     WatchStatus,
-    WatchedBy,
     Emotion,
     EmotionEmojis,
 } from "@/types";
@@ -214,9 +213,9 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             await createWatchEntry({
                 movieId: movie.id,
                 status,
-                watchedBy: isGroupMode ? WatchedBy.Together : WatchedBy.Me,
                 rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
                 ratings: ratingsArray,
+                viewers: isGroupMode ? selectedMembers : undefined,
                 emotion: emotion ?? undefined,
                 comment: comment || undefined,
                 groupId: activeGroupId,
@@ -241,9 +240,11 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             resetForm();
             onOpenChange(false);
         },
-        onError: () => {
-            toast.error(t("failedToAdd"), { position: "top-center" })
-            setError(t("failedToAdd"));
+        onError: (error: any) => {
+            // Extract error message from response if available
+            const errorMessage = error?.response?.data?.message || t("failedToAdd");
+            toast.error(errorMessage, { position: "top-center" })
+            setError(errorMessage);
         },
     });
 
@@ -599,9 +600,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                 <FieldContent>
                                     <FieldLabel className="flex items-center gap-1.5">
                                         <Users className="h-3.5 w-3.5"/>
-                                        {status === WatchStatus.Planned || status === WatchStatus.Watching
-                                            ? t("watchingBy")
-                                            : t("watchedBy")}
+                                        {t("viewers")}
                                     </FieldLabel>
                                     <FieldDescription>
                                         {t("membersDescription")}
@@ -649,7 +648,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                 const member = activeGroup.members.find((m) => m.userId === uid);
                                                 if (!member) return null;
                                                 return (
-                                                    <Field key={uid} orientation="horizontal">
+                                                    <Field key={uid} orientation="horizontal" className="gap-4">
                                                         <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
                                                             {member.displayName}
                                                         </FieldLabel>
@@ -690,7 +689,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                                     }
                                                                 }}
                                                                 placeholder="1-10"
-                                                                className="w-24 h-8"
+                                                                className="w-20 h-8"
                                                                 aria-invalid={!!validationErrors[`memberRating_${uid}`]}
                                                             />
                                                             {validationErrors[`memberRating_${uid}`] && (
