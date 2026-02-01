@@ -117,11 +117,6 @@ export function Header() {
         void setLocale(next);
     };
 
-    // Helper function to extract error message from API response
-    const getApiErrorMessage = (err: unknown): string => {
-        return (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? t("invalidCode");
-    };
-
     const handleCreateGroup = async () => {
         if (!newGroupName.trim()) return;
         try {
@@ -170,8 +165,8 @@ export function Header() {
             // Set default auth mode based on whether password exists
             setUseOtpMode(!result.hasPassword);
             setJoinStep("auth");
-        } catch (err) {
-            setError(getApiErrorMessage(err));
+        } catch {
+            setError(t("invalidCode"));
         }
     };
 
@@ -186,8 +181,8 @@ export function Header() {
             setError("");
             setJoinStep("code");
             setGroupToJoin(null);
-        } catch (err) {
-            setError(getApiErrorMessage(err));
+        } catch {
+            setError(t("invalidCode"));
         }
     };
 
@@ -365,18 +360,7 @@ export function Header() {
                 </div>
             </header>
 
-            <Dialog open={groupDialogOpen} onOpenChange={(open) => {
-                setGroupDialogOpen(open);
-                if (!open) {
-                    // Reset error and join step when dialog is closed
-                    setError("");
-                    setJoinStep("code");
-                    setGroupToJoin(null);
-                    setJoinPassword("");
-                    setJoinOtp("");
-                    setUseOtpMode(false);
-                }
-            }}>
+            <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
                 <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">

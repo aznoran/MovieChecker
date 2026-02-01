@@ -211,6 +211,7 @@ const en = {
     groupCreated: "Group created!",
     joinedGroup: "Joined group!",
     invalidCode: "Invalid invite code",
+    alreadyMember: "Already a member",
     myRatingLabel: "My Rating",
     allRatings: "All Ratings",
     noRatingsYet: "No ratings yet",
