@@ -5,7 +5,8 @@ public enum WatchStatus
     Planned,
     Watching,
     Completed,
-    Dropped
+    Dropped,
+    UnderConsideration
 }
 
 public enum Emotion

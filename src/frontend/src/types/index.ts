@@ -11,6 +11,7 @@ export enum WatchStatus {
   Watching = 1,
   Completed = 2,
   Dropped = 3,
+  UnderConsideration = 4,
 }
 
 export enum Emotion {
@@ -128,6 +129,7 @@ export const WatchStatusLabels: Record<WatchStatus, string> = {
   [WatchStatus.Watching]: "Watching",
   [WatchStatus.Completed]: "Completed",
   [WatchStatus.Dropped]: "Dropped",
+  [WatchStatus.UnderConsideration]: "Under Consideration",
 };
 
 export const EmotionLabels: Record<Emotion, string> = {
