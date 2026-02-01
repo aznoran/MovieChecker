@@ -425,7 +425,7 @@ public static class GroupEndpoints
 
         var memberToUpdate = group.Members.FirstOrDefault(m => m.UserId == userId);
         if (memberToUpdate == null)
-            return Results.NotFound(new { message = "User is not a member of this group" });
+            return Results.NotFound(new { message = localizer["UserNotGroupMember"] });
 
         // Cannot change owner's role
         if (memberToUpdate.Role == GroupRole.Owner)
@@ -527,7 +527,7 @@ public static class GroupEndpoints
         // Group must be private to have a password
         if (!group.IsPrivate)
         {
-            return Results.BadRequest(new { message = "Only private groups can have passwords" });
+            return Results.BadRequest(new { message = localizer["OnlyPrivateGroupsPassword"] });
         }
 
         // Update password (null removes it, making group OTP-only)
@@ -537,6 +537,6 @@ public static class GroupEndpoints
 
         await db.SaveChangesAsync();
 
-        return Results.Ok(new { message = "Password updated successfully" });
+        return Results.Ok(new { message = localizer["PasswordUpdatedSuccessfully"] });
     }
 }

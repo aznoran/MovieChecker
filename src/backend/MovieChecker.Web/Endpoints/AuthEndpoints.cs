@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MovieChecker.Domain.Models;
+using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
 
@@ -20,7 +21,8 @@ public static class AuthEndpoints
         RegisterRequest request,
         AppDbContext db,
         JwtService jwtService,
-        ValidationService validationService)
+        ValidationService validationService,
+        ILocalizationService localizer)
     {
         // Validate input
         var validationResult = validationService.ValidateRegistration(
@@ -32,14 +34,14 @@ public static class AuthEndpoints
         if (!validationResult.IsValid)
         {
             return Results.BadRequest(new { 
-                message = "Validation failed", 
+                message = localizer["ValidationFailed"], 
                 errors = validationResult.Errors 
             });
         }
 
         if (await db.Users.AnyAsync(u => u.Username == request.Username))
         {
-            return Results.BadRequest(new { message = "Username already exists" });
+            return Results.BadRequest(new { message = localizer["UsernameAlreadyExists"] });
         }
 
         var user = new User

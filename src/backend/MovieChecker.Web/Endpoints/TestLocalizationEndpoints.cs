@@ -13,34 +13,47 @@ public static class TestLocalizationEndpoints
         {
             var errors = new Dictionary<string, string>
             {
+                // Permission errors
                 ["InsufficientPermissionsCreate"] = localizer["InsufficientPermissionsCreate"],
-                ["InsufficientPermissionsUpdate"] = localizer["InsufficientPermissionsUpdate"],
+                ["InsufficientPermissionsEdit"] = localizer["InsufficientPermissionsEdit"],
                 ["InsufficientPermissionsDelete"] = localizer["InsufficientPermissionsDelete"],
-                ["InsufficientPermissionsRead"] = localizer["InsufficientPermissionsRead"],
-                ["EntryNotFound"] = localizer["EntryNotFound"],
+                ["InsufficientPermissionsView"] = localizer["InsufficientPermissionsView"],
+                ["InsufficientPermissionsViewEntry"] = localizer["InsufficientPermissionsViewEntry"],
+                ["InsufficientPermissionsRate"] = localizer["InsufficientPermissionsRate"],
+                ["InsufficientPermissionsStats"] = localizer["InsufficientPermissionsStats"],
+                ["InsufficientPermissionsRemove"] = localizer["InsufficientPermissionsRemove"],
+                ["InsufficientPermissionsChangeRole"] = localizer["InsufficientPermissionsChangeRole"],
+                ["InsufficientPermissionsOtp"] = localizer["InsufficientPermissionsOtp"],
+                ["InsufficientPermissionsPassword"] = localizer["InsufficientPermissionsPassword"],
+                // Not found errors
                 ["MovieNotFound"] = localizer["MovieNotFound"],
-                ["GroupNotFound"] = localizer["GroupNotFound"],
-                ["UserNotFound"] = localizer["UserNotFound"],
-                ["InvalidMovieData"] = localizer["InvalidMovieData"],
-                ["InvalidGroupData"] = localizer["InvalidGroupData"],
-                ["InvalidEntryData"] = localizer["InvalidEntryData"],
-                ["InvalidUserData"] = localizer["InvalidUserData"],
-                ["DuplicateEntry"] = localizer["DuplicateEntry"],
-                ["DuplicateGroup"] = localizer["DuplicateGroup"],
-                ["DuplicateUser"] = localizer["DuplicateUser"],
-                ["InvalidCredentials"] = localizer["InvalidCredentials"],
-                ["UserAlreadyExists"] = localizer["UserAlreadyExists"],
-                ["InvalidToken"] = localizer["InvalidToken"],
-                ["TokenExpired"] = localizer["TokenExpired"],
-                ["InvalidFileType"] = localizer["InvalidFileType"],
+                // Duplicate errors
+                ["EntryAlreadyExistsGroup"] = localizer["EntryAlreadyExistsGroup"],
+                ["EntryAlreadyExists"] = localizer["EntryAlreadyExists"],
+                ["AlreadyMember"] = localizer["AlreadyMember"],
+                // Group management errors
+                ["OnlyOwnerTransfer"] = localizer["OnlyOwnerTransfer"],
+                ["MustBeMember"] = localizer["MustBeMember"],
+                ["CannotRemoveOwner"] = localizer["CannotRemoveOwner"],
+                ["CannotChangeOwnerRole"] = localizer["CannotChangeOwnerRole"],
+                ["AdminsCannotModify"] = localizer["AdminsCannotModify"],
+                ["UseTransferOwnership"] = localizer["UseTransferOwnership"],
+                ["UserNotGroupMember"] = localizer["UserNotGroupMember"],
+                // OTP and password errors
+                ["InvalidOrExpiredOtp"] = localizer["InvalidOrExpiredOtp"],
+                ["PasswordOrOtpRequired"] = localizer["PasswordOrOtpRequired"],
+                ["OtpOnlyGroup"] = localizer["OtpOnlyGroup"],
+                ["OtpOnlyForPrivate"] = localizer["OtpOnlyForPrivate"],
+                ["OnlyPrivateGroupsPassword"] = localizer["OnlyPrivateGroupsPassword"],
+                ["PasswordUpdatedSuccessfully"] = localizer["PasswordUpdatedSuccessfully"],
+                // Auth errors
+                ["ValidationFailed"] = localizer["ValidationFailed"],
+                ["UsernameAlreadyExists"] = localizer["UsernameAlreadyExists"],
+                ["InvalidInviteCode"] = localizer["InvalidInviteCode"],
+                // File upload errors
+                ["NoFileProvided"] = localizer["NoFileProvided"],
                 ["FileTooLarge"] = localizer["FileTooLarge"],
-                ["UploadFailed"] = localizer["UploadFailed"],
-                ["DatabaseError"] = localizer["DatabaseError"],
-                ["UnexpectedError"] = localizer["UnexpectedError"],
-                ["ValidationError"] = localizer["ValidationError"],
-                ["InvalidOperation"] = localizer["InvalidOperation"],
-                ["ResourceLocked"] = localizer["ResourceLocked"],
-                ["RateLimitExceeded"] = localizer["RateLimitExceeded"]
+                ["InvalidFileType"] = localizer["InvalidFileType"]
             };
 
             return Results.Ok(new

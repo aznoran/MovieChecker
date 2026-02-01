@@ -136,4 +136,28 @@
   <data name="InvalidInviteCode" xml:space="preserve">
     <value>Invalid invite code</value>
   </data>
+  <data name="ValidationFailed" xml:space="preserve">
+    <value>Validation failed</value>
+  </data>
+  <data name="UsernameAlreadyExists" xml:space="preserve">
+    <value>Username already exists</value>
+  </data>
+  <data name="UserNotGroupMember" xml:space="preserve">
+    <value>User is not a member of this group</value>
+  </data>
+  <data name="OnlyPrivateGroupsPassword" xml:space="preserve">
+    <value>Only private groups can have passwords</value>
+  </data>
+  <data name="PasswordUpdatedSuccessfully" xml:space="preserve">
+    <value>Password updated successfully</value>
+  </data>
+  <data name="NoFileProvided" xml:space="preserve">
+    <value>No file provided</value>
+  </data>
+  <data name="FileTooLarge" xml:space="preserve">
+    <value>File too large. Max 5MB.</value>
+  </data>
+  <data name="InvalidFileType" xml:space="preserve">
+    <value>Invalid file type. Allowed: jpg, png, webp, gif</value>
+  </data>
 </root>

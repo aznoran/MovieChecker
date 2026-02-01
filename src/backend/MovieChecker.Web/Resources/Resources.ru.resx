@@ -136,4 +136,28 @@
   <data name="InvalidInviteCode" xml:space="preserve">
     <value>Неверный код приглашения</value>
   </data>
+  <data name="ValidationFailed" xml:space="preserve">
+    <value>Ошибка валидации</value>
+  </data>
+  <data name="UsernameAlreadyExists" xml:space="preserve">
+    <value>Имя пользователя уже существует</value>
+  </data>
+  <data name="UserNotGroupMember" xml:space="preserve">
+    <value>Пользователь не является участником этой группы</value>
+  </data>
+  <data name="OnlyPrivateGroupsPassword" xml:space="preserve">
+    <value>Только приватные группы могут иметь пароль</value>
+  </data>
+  <data name="PasswordUpdatedSuccessfully" xml:space="preserve">
+    <value>Пароль успешно обновлен</value>
+  </data>
+  <data name="NoFileProvided" xml:space="preserve">
+    <value>Файл не предоставлен</value>
+  </data>
+  <data name="FileTooLarge" xml:space="preserve">
+    <value>Файл слишком большой. Максимум 5МБ.</value>
+  </data>
+  <data name="InvalidFileType" xml:space="preserve">
+    <value>Недопустимый тип файла. Разрешены: jpg, png, webp, gif</value>
+  </data>
 </root>
