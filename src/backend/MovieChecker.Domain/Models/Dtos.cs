@@ -41,7 +41,7 @@ public record MovieDto(
 );
 
 // WatchEntry DTOs
-public record UserRatingInput(int UserId, int? Rating);
+public record UserRatingInput(int UserId, int Rating);
 
 public record CreateWatchEntryRequest(
     int MovieId,
@@ -59,7 +59,8 @@ public record CreateWatchEntryRequest(
     int? CurrentEpisode,
     int? TotalEpisodes,
     int? WatchingTime,
-    List<UserRatingInput>? Ratings
+    List<UserRatingInput>? Ratings,
+    List<int>? Viewers
 );
 
 public record UpdateWatchEntryRequest(
@@ -76,7 +77,8 @@ public record UpdateWatchEntryRequest(
     int? CurrentEpisode,
     int? TotalEpisodes,
     int? WatchingTime,
-    List<UserRatingInput>? Ratings
+    List<UserRatingInput>? Ratings,
+    List<int>? Viewers
 );
 
 public record WatchEntryDto(

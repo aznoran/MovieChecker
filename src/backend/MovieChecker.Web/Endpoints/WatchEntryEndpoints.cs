@@ -181,10 +181,10 @@ public static class WatchEntryEndpoints
 
         // If creating in a group, duplicate to personal lists of all viewers
         Dictionary<int, WatchEntry> personalEntries = new();
-        if (request.GroupId.HasValue && request.Ratings is { Count: > 0 })
+        if (request.GroupId.HasValue && request.Viewers is { Count: > 0 })
         {
             // Get list of user IDs who are chosen as viewers
-            var viewerUserIds = request.Ratings.Select(r => r.UserId).Distinct().ToList();
+            var viewerUserIds = request.Viewers.Distinct().ToList();
             
             // Get user settings to check privacy preferences
             var userSettings = await db.UserSettings
@@ -266,26 +266,22 @@ public static class WatchEntryEndpoints
             {
                 if (validUserIds.Contains(ri.UserId))
                 {
-                    // Only add rating if rating value is provided (not null)
-                    if (ri.Rating.HasValue)
+                    db.EntryRatings.Add(new EntryRating
+                    {
+                        WatchEntryId = entry.Id,
+                        UserId = ri.UserId,
+                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                    });
+                    
+                    // Add rating to personal entry if it exists for this user
+                    if (personalEntries.TryGetValue(ri.UserId, out var personalEntry))
                     {
                         db.EntryRatings.Add(new EntryRating
                         {
-                            WatchEntryId = entry.Id,
+                            WatchEntryId = personalEntry.Id,
                             UserId = ri.UserId,
-                            Rating = Math.Clamp(ri.Rating.Value, 1, 10)
+                            Rating = Math.Clamp(ri.Rating, 1, 10)
                         });
-                        
-                        // Add rating to personal entry if it exists for this user
-                        if (personalEntries.TryGetValue(ri.UserId, out var personalEntry))
-                        {
-                            db.EntryRatings.Add(new EntryRating
-                            {
-                                WatchEntryId = personalEntry.Id,
-                                UserId = ri.UserId,
-                                Rating = Math.Clamp(ri.Rating.Value, 1, 10)
-                            });
-                        }
                     }
                 }
             }
@@ -378,31 +374,18 @@ public static class WatchEntryEndpoints
                 if (!validUserIds.Contains(ri.UserId)) continue;
                 
                 var existing = entry.Ratings.FirstOrDefault(r => r.UserId == ri.UserId);
-                
-                // If rating is null, remove the rating if it exists
-                if (!ri.Rating.HasValue)
+                if (existing != null)
                 {
-                    if (existing != null)
-                    {
-                        db.EntryRatings.Remove(existing);
-                    }
+                    existing.Rating = Math.Clamp(ri.Rating, 1, 10);
                 }
                 else
                 {
-                    // Add or update rating
-                    if (existing != null)
+                    db.EntryRatings.Add(new EntryRating
                     {
-                        existing.Rating = Math.Clamp(ri.Rating.Value, 1, 10);
-                    }
-                    else
-                    {
-                        db.EntryRatings.Add(new EntryRating
-                        {
-                            WatchEntryId = entry.Id,
-                            UserId = ri.UserId,
-                            Rating = Math.Clamp(ri.Rating.Value, 1, 10)
-                        });
-                    }
+                        WatchEntryId = entry.Id,
+                        UserId = ri.UserId,
+                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                    });
                 }
             }
         }
