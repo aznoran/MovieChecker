@@ -321,7 +321,7 @@ export function Header() {
                             <SelectTrigger className="w-[180px] h-8 text-sm">
                                 <SelectValue/>
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent position="popper" sideOffset={4}>
                                 <SelectItem value="personal">
                                     <User />
                                     {t("personal")}
