@@ -139,3 +139,14 @@ public record StatsDto(
     Dictionary<string, int> ByEmotion,
     List<MemberRatingDto> MemberRatings
 );
+
+// User Settings DTOs
+public record UserSettingsDto(
+    bool PreventOthersAddingToMyPersonal,
+    bool PreventMeAddingToMyPersonal
+);
+
+public record UpdateUserSettingsRequest(
+    bool? PreventOthersAddingToMyPersonal,
+    bool? PreventMeAddingToMyPersonal
+);

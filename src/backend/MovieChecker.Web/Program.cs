@@ -1,14 +1,26 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using MovieChecker.Infrastructure;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Web.Endpoints;
-using Swashbuckle.AspNetCore.SwaggerGen;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Database
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Localization
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[] { "en", "ru" };
+    options.SetDefaultCulture("en")
+        .AddSupportedCultures(supportedCultures)
+        .AddSupportedUICultures(supportedCultures);
+});
 
 // Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
@@ -96,6 +108,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.UseRequestLocalization();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -105,8 +118,12 @@ app.MapMovieEndpoints();
 app.MapWatchEntryEndpoints();
 app.MapUploadEndpoints();
 app.MapGroupEndpoints();
+app.MapUserSettingsEndpoints();
 
 // Health check
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
+
+// Test localization endpoint
+app.MapTestLocalizationEndpoints();
 
 app.Run();
