@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +43,28 @@ public static class DependencyInjection
                     ValidIssuer = configuration["Jwt:Issuer"] ?? "MovieChecker",
                     ValidAudience = configuration["Jwt:Audience"] ?? "MovieChecker",
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+                };
+                
+                // Validate that the user in the JWT actually exists in the database
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var userIdClaim = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+                        {
+                            context.Fail("Invalid user identifier in token");
+                            return;
+                        }
+                        
+                        var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                        var userExists = await dbContext.Users.AnyAsync(u => u.Id == userId);
+                        
+                        if (!userExists)
+                        {
+                            context.Fail("User no longer exists");
+                        }
+                    }
                 };
             });
         services.AddAuthorization();
