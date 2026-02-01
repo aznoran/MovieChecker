@@ -93,6 +93,31 @@ MovieChecker is a full-stack web application for tracking and managing movie wat
 - Add comments only when necessary to explain "why", not "what"
 - Handle errors gracefully with user-friendly messages
 
+## Restricted Operations
+
+### Entity Framework Core Migrations
+**IMPORTANT: The agent is NOT allowed to create, generate, or apply Entity Framework Core migrations.**
+
+When database schema changes are required (e.g., adding new entities, modifying existing models, changing relationships), the agent must:
+1. **NEVER** run `dotnet ef migrations add` commands
+2. **NEVER** run `dotnet ef database update` commands
+3. **NEVER** create migration files manually in the `Migrations` folder
+4. **ALWAYS** ask the repository owner to create and apply migrations manually
+
+If a task requires database schema changes, the agent should:
+- Complete all code changes that do not involve migrations
+- Clearly document what database changes are needed
+- Request the owner to run the migration commands with a specific migration name suggestion
+- Wait for the owner to confirm the migration has been applied before proceeding with dependent tasks
+
+Example message to owner:
+> "The code changes are complete. This feature requires a database migration. Please run the following commands:
+> ```bash
+> cd src/backend/MovieChecker.Web
+> dotnet ef migrations add AddNewFeatureName
+> dotnet ef database update
+> ```"
+
 ## Development Workflow
 
 ### Issue and Pull Request Management
@@ -130,7 +155,9 @@ npm install
 npm run dev
 ```
 
-### Database Migrations
+### Database Migrations (Owner Only)
+**⚠️ These commands must be run by the repository owner only. The agent is NOT permitted to execute these commands.**
+
 ```bash
 cd src/backend/MovieChecker.Web
 dotnet ef migrations add MigrationName
@@ -160,7 +187,7 @@ npm run lint         # Run ESLint
 1. Define the domain model in `MovieChecker.Domain/Models/`
 2. Create entity configuration in `MovieChecker.Infrastructure/Data/Configurations/`
 3. Update `AppDbContext` to include the new entity
-4. Create and apply database migration
+4. **Request the owner to create and apply database migration** (agent must NOT create migrations)
 5. Add endpoint methods in `MovieChecker.Web/Endpoints/`
 6. Map the endpoints in `Program.cs`
 
