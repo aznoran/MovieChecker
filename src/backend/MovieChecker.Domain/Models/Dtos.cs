@@ -41,7 +41,7 @@ public record MovieDto(
 );
 
 // WatchEntry DTOs
-public record UserRatingInput(int UserId, int Rating);
+public record UserRatingInput(int UserId, int? Rating);
 
 public record CreateWatchEntryRequest(
     int MovieId,
@@ -64,7 +64,6 @@ public record CreateWatchEntryRequest(
 
 public record UpdateWatchEntryRequest(
     WatchStatus? Status,
-    WatchedBy? WatchedBy,
     int? MyRating,
     int? PartnerRating,
     Emotion? Emotion,
@@ -85,7 +84,6 @@ public record WatchEntryDto(
     int MovieId,
     MovieDto Movie,
     WatchStatus Status,
-    WatchedBy WatchedBy,
     int? GroupId,
     Emotion? Emotion,
     string? Comment,
@@ -150,7 +148,6 @@ public record StatsDto(
     int TotalDropped,
     double AverageMyRating,
     double AveragePartnerRating,
-    int WatchedTogether,
     Dictionary<string, int> ByType,
     Dictionary<string, int> ByEmotion,
     List<MemberRatingDto> MemberRatings

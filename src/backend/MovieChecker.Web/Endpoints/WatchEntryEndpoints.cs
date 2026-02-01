@@ -40,7 +40,6 @@ public static class WatchEntryEndpoints
             w.Movie.CreatedAt
         ),
         w.Status,
-        w.WatchedBy,
         w.GroupId,
         w.Emotion,
         w.Comment,
@@ -65,7 +64,6 @@ public static class WatchEntryEndpoints
         AppDbContext db,
         IStringLocalizer<Resources.Resources> localizer,
         WatchStatus? status = null,
-        WatchedBy? watchedBy = null,
         int? groupId = null)
     {
         var userId = GetUserId(user);
@@ -94,9 +92,6 @@ public static class WatchEntryEndpoints
 
         if (status.HasValue)
             query = query.Where(w => w.Status == status.Value);
-
-        if (watchedBy.HasValue)
-            query = query.Where(w => w.WatchedBy == watchedBy.Value);
 
         var entries = await query
             .OrderByDescending(w => w.UpdatedAt)
@@ -162,28 +157,12 @@ public static class WatchEntryEndpoints
                 return Results.BadRequest(new { message = localizer["EntryAlreadyExists"].Value });
         }
 
-        // Determine WatchedBy based on Ratings list
-        WatchedBy watchedBy = WatchedBy.Together; // Default
-        if (request.Ratings is { Count: > 0 })
-        {
-            var viewerIds = request.Ratings.Select(r => r.UserId).Distinct().ToList();
-            if (viewerIds.Count == 1 && viewerIds[0] == userId)
-            {
-                watchedBy = WatchedBy.Me;
-            }
-            else
-            {
-                watchedBy = WatchedBy.Together;
-            }
-        }
-
         var entry = new WatchEntry
         {
             MovieId = request.MovieId,
             UserId = userId,
             GroupId = request.GroupId,
             Status = request.Status,
-            WatchedBy = watchedBy,
             MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
             PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
             Emotion = request.Emotion,
@@ -243,24 +222,12 @@ public static class WatchEntryEndpoints
                 
                 if (!existingPersonalEntries.Contains(viewerUserId) && !preventAutoAdd)
                 {
-                    // Calculate WatchedBy for personal entry based on viewers list
-                    WatchedBy personalWatchedBy = WatchedBy.Together; // Default
-                    if (viewerUserIds.Count == 1 && viewerUserIds[0] == viewerUserId)
-                    {
-                        personalWatchedBy = WatchedBy.Me;
-                    }
-                    else
-                    {
-                        personalWatchedBy = WatchedBy.Together;
-                    }
-                    
                     var personalEntry = new WatchEntry
                     {
                         MovieId = request.MovieId,
                         UserId = viewerUserId,
                         GroupId = null, // Personal entry
                         Status = request.Status,
-                        WatchedBy = personalWatchedBy,
                         MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
                         PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
                         Emotion = request.Emotion,
@@ -299,22 +266,26 @@ public static class WatchEntryEndpoints
             {
                 if (validUserIds.Contains(ri.UserId))
                 {
-                    db.EntryRatings.Add(new EntryRating
-                    {
-                        WatchEntryId = entry.Id,
-                        UserId = ri.UserId,
-                        Rating = Math.Clamp(ri.Rating, 1, 10)
-                    });
-                    
-                    // Add rating to personal entry if it exists for this user
-                    if (personalEntries.TryGetValue(ri.UserId, out var personalEntry))
+                    // Only add rating if rating value is provided (not null)
+                    if (ri.Rating.HasValue)
                     {
                         db.EntryRatings.Add(new EntryRating
                         {
-                            WatchEntryId = personalEntry.Id,
+                            WatchEntryId = entry.Id,
                             UserId = ri.UserId,
-                            Rating = Math.Clamp(ri.Rating, 1, 10)
+                            Rating = Math.Clamp(ri.Rating.Value, 1, 10)
                         });
+                        
+                        // Add rating to personal entry if it exists for this user
+                        if (personalEntries.TryGetValue(ri.UserId, out var personalEntry))
+                        {
+                            db.EntryRatings.Add(new EntryRating
+                            {
+                                WatchEntryId = personalEntry.Id,
+                                UserId = ri.UserId,
+                                Rating = Math.Clamp(ri.Rating.Value, 1, 10)
+                            });
+                        }
                     }
                 }
             }
@@ -375,7 +346,6 @@ public static class WatchEntryEndpoints
             return Results.BadRequest(new { message = localizer["InsufficientPermissionsEdit"].Value });
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
-        if (request.WatchedBy.HasValue) entry.WatchedBy = request.WatchedBy.Value;
         if (request.MyRating.HasValue) entry.MyRating = Math.Clamp(request.MyRating.Value, 1, 10);
         if (request.PartnerRating.HasValue) entry.PartnerRating = Math.Clamp(request.PartnerRating.Value, 1, 10);
         if (request.Emotion.HasValue) entry.Emotion = request.Emotion.Value;
@@ -406,19 +376,33 @@ public static class WatchEntryEndpoints
             foreach (var ri in request.Ratings)
             {
                 if (!validUserIds.Contains(ri.UserId)) continue;
+                
                 var existing = entry.Ratings.FirstOrDefault(r => r.UserId == ri.UserId);
-                if (existing != null)
+                
+                // If rating is null, remove the rating if it exists
+                if (!ri.Rating.HasValue)
                 {
-                    existing.Rating = Math.Clamp(ri.Rating, 1, 10);
+                    if (existing != null)
+                    {
+                        db.EntryRatings.Remove(existing);
+                    }
                 }
                 else
                 {
-                    db.EntryRatings.Add(new EntryRating
+                    // Add or update rating
+                    if (existing != null)
                     {
-                        WatchEntryId = entry.Id,
-                        UserId = ri.UserId,
-                        Rating = Math.Clamp(ri.Rating, 1, 10)
-                    });
+                        existing.Rating = Math.Clamp(ri.Rating.Value, 1, 10);
+                    }
+                    else
+                    {
+                        db.EntryRatings.Add(new EntryRating
+                        {
+                            WatchEntryId = entry.Id,
+                            UserId = ri.UserId,
+                            Rating = Math.Clamp(ri.Rating.Value, 1, 10)
+                        });
+                    }
                 }
             }
         }
@@ -568,7 +552,6 @@ public static class WatchEntryEndpoints
             TotalDropped: entries.Count(e => e.Status == WatchStatus.Dropped),
             AverageMyRating: myRatings.Count > 0 ? myRatings.Average() : 0,
             AveragePartnerRating: otherRatings.Count > 0 ? otherRatings.Average() : 0,
-            WatchedTogether: entries.Count(e => e.WatchedBy == WatchedBy.Together),
             ByType: entries.GroupBy(e => e.Movie.Type.ToString()).ToDictionary(g => g.Key, g => g.Count()),
             ByEmotion: entries.Where(e => e.Emotion.HasValue).GroupBy(e => e.Emotion!.Value.ToString())
                 .ToDictionary(g => g.Key, g => g.Count()),
