@@ -782,7 +782,7 @@ export function Header() {
                                                                         className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
                                                                         onClick={() => handleGenerateOtp(g.id)}
                                                                     >
-                                                                        <Key className="h-3.5 w-3.5 mr-1.5"/>
+                                                                        <KeyRound className="h-3.5 w-3.5 mr-1.5"/>
                                                                         {t("generateOtp")}
                                                                     </Button>
                                                                     <Button
