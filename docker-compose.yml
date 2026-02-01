@@ -42,7 +42,7 @@ services:
       - "5000"
     environment:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-moviechecker};Username=${POSTGRES_USER:-moviechecker};Password=${POSTGRES_PASSWORD:-moviechecker_secret}"
-      ConnectionStrings__Redis: "localhost:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
       Jwt__Key: ${JWT_KEY:-MovieCheckerSuperSecretKey123456789012345678901234567890}
       Jwt__Issuer: MovieChecker
