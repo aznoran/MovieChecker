@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Localization;
-using MovieChecker.Web.Resources;
+using ResourcesClass = MovieChecker.Web.Resources.Resources;
 
 namespace MovieChecker.Web.Endpoints;
 
@@ -9,7 +9,7 @@ public static class TestLocalizationEndpoints
     {
         var group = app.MapGroup("/api/test-localization");
 
-        group.MapGet("/all-errors", (IStringLocalizer<Resources.Resources> localizer) =>
+        group.MapGet("/all-errors", (IStringLocalizer<ResourcesClass> localizer) =>
         {
             var errors = new Dictionary<string, string>
             {
@@ -51,7 +51,7 @@ public static class TestLocalizationEndpoints
             });
         });
 
-        group.MapGet("/test-error/{key}", (string key, IStringLocalizer<Resources.Resources> localizer) =>
+        group.MapGet("/test-error/{key}", (string key, IStringLocalizer<ResourcesClass> localizer) =>
         {
             var translatedValue = localizer[key].Value;
             var isFound = !localizer[key].ResourceNotFound;
