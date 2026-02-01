@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Localization;
 using MovieChecker.Infrastructure.Abstractions;
 
 namespace MovieChecker.Web.Endpoints;
