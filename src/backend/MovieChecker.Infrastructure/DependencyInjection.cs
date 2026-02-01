@@ -2,7 +2,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -24,14 +24,26 @@ public static class DependencyInjection
         .AddScoped<JwtService>()
         .AddScoped<ValidationService>();
 
-        // Add memory cache for user validation
-        services.AddMemoryCache();
-
-        // Redis
+        // Redis and HybridCache
         var redisConnection = configuration.GetConnectionString("Redis");
         services.AddSingleton<IConnectionMultiplexer>(sp =>
             ConnectionMultiplexer.Connect(redisConnection!));
         services.AddScoped<OtpService>();
+        
+        // Configure HybridCache with Redis as the distributed cache backing store
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = redisConnection;
+            options.InstanceName = "MovieChecker:";
+        });
+        services.AddHybridCache(options =>
+        {
+            options.DefaultEntryOptions = new HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(1),
+                LocalCacheExpiration = TimeSpan.FromMinutes(1)
+            };
+        });
 
         // JWT Authentication
         var jwtKey = configuration["Jwt:Key"] ?? "SuperSecretKey12345678901234567890";
@@ -61,21 +73,20 @@ public static class DependencyInjection
                             return;
                         }
                         
-                        // Use cache to reduce database hits for user validation
-                        var cache = context.HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+                        // Use HybridCache (with Redis backing) to reduce database hits for user validation
+                        var cache = context.HttpContext.RequestServices.GetRequiredService<HybridCache>();
+                        var scopeFactory = context.HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
                         var cacheKey = $"user_exists_{userId}";
                         
-                        if (!cache.TryGetValue(cacheKey, out bool userExists))
-                        {
-                            // Create a scope to properly manage DbContext lifetime
-                            var scopeFactory = context.HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
-                            using var scope = scopeFactory.CreateScope();
-                            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                            userExists = await dbContext.Users.AnyAsync(u => u.Id == userId);
-                            
-                            // Cache the result for 1 minute to balance security and performance
-                            cache.Set(cacheKey, userExists, TimeSpan.FromMinutes(1));
-                        }
+                        var userExists = await cache.GetOrCreateAsync(
+                            cacheKey,
+                            async cancel =>
+                            {
+                                using var scope = scopeFactory.CreateScope();
+                                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                                return await dbContext.Users.AnyAsync(u => u.Id == userId, cancel);
+                            },
+                            cancellationToken: context.HttpContext.RequestAborted);
                         
                         if (!userExists)
                         {
