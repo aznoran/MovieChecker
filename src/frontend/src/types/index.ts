@@ -14,13 +14,6 @@ export enum WatchStatus {
   UnderConsideration = 4,
 }
 
-export enum WatchedBy {
-  Me = 0,
-  Partner = 1,
-  Together = 2,
-  Separately = 3,
-}
-
 export enum Emotion {
   Joy = 0,
   Sadness = 1,
@@ -64,7 +57,6 @@ export interface WatchEntry {
   movieId: number;
   movie: Movie;
   status: WatchStatus;
-  watchedBy: WatchedBy;
   groupId?: number;
   emotion?: Emotion;
   comment?: string;
@@ -79,11 +71,20 @@ export interface WatchEntry {
   watchingTime: number;
 }
 
+export enum GroupRole {
+  Viewer = 0,
+  Member = 1,
+  Admin = 2,
+  Owner = 3,
+}
+
 export interface Group {
   id: number;
   name: string;
   inviteCode: string;
   createdByUserId: number;
+  isPrivate: boolean;
+  defaultRole: GroupRole;
   members: GroupMember[];
   createdAt: string;
 }
@@ -91,6 +92,7 @@ export interface Group {
 export interface GroupMember {
   userId: number;
   displayName: string;
+  role: GroupRole;
   joinedAt: string;
 }
 
@@ -130,13 +132,6 @@ export const WatchStatusLabels: Record<WatchStatus, string> = {
   [WatchStatus.UnderConsideration]: "Under Consideration",
 };
 
-export const WatchedByLabels: Record<WatchedBy, string> = {
-  [WatchedBy.Me]: "Me",
-  [WatchedBy.Partner]: "Partner",
-  [WatchedBy.Together]: "Together",
-  [WatchedBy.Separately]: "Separately",
-};
-
 export const EmotionLabels: Record<Emotion, string> = {
   [Emotion.Joy]: "Joy",
   [Emotion.Sadness]: "Sadness",
@@ -153,4 +148,11 @@ export const EmotionEmojis: Record<Emotion, string> = {
   [Emotion.Cringe]: "😬",
   [Emotion.Confused]: "🤔",
   [Emotion.Neutral]: "😐",
+};
+
+export const GroupRoleLabels: Record<GroupRole, string> = {
+  [GroupRole.Viewer]: "Viewer",
+  [GroupRole.Member]: "Member",
+  [GroupRole.Admin]: "Admin",
+  [GroupRole.Owner]: "Owner",
 };

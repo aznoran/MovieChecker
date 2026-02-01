@@ -8,6 +8,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Database
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Localization
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[] { "en", "ru" };
+    options.SetDefaultCulture("en")
+        .AddSupportedCultures(supportedCultures)
+        .AddSupportedUICultures(supportedCultures);
+});
+
 // CORS
 var allowedOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
     ?? ["http://localhost:5173", "http://localhost:3000"];
@@ -46,6 +56,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseCors();
+app.UseRequestLocalization();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -55,8 +66,12 @@ app.MapMovieEndpoints();
 app.MapWatchEntryEndpoints();
 app.MapUploadEndpoints();
 app.MapGroupEndpoints();
+app.MapUserSettingsEndpoints();
 
 // Health check
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
+
+// Test localization endpoint
+app.MapTestLocalizationEndpoints();
 
 app.Run();

@@ -1,4 +1,21 @@
 ﻿services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --aclfile /usr/local/etc/redis/users.acl
+    volumes:
+      - redis_data:/data
+      - ./redis/users.acl:/usr/local/etc/redis/users.acl:ro
+    networks:
+      - backend_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--user", "ide", "--pass", "fasdfdsafasdwadawdsd", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "6379:6379"
+
   db:
     image: postgres:17-alpine
     restart: unless-stopped
@@ -18,46 +35,6 @@
       timeout: 5s
       retries: 5
 
-  backend:
-    build:
-      context: ./src/backend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - "5000:5000"
-    environment:
-      ASPNETCORE_URLS: http://0.0.0.0:5000
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-moviechecker};Username=admin;Password=${POSTGRES_PASSWORD:-moviechecker_secret}"
-      Jwt__Key: ${JWT_KEY:-MovieCheckerSuperSecretKey123456789012345678901234567890}
-      Jwt__Issuer: MovieChecker
-      Jwt__Audience: MovieChecker
-      Cors__Origins__0: http://localhost:3000
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - backend_network
-
-  frontend:
-    build:
-      context: ./src/frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:5000/api
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      NODE_ENV: development
-    depends_on:
-      - backend
-    networks:
-      - backend_network
-
 volumes:
   postgres_data:
-
-networks:
-  backend_network:
-    driver: bridge
+  redis_data:

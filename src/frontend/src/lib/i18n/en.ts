@@ -1,8 +1,8 @@
 const en = {
     // Common
-    cancel: "Cancel",
+    cancel: "Cancel", // Used in AlertDialog confirmations
     save: "Save",
-    delete: "Delete",
+    delete: "Delete", // Used in AlertDialog confirmations
     add: "Add",
     clear: "Clear",
     loading: "Loading...",
@@ -36,8 +36,10 @@ const en = {
     addEntry: "Add Entry",
     addFirstEntry: "Add your first entry",
     noEntries: "No entries yet. Start tracking your movies!",
-    deleteConfirm: "Delete this entry?",
+    deleteConfirm: "Delete this entry?", // Used in AlertDialog confirmation
     loadingEntries: "Loading entries...",
+    errorLoadingEntries: "Failed to load entries. Please try again.",
+    retryLoad: "Retry",
 
     // Add/Edit Dialog
     addNewEntry: "Add New Entry",
@@ -67,8 +69,7 @@ const en = {
     genreMusical: "Musical",
     description: "Description",
     status: "Status",
-    watchedBy: "Watched By",
-    watchingBy: "Watching By",
+    viewers: "Viewers",
     myRating: "My Rating (1-10)",
     partnerRating: "Partner Rating (1-10)",
     emotion: "Emotion",
@@ -96,6 +97,53 @@ const en = {
     kickError: "Failed to remove member",
     transferSuccess: "Ownership transferred successfully",
     transferError: "Failed to transfer ownership",
+    roleUpdateSuccess: "Member role updated successfully",
+    roleUpdateError: "Failed to update member role",
+    privateGroup: "Private",
+    publicGroup: "Public",
+    groupPassword: "Group Password",
+    enterPassword: "Enter password",
+    roleViewer: "Viewer",
+    roleMember: "Member",
+    roleAdmin: "Admin",
+    roleOwner: "Owner",
+    changeRole: "Change Role",
+    invalidRole: "Invalid role",
+    selectNewRole: "Select New Role",
+    currentRole: "Current Role",
+    defaultRole: "Default Role for New Members",
+    defaultRoleDescription: "Choose the role that new members will get when they join this group",
+    changeRoleConfirm: "Change this member's role?",
+    changeRoleDescription: "This will update the member's permissions in the group.",
+    errorChangingRole: "Failed to change role",
+    otpCode: "OTP Code",
+    enterOtp: "Enter OTP",
+    generateOtp: "Generate OTP",
+    otpGenerated: "OTP Generated",
+    otpExpiresIn: "Expires in",
+    minutes: "minutes",
+    useOtp: "Use OTP",
+    usePassword: "Use Password",
+    otp: "OTP",
+    otpGenerateError: "Failed to generate OTP",
+    passwordUpdateSuccess: "Password updated successfully",
+    passwordUpdateError: "Failed to update password",
+    changePassword: "Change Password",
+    removePassword: "Remove Password",
+    newPassword: "New Password",
+    optionalPassword: "Optional - leave empty to use OTP only",
+    otpOnlyGroup: "This is an OTP-only group",
+    passwordDisabled: "Password is disabled for this group. Use OTP code instead.",
+    authenticationMethod: "Authentication Method",
+    enterSixDigitCode: "Enter the 6-digit code",
+    continue: "Continue",
+    back: "Back",
+    privateGroupWithPassword: "Private group - enter password or OTP to join",
+    privateGroupOtpOnly: "Private group - OTP required (password not set)",
+    you: "you",
+    leave: "Leave",
+    yourGroups: "Your Groups",
+    copyCode: "Copy Code",
 
     // Content Types
     contentMovie: "Film",
@@ -111,12 +159,6 @@ const en = {
     statusDropped: "Dropped",
     statusUnderConsideration: "Under Consideration",
 
-    // Watched By
-    watchedByMe: "Me",
-    watchedByPartner: "Partner",
-    watchedByTogether: "Together",
-    watchedBySeparately: "Separately",
-
     // Emotions
     emotionJoy: "Joy",
     emotionSadness: "Sadness",
@@ -128,6 +170,7 @@ const en = {
     // Stats
     statistics: "Statistics",
     noStats: "No data yet. Start adding movies to see stats!",
+    errorLoadingStats: "Failed to load statistics. Please try again.",
     completed: "Completed",
     watching: "Watching",
     planned: "Planned",
@@ -157,9 +200,8 @@ const en = {
     enterInviteCode: "Enter invite code",
     members: "Members",
     copied: "Copied!",
-    copyCode: "Copy Code",
     noGroups: "No groups yet",
-    leaveGroupConfirm: "Leave this group?",
+    leaveGroupConfirm: "Leave this group?", // Used in AlertDialog confirmation
     groupCreated: "Group created!",
     joinedGroup: "Joined group!",
     invalidCode: "Invalid invite code",
@@ -170,10 +212,10 @@ const en = {
     ratingOf: "'s rating",
     memberAvgRatings: "Member Ratings",
     rated: "rated",
-    kickMember: "Remove",
-    kickConfirm: "Remove this member from the group?",
-    transferOwnership: "Make Owner",
-    transferConfirm: "Transfer group ownership to this member? You will lose owner rights.",
+    kickMember: "Remove", // Used in AlertDialog confirmations
+    kickConfirm: "Remove this member from the group?", // Used in AlertDialog confirmation
+    transferOwnership: "Make Owner", // Used in AlertDialog confirmations
+    transferConfirm: "Transfer group ownership to this member? You will lose owner rights.", // Used in AlertDialog confirmation
     owner: "Owner",
     failedToKick: "Failed to remove member",
     failedToTransfer: "Failed to transfer ownership",
@@ -198,6 +240,14 @@ const en = {
     emotionDescription: "What emotions did the viewing evoke",
     commentDescription: "Share your thoughts about the viewing",
 
+    // Settings
+    settings: "Settings",
+    privacy: "Privacy",
+    preventOthersAddingToMyPersonal: "Prevent others from adding entries to my personal list",
+    preventOthersAddingToMyPersonalDescription: "When enabled, entries won't be automatically added to your personal list when someone else selects you as a viewer in a group",
+    preventMeAddingToMyPersonal: "Prevent me from adding entries to my personal list in groups",
+    preventMeAddingToMyPersonalDescription: "When enabled, entries won't be automatically added to your personal list when you create entries in groups and include yourself as a viewer",
+
     // Validation Errors
     titleTooLong: "Title is too long (max 255 characters)",
     invalidYear: "Invalid year (1900-2100)",
@@ -206,7 +256,21 @@ const en = {
     invalidNumber: "Must be a positive number",
     invalidTimeComponent: "Must be between 0 and 59",
     invalidRating: "Rating must be between 1 and 10",
-    fixValidationErrors: "Please fix validation errors"
+    fixValidationErrors: "Please fix validation errors",
+
+    // Registration Validation Errors
+    usernameRequired: "Username is required",
+    usernameTooShort: "Username must be at least 3 characters",
+    usernameTooLong: "Username must not exceed 50 characters",
+    usernameInvalidChars: "Username can only contain letters, numbers, underscores, and hyphens",
+    passwordRequired: "Password is required",
+    passwordTooShort: "Password must be at least 8 characters",
+    passwordTooLong: "Password must not exceed 72 characters",
+    passwordMissingRequirements: "Password must contain at least one uppercase letter, one lowercase letter, and one digit",
+    displayNameRequired: "Display name is required",
+    displayNameTooShort: "Display name must be at least 2 characters",
+    displayNameTooLong: "Display name must not exceed 100 characters",
+    usernameAlreadyExists: "Username already exists"
 } as const;
 
 export type TranslationKeys = keyof typeof en;

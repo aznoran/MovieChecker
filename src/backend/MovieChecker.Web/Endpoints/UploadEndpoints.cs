@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MovieChecker.Domain.Models;
+using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 
 namespace MovieChecker.Web.Endpoints;
@@ -20,16 +21,16 @@ public static class UploadEndpoints
         app.MapGet("/api/posters/{id:int}", GetPoster);
     }
 
-    private static async Task<IResult> UploadPoster(IFormFile file, AppDbContext db)
+    private static async Task<IResult> UploadPoster(IFormFile file, AppDbContext db, ILocalizationService localizer)
     {
         if (file.Length == 0)
-            return Results.BadRequest(new { message = "No file provided" });
+            return Results.BadRequest(new { message = localizer["NoFileProvided"] });
 
         if (file.Length > MaxFileSize)
-            return Results.BadRequest(new { message = "File too large. Max 5MB." });
+            return Results.BadRequest(new { message = localizer["FileTooLarge"] });
 
         if (!AllowedContentTypes.Contains(file.ContentType.ToLowerInvariant()))
-            return Results.BadRequest(new { message = "Invalid file type. Allowed: jpg, png, webp, gif" });
+            return Results.BadRequest(new { message = localizer["InvalidFileType"] });
 
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms);

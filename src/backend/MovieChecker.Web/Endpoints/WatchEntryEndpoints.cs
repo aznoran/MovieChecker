@@ -1,7 +1,10 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using MovieChecker.Domain.Models;
+using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
+using MovieChecker.Infrastructure.Services;
 
 namespace MovieChecker.Web.Endpoints;
 
@@ -23,6 +26,7 @@ public static class WatchEntryEndpoints
     private static int GetUserId(ClaimsPrincipal user) =>
         int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
 
+
     private static WatchEntryDto ToDto(WatchEntry w) => new(
         w.Id,
         w.MovieId,
@@ -37,7 +41,6 @@ public static class WatchEntryEndpoints
             w.Movie.CreatedAt
         ),
         w.Status,
-        w.WatchedBy,
         w.GroupId,
         w.Emotion,
         w.Comment,
@@ -60,8 +63,8 @@ public static class WatchEntryEndpoints
     private static async Task<IResult> GetAll(
         ClaimsPrincipal user,
         AppDbContext db,
+        ILocalizationService localizer,
         WatchStatus? status = null,
-        WatchedBy? watchedBy = null,
         int? groupId = null)
     {
         var userId = GetUserId(user);
@@ -70,11 +73,9 @@ public static class WatchEntryEndpoints
 
         if (groupId.HasValue)
         {
-            // Verify user is a member of this group
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == groupId.Value && m.UserId == userId);
-            if (!isMember)
-                return Results.Forbid();
+            // Verify user can view this group
+            if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsView"] });
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
@@ -93,9 +94,6 @@ public static class WatchEntryEndpoints
         if (status.HasValue)
             query = query.Where(w => w.Status == status.Value);
 
-        if (watchedBy.HasValue)
-            query = query.Where(w => w.WatchedBy == watchedBy.Value);
-
         var entries = await query
             .OrderByDescending(w => w.UpdatedAt)
             .ToListAsync();
@@ -103,7 +101,7 @@ public static class WatchEntryEndpoints
         return Results.Ok(entries.Select(ToDto).ToList());
     }
 
-    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, AppDbContext db)
+    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -120,7 +118,7 @@ public static class WatchEntryEndpoints
             var isMember = await db.GroupMembers
                 .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
             if (!isMember)
-                return Results.Forbid();
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsViewEntry"] });
         }
         else if (entry.UserId != userId)
         {
@@ -133,31 +131,31 @@ public static class WatchEntryEndpoints
     private static async Task<IResult> Create(
         CreateWatchEntryRequest request,
         ClaimsPrincipal user,
-        AppDbContext db)
+        AppDbContext db,
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
 
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
-            return Results.BadRequest(new { message = "Movie not found" });
+            return Results.BadRequest(new { message = localizer["MovieNotFound"] });
 
         // Validate group membership if group specified
         if (request.GroupId.HasValue)
         {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == request.GroupId.Value && m.UserId == userId);
-            if (!isMember)
-                return Results.BadRequest(new { message = "Not a member of this group" });
+            // Check if user can create in this group
+            if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsCreate"] });
 
             // Check duplicate within group
             if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.GroupId == request.GroupId.Value))
-                return Results.BadRequest(new { message = "Entry already exists in this group" });
+                return Results.BadRequest(new { message = localizer["EntryAlreadyExistsGroup"] });
         }
         else
         {
             // Check duplicate for personal entries
             if (await db.WatchEntries.AnyAsync(w =>
                     w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
-                return Results.BadRequest(new { message = "Watch entry already exists for this movie" });
+                return Results.BadRequest(new { message = localizer["EntryAlreadyExists"] });
         }
 
         var entry = new WatchEntry
@@ -166,7 +164,6 @@ public static class WatchEntryEndpoints
             UserId = userId,
             GroupId = request.GroupId,
             Status = request.Status,
-            WatchedBy = request.WatchedBy,
             MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
             PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
             Emotion = request.Emotion,
@@ -182,6 +179,78 @@ public static class WatchEntryEndpoints
 
         db.WatchEntries.Add(entry);
         await db.SaveChangesAsync();
+
+        // If creating in a group, duplicate to personal lists of all viewers
+        Dictionary<int, WatchEntry> personalEntries = new();
+        if (request.GroupId.HasValue && request.Viewers is { Count: > 0 })
+        {
+            // Get list of user IDs who are chosen as viewers
+            var viewerUserIds = request.Viewers.Distinct().ToList();
+            
+            // Get user settings to check privacy preferences
+            var userSettings = await db.UserSettings
+                .Where(s => viewerUserIds.Contains(s.UserId))
+                .ToDictionaryAsync(s => s.UserId);
+            
+            // Get existing personal entries for these users for this movie
+            var existingPersonalEntries = await db.WatchEntries
+                .Where(w => w.MovieId == request.MovieId 
+                    && viewerUserIds.Contains(w.UserId) 
+                    && w.GroupId == null)
+                .Select(w => w.UserId)
+                .ToListAsync();
+
+            // Create personal entries for viewers who don't have one yet and haven't disabled it
+            foreach (var viewerUserId in viewerUserIds)
+            {
+                // Check if user has disabled auto-add to personal
+                var settings = userSettings.GetValueOrDefault(viewerUserId);
+                bool preventAutoAdd = false;
+                
+                if (settings != null)
+                {
+                    // If the viewer is the creator (current user), check PreventMeAddingToMyPersonal
+                    // If the viewer is someone else, check PreventOthersAddingToMyPersonal
+                    if (viewerUserId == userId)
+                    {
+                        preventAutoAdd = settings.PreventMeAddingToMyPersonal;
+                    }
+                    else
+                    {
+                        preventAutoAdd = settings.PreventOthersAddingToMyPersonal;
+                    }
+                }
+                
+                if (!existingPersonalEntries.Contains(viewerUserId) && !preventAutoAdd)
+                {
+                    var personalEntry = new WatchEntry
+                    {
+                        MovieId = request.MovieId,
+                        UserId = viewerUserId,
+                        GroupId = null, // Personal entry
+                        Status = request.Status,
+                        MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
+                        PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
+                        Emotion = request.Emotion,
+                        Comment = request.Comment,
+                        PrivateComment = request.PrivateComment,
+                        StartedAt = request.StartedAt,
+                        CompletedAt = request.CompletedAt,
+                        CurrentSeason = request.CurrentSeason,
+                        CurrentEpisode = request.CurrentEpisode,
+                        TotalEpisodes = request.TotalEpisodes,
+                        WatchingTime = request.WatchingTime,
+                    };
+                    db.WatchEntries.Add(personalEntry);
+                    personalEntries[viewerUserId] = personalEntry;
+                }
+            }
+            
+            if (personalEntries.Count > 0)
+            {
+                await db.SaveChangesAsync();
+            }
+        }
 
         // Add bulk ratings if provided (group mode)
         if (request.Ratings is { Count: > 0 })
@@ -204,6 +273,17 @@ public static class WatchEntryEndpoints
                         UserId = ri.UserId,
                         Rating = Math.Clamp(ri.Rating, 1, 10)
                     });
+                    
+                    // Add rating to personal entry if it exists for this user
+                    if (personalEntries.TryGetValue(ri.UserId, out var personalEntry))
+                    {
+                        db.EntryRatings.Add(new EntryRating
+                        {
+                            WatchEntryId = personalEntry.Id,
+                            UserId = ri.UserId,
+                            Rating = Math.Clamp(ri.Rating, 1, 10)
+                        });
+                    }
                 }
             }
 
@@ -218,6 +298,18 @@ public static class WatchEntryEndpoints
                 UserId = userId,
                 Rating = Math.Clamp(request.Rating.Value, 1, 10)
             });
+            
+            // Add rating to personal entry if it exists for current user
+            if (personalEntries.TryGetValue(userId, out var personalEntry))
+            {
+                db.EntryRatings.Add(new EntryRating
+                {
+                    WatchEntryId = personalEntry.Id,
+                    UserId = userId,
+                    Rating = Math.Clamp(request.Rating.Value, 1, 10)
+                });
+            }
+            
             await db.SaveChangesAsync();
         }
 
@@ -234,7 +326,8 @@ public static class WatchEntryEndpoints
         int id,
         UpdateWatchEntryRequest request,
         ClaimsPrincipal user,
-        AppDbContext db)
+        AppDbContext db,
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -245,21 +338,11 @@ public static class WatchEntryEndpoints
         if (entry == null)
             return Results.NotFound();
 
-        // Check access
-        if (entry.GroupId.HasValue)
-        {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
-            if (!isMember)
-                return Results.Forbid();
-        }
-        else if (entry.UserId != userId)
-        {
-            return Results.NotFound();
-        }
+        // Check edit permission
+        if (!await PermissionService.CanEditEntry(db, userId, entry))
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsEdit"] });
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
-        if (request.WatchedBy.HasValue) entry.WatchedBy = request.WatchedBy.Value;
         if (request.MyRating.HasValue) entry.MyRating = Math.Clamp(request.MyRating.Value, 1, 10);
         if (request.PartnerRating.HasValue) entry.PartnerRating = Math.Clamp(request.PartnerRating.Value, 1, 10);
         if (request.Emotion.HasValue) entry.Emotion = request.Emotion.Value;
@@ -290,6 +373,7 @@ public static class WatchEntryEndpoints
             foreach (var ri in request.Ratings)
             {
                 if (!validUserIds.Contains(ri.UserId)) continue;
+                
                 var existing = entry.Ratings.FirstOrDefault(r => r.UserId == ri.UserId);
                 if (existing != null)
                 {
@@ -340,7 +424,8 @@ public static class WatchEntryEndpoints
         int id,
         RateRequest request,
         ClaimsPrincipal user,
-        AppDbContext db)
+        AppDbContext db,
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -350,13 +435,11 @@ public static class WatchEntryEndpoints
         if (entry == null)
             return Results.NotFound();
 
-        // Check access
+        // Check access - members can rate entries in their group
         if (entry.GroupId.HasValue)
         {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
-            if (!isMember)
-                return Results.Forbid();
+            if (!await PermissionService.CanViewGroup(db, userId, entry.GroupId.Value))
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsRate"] });
         }
         else if (entry.UserId != userId)
         {
@@ -383,7 +466,8 @@ public static class WatchEntryEndpoints
         return Results.Ok(new { rating });
     }
 
-    private static async Task<IResult> Delete(int id, ClaimsPrincipal user, AppDbContext db)
+    private static async Task<IResult> Delete(
+        int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries.FirstOrDefaultAsync(w => w.Id == id);
@@ -391,18 +475,9 @@ public static class WatchEntryEndpoints
         if (entry == null)
             return Results.NotFound();
 
-        // Only creator or group member can delete
-        if (entry.GroupId.HasValue)
-        {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
-            if (!isMember)
-                return Results.Forbid();
-        }
-        else if (entry.UserId != userId)
-        {
-            return Results.NotFound();
-        }
+        // Check delete permission
+        if (!await PermissionService.CanDeleteEntry(db, userId, entry))
+            return Results.BadRequest(new { message = localizer["InsufficientPermissionsDelete"] });
 
         db.WatchEntries.Remove(entry);
         await db.SaveChangesAsync();
@@ -413,6 +488,7 @@ public static class WatchEntryEndpoints
     private static async Task<IResult> GetStats(
         ClaimsPrincipal user,
         AppDbContext db,
+        ILocalizationService localizer,
         int? groupId = null)
     {
         var userId = GetUserId(user);
@@ -421,10 +497,8 @@ public static class WatchEntryEndpoints
 
         if (groupId.HasValue)
         {
-            var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == groupId.Value && m.UserId == userId);
-            if (!isMember)
-                return Results.Forbid();
+            if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
+                return Results.BadRequest(new { message = localizer["InsufficientPermissionsStats"] });
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
@@ -462,7 +536,6 @@ public static class WatchEntryEndpoints
             TotalDropped: entries.Count(e => e.Status == WatchStatus.Dropped),
             AverageMyRating: myRatings.Count > 0 ? myRatings.Average() : 0,
             AveragePartnerRating: otherRatings.Count > 0 ? otherRatings.Average() : 0,
-            WatchedTogether: entries.Count(e => e.WatchedBy == WatchedBy.Together),
             ByType: entries.GroupBy(e => e.Movie.Type.ToString()).ToDictionary(g => g.Key, g => g.Count()),
             ByEmotion: entries.Where(e => e.Emotion.HasValue).GroupBy(e => e.Emotion!.Value.ToString())
                 .ToDictionary(g => g.Key, g => g.Count()),

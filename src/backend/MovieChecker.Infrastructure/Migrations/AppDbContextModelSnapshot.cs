@@ -77,15 +77,27 @@ namespace MovieChecker.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("created_by_user_id");
 
+                    b.Property<int>("DefaultRole")
+                        .HasColumnType("integer")
+                        .HasColumnName("default_role");
+
                     b.Property<string>("InviteCode")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("invite_code");
 
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_private");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("name");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text")
+                        .HasColumnName("password_hash");
 
                     b.HasKey("Id")
                         .HasName("pk_groups");
@@ -116,6 +128,10 @@ namespace MovieChecker.Infrastructure.Migrations
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("joined_at");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer")
+                        .HasColumnName("role");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer")
@@ -250,6 +266,45 @@ namespace MovieChecker.Infrastructure.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("MovieChecker.Domain.Models.UserSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("PreventMeAddingToMyPersonal")
+                        .HasColumnType("boolean")
+                        .HasColumnName("prevent_me_adding_to_my_personal");
+
+                    b.Property<bool>("PreventOthersAddingToMyPersonal")
+                        .HasColumnType("boolean")
+                        .HasColumnName("prevent_others_adding_to_my_personal");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_settings");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_settings_user_id");
+
+                    b.ToTable("user_settings", (string)null);
+                });
+
             modelBuilder.Entity("MovieChecker.Domain.Models.WatchEntry", b =>
                 {
                     b.Property<int>("Id")
@@ -322,10 +377,6 @@ namespace MovieChecker.Infrastructure.Migrations
                     b.Property<int>("UserId")
                         .HasColumnType("integer")
                         .HasColumnName("user_id");
-
-                    b.Property<int>("WatchedBy")
-                        .HasColumnType("integer")
-                        .HasColumnName("watched_by");
 
                     b.Property<int?>("WatchingTime")
                         .HasColumnType("integer")
@@ -400,6 +451,18 @@ namespace MovieChecker.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MovieChecker.Domain.Models.UserSettings", b =>
+                {
+                    b.HasOne("MovieChecker.Domain.Models.User", "User")
+                        .WithOne("Settings")
+                        .HasForeignKey("MovieChecker.Domain.Models.UserSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_settings_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MovieChecker.Domain.Models.WatchEntry", b =>
                 {
                     b.HasOne("MovieChecker.Domain.Models.Group", "Group")
@@ -444,6 +507,8 @@ namespace MovieChecker.Infrastructure.Migrations
                     b.Navigation("GroupMemberships");
 
                     b.Navigation("Ratings");
+
+                    b.Navigation("Settings");
 
                     b.Navigation("WatchEntries");
                 });

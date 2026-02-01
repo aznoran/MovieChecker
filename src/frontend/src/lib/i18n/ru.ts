@@ -2,9 +2,9 @@ import type {TranslationKeys} from "./en";
 
 const ru: Record<TranslationKeys, string> = {
     // Common
-    cancel: "Отмена",
+    cancel: "Отмена", // Used in AlertDialog confirmations
     save: "Сохранить",
-    delete: "Удалить",
+    delete: "Удалить", // Used in AlertDialog confirmations
     add: "Добавить",
     clear: "Очистить",
     loading: "Загрузка...",
@@ -38,8 +38,10 @@ const ru: Record<TranslationKeys, string> = {
     addEntry: "Добавить запись",
     addFirstEntry: "Добавьте первую запись",
     noEntries: "Записей пока нет. Начните отслеживать фильмы!",
-    deleteConfirm: "Удалить эту запись?",
+    deleteConfirm: "Удалить эту запись?", // Used in AlertDialog confirmation
     loadingEntries: "Загрузка записей...",
+    errorLoadingEntries: "Не удалось загрузить записи. Попробуйте снова.",
+    retryLoad: "Повторить",
 
     // Add/Edit Dialog
     addNewEntry: "Новая запись",
@@ -69,8 +71,7 @@ const ru: Record<TranslationKeys, string> = {
     genreMusical: "Мюзикл",
     description: "Описание",
     status: "Статус",
-    watchedBy: "Кто смотрел",
-    watchingBy: "Кто смотрит",
+    viewers: "Зрители",
     myRating: "Моя оценка (1-10)",
     partnerRating: "Оценка партнёра (1-10)",
     emotion: "Эмоция",
@@ -98,6 +99,53 @@ const ru: Record<TranslationKeys, string> = {
     kickError: "Не удалось удалить участника",
     transferSuccess: "Права владельца успешно переданы",
     transferError: "Не удалось передать права владельца",
+    roleUpdateSuccess: "Роль участника успешно обновлена",
+    roleUpdateError: "Не удалось обновить роль участника",
+    privateGroup: "Приватная",
+    publicGroup: "Публичная",
+    groupPassword: "Пароль группы",
+    enterPassword: "Введите пароль",
+    roleViewer: "Наблюдатель",
+    roleMember: "Участник",
+    roleAdmin: "Администратор",
+    roleOwner: "Владелец",
+    changeRole: "Изменить роль",
+    invalidRole: "Неверная роль",
+    selectNewRole: "Выберите новую роль",
+    currentRole: "Текущая роль",
+    defaultRole: "Роль по умолчанию для новых участников",
+    defaultRoleDescription: "Выберите роль, которая будет назначена новым участникам при присоединении к группе",
+    changeRoleConfirm: "Изменить роль этого участника?",
+    changeRoleDescription: "Это обновит права участника в группе.",
+    errorChangingRole: "Не удалось изменить роль",
+    otpCode: "OTP код",
+    enterOtp: "Введите OTP",
+    generateOtp: "Генерировать OTP",
+    otpGenerated: "OTP сгенерирован",
+    otpExpiresIn: "Истекает через",
+    minutes: "минут",
+    useOtp: "Использовать OTP",
+    usePassword: "Использовать пароль",
+    otp: "OTP",
+    otpGenerateError: "Не удалось сгенерировать OTP",
+    passwordUpdateSuccess: "Пароль успешно обновлен",
+    passwordUpdateError: "Не удалось обновить пароль",
+    changePassword: "Изменить пароль",
+    removePassword: "Удалить пароль",
+    newPassword: "Новый пароль",
+    optionalPassword: "Опционально - оставьте пустым для использования только OTP",
+    otpOnlyGroup: "Это группа только с OTP",
+    passwordDisabled: "Пароль отключен для этой группы. Используйте OTP код.",
+    authenticationMethod: "Метод аутентификации",
+    enterSixDigitCode: "Введите 6-значный код",
+    continue: "Продолжить",
+    back: "Назад",
+    privateGroupWithPassword: "Приватная группа - введите пароль или OTP для входа",
+    privateGroupOtpOnly: "Приватная группа - требуется OTP (пароль не установлен)",
+    you: "вы",
+    leave: "Выйти",
+    yourGroups: "Ваши группы",
+    copyCode: "Скопировать код",
 
     // Content Types
     contentMovie: "Фильм",
@@ -113,12 +161,6 @@ const ru: Record<TranslationKeys, string> = {
     statusDropped: "Брошено",
     statusUnderConsideration: "На рассмотрении",
 
-    // Watched By
-    watchedByMe: "Я",
-    watchedByPartner: "Партнёр",
-    watchedByTogether: "Вместе",
-    watchedBySeparately: "По отдельности",
-
     // Emotions
     emotionJoy: "Радость",
     emotionSadness: "Грусть",
@@ -130,6 +172,7 @@ const ru: Record<TranslationKeys, string> = {
     // Stats
     statistics: "Статистика",
     noStats: "Данных пока нет. Добавьте фильмы, чтобы увидеть статистику!",
+    errorLoadingStats: "Не удалось загрузить статистику. Попробуйте снова.",
     completed: "Просмотрено",
     watching: "Смотрим",
     planned: "Запланировано",
@@ -159,9 +202,8 @@ const ru: Record<TranslationKeys, string> = {
     enterInviteCode: "Введите код приглашения",
     members: "Участники",
     copied: "Скопировано!",
-    copyCode: "Скопировать код",
     noGroups: "Групп пока нет",
-    leaveGroupConfirm: "Покинуть эту группу?",
+    leaveGroupConfirm: "Покинуть эту группу?", // Used in AlertDialog confirmation
     groupCreated: "Группа создана!",
     joinedGroup: "Вы присоединились!",
     invalidCode: "Неверный код приглашения",
@@ -172,10 +214,10 @@ const ru: Record<TranslationKeys, string> = {
     ratingOf: " оценил(а)",
     memberAvgRatings: "Оценки участников",
     rated: "оценок",
-    kickMember: "Удалить",
-    kickConfirm: "Удалить этого участника из группы?",
-    transferOwnership: "Передать права",
-    transferConfirm: "Передать права владельца этому участнику? Вы потеряете права владельца.",
+    kickMember: "Удалить", // Used in AlertDialog confirmations
+    kickConfirm: "Удалить этого участника из группы?", // Used in AlertDialog confirmation
+    transferOwnership: "Передать права", // Used in AlertDialog confirmations
+    transferConfirm: "Передать права владельца этому участнику? Вы потеряете права владельца.", // Used in AlertDialog confirmation
     owner: "Владелец",
     failedToKick: "Не удалось удалить участника",
     failedToTransfer: "Не удалось передать права",
@@ -200,6 +242,14 @@ const ru: Record<TranslationKeys, string> = {
     emotionDescription: "Какие эмоции вызвал просмотр",
     commentDescription: "Поделитесь своими мыслями о просмотре",
 
+    // Settings
+    settings: "Настройки",
+    privacy: "Приватность",
+    preventOthersAddingToMyPersonal: "Запретить другим добавлять записи в мой личный список",
+    preventOthersAddingToMyPersonalDescription: "Когда включено, записи не будут автоматически добавляться в ваш личный список, когда кто-то другой выбирает вас в качестве зрителя в группе",
+    preventMeAddingToMyPersonal: "Запретить мне добавлять записи в личный список через группы",
+    preventMeAddingToMyPersonalDescription: "Когда включено, записи не будут автоматически добавляться в ваш личный список, когда вы создаёте записи в группах и включаете себя в качестве зрителя",
+
     // Validation Errors
     titleTooLong: "Название слишком длинное (макс. 255 символов)",
     invalidYear: "Некорректный год (1900-2100)",
@@ -208,7 +258,21 @@ const ru: Record<TranslationKeys, string> = {
     invalidNumber: "Должно быть положительным числом",
     invalidTimeComponent: "Должно быть от 0 до 59",
     invalidRating: "Оценка должна быть от 1 до 10",
-    fixValidationErrors: "Исправьте ошибки в форме"
+    fixValidationErrors: "Исправьте ошибки в форме",
+
+    // Registration Validation Errors
+    usernameRequired: "Логин обязателен",
+    usernameTooShort: "Логин должен содержать минимум 3 символа",
+    usernameTooLong: "Логин не должен превышать 50 символов",
+    usernameInvalidChars: "Логин может содержать только буквы, цифры, подчёркивания и дефисы",
+    passwordRequired: "Пароль обязателен",
+    passwordTooShort: "Пароль должен содержать минимум 8 символов",
+    passwordTooLong: "Пароль не должен превышать 72 символа",
+    passwordMissingRequirements: "Пароль должен содержать хотя бы одну заглавную букву, одну строчную букву и одну цифру",
+    displayNameRequired: "Имя обязательно",
+    displayNameTooShort: "Имя должно содержать минимум 2 символа",
+    displayNameTooLong: "Имя не должно превышать 100 символов",
+    usernameAlreadyExists: "Логин уже занят"
 };
 
 export default ru;

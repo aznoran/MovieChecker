@@ -1,18 +1,18 @@
 "use client";
 
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
 import {useRouter} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
+import {ConfirmDialog} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
 import {WatchStatus, EmotionEmojis} from "@/types";
 import type {WatchEntry} from "@/types";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
-    getWatchedByLabels,
 } from "@/lib/i18n/labels";
 import {AddEntryDialog} from "@/components/add-entry-dialog";
 import {EditEntryDialog} from "@/components/edit-entry-dialog";
@@ -31,6 +31,8 @@ import {
     Popcorn,
     ImageOff,
     Play,
+    RefreshCw,
+    AlertCircle,
 } from "lucide-react";
 import {toast} from "sonner";
 
@@ -51,17 +53,17 @@ export default function HomePage() {
 
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
-    const watchedByLabels = getWatchedByLabels(locale);
 
     const [addOpen, setAddOpen] = useState(false);
     const [editEntry, setEditEntry] = useState<WatchEntry | null>(null);
     const [statusFilter, setStatusFilter] = useState<WatchStatus | null>(null);
 
-    const {data: entries = [], isLoading} = useQuery({
+    const {data: entries = [], isLoading, error, refetch} = useQuery({
         queryKey: ["watchEntries", statusFilter, activeGroupId],
         queryFn: () =>
-            getWatchEntries(statusFilter !== null ? statusFilter : undefined, undefined, activeGroupId),
+            getWatchEntries(statusFilter !== null ? statusFilter : undefined, activeGroupId),
         enabled: isAuthenticated,
+        retry: false,
     });
 
     const deleteMutation = useMutation({
@@ -75,6 +77,13 @@ export default function HomePage() {
             toast.error(t("deleteError"), { position: "top-center"})
         },
     });
+
+    // Show toast notification on error
+    useEffect(() => {
+        if (error) {
+            toast.error(t("errorLoadingEntries"), { position: "top-center" });
+        }
+    }, [error, t]);
 
     if (authLoading) {
         return (
@@ -127,6 +136,15 @@ export default function HomePage() {
                 {isLoading ? (
                     <div className="flex justify-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-12">
+                        <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4"/>
+                        <p className="text-muted-foreground mb-4">{t("errorLoadingEntries")}</p>
+                        <Button onClick={() => refetch()}>
+                            <RefreshCw className="h-4 w-4 mr-1.5"/>
+                            {t("retryLoad")}
+                        </Button>
                     </div>
                 ) : entries.length === 0 ? (
                     <div className="text-center py-12">
@@ -199,11 +217,6 @@ export default function HomePage() {
                                                 >
                                                     {watchStatusLabels[entry.status]}
                                                 </Badge>
-                                                {activeGroupId && (
-                                                    <Badge variant="secondary">
-                                                        {watchedByLabels[entry.watchedBy]}
-                                                    </Badge>
-                                                )}
                                             </div>
                                             {entry.status === WatchStatus.Watching && (
                                                 (entry.currentEpisode || entry.currentSeason || entry.watchingTime) && (
@@ -267,20 +280,27 @@ export default function HomePage() {
                                             )}
                                         </div>
                                         <div className="flex justify-end pt-3 shrink-0">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-destructive hover:text-destructive"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (confirm(t("deleteConfirm"))) {
-                                                        deleteMutation.mutate(entry.id);
+                                            <div onClick={(e) => e.stopPropagation()}>
+                                                <ConfirmDialog
+                                                    trigger={
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-destructive hover:text-destructive"
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mr-1"/>
+                                                            {t("delete")}
+                                                        </Button>
                                                     }
-                                                }}
-                                            >
-                                                <Trash2 className="h-4 w-4 mr-1"/>
-                                                {t("delete")}
-                                            </Button>
+                                                    onConfirm={() => deleteMutation.mutate(entry.id)}
+                                                    title={t("delete")}
+                                                    description={t("deleteConfirm")}
+                                                    confirmText={t("delete")}
+                                                    cancelText={t("cancel")}
+                                                    variant="destructive"
+                                                    icon={<Trash2 className="h-6 w-6" />}
+                                                />
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>

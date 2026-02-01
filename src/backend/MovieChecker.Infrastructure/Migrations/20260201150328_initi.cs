@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MovieChecker.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class initi : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -72,6 +72,9 @@ namespace MovieChecker.Infrastructure.Migrations
                     name = table.Column<string>(type: "text", nullable: false),
                     invite_code = table.Column<string>(type: "text", nullable: false),
                     created_by_user_id = table.Column<int>(type: "integer", nullable: false),
+                    is_private = table.Column<bool>(type: "boolean", nullable: false),
+                    password_hash = table.Column<string>(type: "text", nullable: true),
+                    default_role = table.Column<int>(type: "integer", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -86,6 +89,29 @@ namespace MovieChecker.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "user_settings",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    user_id = table.Column<int>(type: "integer", nullable: false),
+                    prevent_others_adding_to_my_personal = table.Column<bool>(type: "boolean", nullable: false),
+                    prevent_me_adding_to_my_personal = table.Column<bool>(type: "boolean", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_user_settings", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_user_settings_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "group_members",
                 columns: table => new
                 {
@@ -93,6 +119,7 @@ namespace MovieChecker.Infrastructure.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     group_id = table.Column<int>(type: "integer", nullable: false),
                     user_id = table.Column<int>(type: "integer", nullable: false),
+                    role = table.Column<int>(type: "integer", nullable: false),
                     joined_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -122,7 +149,6 @@ namespace MovieChecker.Infrastructure.Migrations
                     user_id = table.Column<int>(type: "integer", nullable: false),
                     group_id = table.Column<int>(type: "integer", nullable: true),
                     status = table.Column<int>(type: "integer", nullable: false),
-                    watched_by = table.Column<int>(type: "integer", nullable: false),
                     my_rating = table.Column<int>(type: "integer", nullable: true),
                     partner_rating = table.Column<int>(type: "integer", nullable: true),
                     emotion = table.Column<int>(type: "integer", nullable: true),
@@ -130,6 +156,10 @@ namespace MovieChecker.Infrastructure.Migrations
                     private_comment = table.Column<string>(type: "text", nullable: true),
                     started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     completed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    current_season = table.Column<int>(type: "integer", nullable: true),
+                    current_episode = table.Column<int>(type: "integer", nullable: true),
+                    total_episodes = table.Column<int>(type: "integer", nullable: true),
+                    watching_time = table.Column<int>(type: "integer", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
@@ -218,6 +248,12 @@ namespace MovieChecker.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "ix_user_settings_user_id",
+                table: "user_settings",
+                column: "user_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "ix_users_username",
                 table: "users",
                 column: "username",
@@ -250,6 +286,9 @@ namespace MovieChecker.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "poster_images");
+
+            migrationBuilder.DropTable(
+                name: "user_settings");
 
             migrationBuilder.DropTable(
                 name: "watch_entries");
