@@ -84,11 +84,25 @@ public static class WatchEntryEndpoints
         }
         else
         {
-            // Personal entries only (no group)
-            query = db.WatchEntries
-                .Include(w => w.Movie)
-                .Include(w => w.Ratings).ThenInclude(r => r.User)
-                .Where(w => w.UserId == userId && w.GroupId == null);
+            // Personal entries - find user's personal group or entries with null GroupId (legacy)
+            var personalGroup = await db.Groups
+                .FirstOrDefaultAsync(g => g.CreatedByUserId == userId && g.GroupType == GroupType.Personal);
+            
+            if (personalGroup != null)
+            {
+                query = db.WatchEntries
+                    .Include(w => w.Movie)
+                    .Include(w => w.Ratings).ThenInclude(r => r.User)
+                    .Where(w => w.GroupId == personalGroup.Id || (w.UserId == userId && w.GroupId == null));
+            }
+            else
+            {
+                // Legacy: no personal group yet, get entries with null GroupId
+                query = db.WatchEntries
+                    .Include(w => w.Movie)
+                    .Include(w => w.Ratings).ThenInclude(r => r.User)
+                    .Where(w => w.UserId == userId && w.GroupId == null);
+            }
         }
 
         if (status.HasValue)
@@ -139,20 +153,34 @@ public static class WatchEntryEndpoints
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
             return Results.BadRequest(new { message = localizer["MovieNotFound"] });
 
+        int? targetGroupId = request.GroupId;
+        
+        // If no group specified, use the user's personal group
+        if (!targetGroupId.HasValue)
+        {
+            var personalGroup = await db.Groups
+                .FirstOrDefaultAsync(g => g.CreatedByUserId == userId && g.GroupType == GroupType.Personal);
+            
+            if (personalGroup != null)
+            {
+                targetGroupId = personalGroup.Id;
+            }
+        }
+
         // Validate group membership if group specified
-        if (request.GroupId.HasValue)
+        if (targetGroupId.HasValue)
         {
             // Check if user can create in this group
-            if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
+            if (!await PermissionService.CanCreateInGroup(db, userId, targetGroupId.Value))
                 return Results.BadRequest(new { message = localizer["InsufficientPermissionsCreate"] });
 
             // Check duplicate within group
-            if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.GroupId == request.GroupId.Value))
+            if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.GroupId == targetGroupId.Value))
                 return Results.BadRequest(new { message = localizer["EntryAlreadyExistsGroup"] });
         }
         else
         {
-            // Check duplicate for personal entries
+            // Legacy: Check duplicate for personal entries with null GroupId
             if (await db.WatchEntries.AnyAsync(w =>
                     w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
                 return Results.BadRequest(new { message = localizer["EntryAlreadyExists"] });
@@ -162,7 +190,7 @@ public static class WatchEntryEndpoints
         {
             MovieId = request.MovieId,
             UserId = userId,
-            GroupId = request.GroupId,
+            GroupId = targetGroupId,
             Status = request.Status,
             MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
             PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
@@ -180,9 +208,12 @@ public static class WatchEntryEndpoints
         db.WatchEntries.Add(entry);
         await db.SaveChangesAsync();
 
-        // If creating in a group, duplicate to personal lists of all viewers
+        // If creating in a non-personal group, duplicate to personal lists of all viewers
         Dictionary<int, WatchEntry> personalEntries = new();
-        if (request.GroupId.HasValue && request.Viewers is { Count: > 0 })
+        var isPersonalGroup = targetGroupId.HasValue && 
+            await db.Groups.AnyAsync(g => g.Id == targetGroupId.Value && g.GroupType == GroupType.Personal);
+        
+        if (targetGroupId.HasValue && !isPersonalGroup && request.Viewers is { Count: > 0 })
         {
             // Get list of user IDs who are chosen as viewers
             var viewerUserIds = request.Viewers.Distinct().ToList();
@@ -192,12 +223,18 @@ public static class WatchEntryEndpoints
                 .Where(s => viewerUserIds.Contains(s.UserId))
                 .ToDictionaryAsync(s => s.UserId);
             
-            // Get existing personal entries for these users for this movie
+            // Get personal groups for all viewers
+            var viewerPersonalGroups = await db.Groups
+                .Where(g => viewerUserIds.Contains(g.CreatedByUserId) && g.GroupType == GroupType.Personal)
+                .ToDictionaryAsync(g => g.CreatedByUserId, g => g.Id);
+            
+            // Get existing personal entries for these users for this movie (in their personal groups or null GroupId)
             var existingPersonalEntries = await db.WatchEntries
                 .Where(w => w.MovieId == request.MovieId 
                     && viewerUserIds.Contains(w.UserId) 
-                    && w.GroupId == null)
+                    && (w.GroupId == null || viewerPersonalGroups.Values.Contains(w.GroupId.Value)))
                 .Select(w => w.UserId)
+                .Distinct()
                 .ToListAsync();
 
             // Create personal entries for viewers who don't have one yet and haven't disabled it
@@ -223,11 +260,14 @@ public static class WatchEntryEndpoints
                 
                 if (!existingPersonalEntries.Contains(viewerUserId) && !preventAutoAdd)
                 {
+                    // Get the viewer's personal group ID, or null if they don't have one yet
+                    int? viewerPersonalGroupId = viewerPersonalGroups.GetValueOrDefault(viewerUserId);
+                    
                     var personalEntry = new WatchEntry
                     {
                         MovieId = request.MovieId,
                         UserId = viewerUserId,
-                        GroupId = null, // Personal entry
+                        GroupId = viewerPersonalGroupId > 0 ? viewerPersonalGroupId : null,
                         Status = request.Status,
                         MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
                         PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
@@ -508,11 +548,26 @@ public static class WatchEntryEndpoints
         }
         else
         {
-            query = db.WatchEntries
-                .Include(w => w.Movie)
-                .Include(w => w.Ratings)
-                .ThenInclude(x => x.User)
-                .Where(w => w.UserId == userId && w.GroupId == null);
+            // Personal entries - find user's personal group or entries with null GroupId (legacy)
+            var personalGroup = await db.Groups
+                .FirstOrDefaultAsync(g => g.CreatedByUserId == userId && g.GroupType == GroupType.Personal);
+            
+            if (personalGroup != null)
+            {
+                query = db.WatchEntries
+                    .Include(w => w.Movie)
+                    .Include(w => w.Ratings)
+                    .ThenInclude(x => x.User)
+                    .Where(w => w.GroupId == personalGroup.Id || (w.UserId == userId && w.GroupId == null));
+            }
+            else
+            {
+                query = db.WatchEntries
+                    .Include(w => w.Movie)
+                    .Include(w => w.Ratings)
+                    .ThenInclude(x => x.User)
+                    .Where(w => w.UserId == userId && w.GroupId == null);
+            }
         }
 
         var entries = await query.ToListAsync();

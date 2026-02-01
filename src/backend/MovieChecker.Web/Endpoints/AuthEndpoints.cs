@@ -53,6 +53,29 @@ public static class AuthEndpoints
 
         db.Users.Add(user);
         await db.SaveChangesAsync();
+        
+        // Create a personal group for the user
+        var personalGroup = new Group
+        {
+            Name = $"{user.DisplayName}'s Personal",
+            InviteCode = GenerateInviteCode(),
+            CreatedByUserId = user.Id,
+            IsPrivate = false,
+            GroupType = GroupType.Personal,
+            DefaultRole = GroupRole.Owner
+        };
+        
+        db.Groups.Add(personalGroup);
+        await db.SaveChangesAsync();
+        
+        // Add user as owner of their personal group
+        db.GroupMembers.Add(new GroupMember
+        {
+            GroupId = personalGroup.Id,
+            UserId = user.Id,
+            Role = GroupRole.Owner
+        });
+        await db.SaveChangesAsync();
 
         var token = jwtService.GenerateToken(user);
         return Results.Ok(new AuthResponse(
@@ -102,6 +125,13 @@ public static class AuthEndpoints
         );
 
         return Results.Ok(new { language = culture });
+    }
+    
+    private static string GenerateInviteCode()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var random = Random.Shared;
+        return new string(Enumerable.Range(0, 8).Select(_ => chars[random.Next(chars.Length)]).ToArray());
     }
 }
 

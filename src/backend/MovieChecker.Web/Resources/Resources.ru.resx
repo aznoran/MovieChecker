@@ -160,4 +160,7 @@
   <data name="InvalidFileType" xml:space="preserve">
     <value>Недопустимый тип файла. Разрешены: jpg, png, webp, gif</value>
   </data>
+  <data name="CannotJoinPersonalGroup" xml:space="preserve">
+    <value>Нельзя присоединиться к личной группе</value>
+  </data>
 </root>

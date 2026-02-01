@@ -108,7 +108,7 @@ public record EntryRatingDto(
 );
 
 // Group DTOs
-public record CreateGroupRequest(string Name, bool IsPrivate = false, string? Password = null, GroupRole? DefaultRole = null);
+public record CreateGroupRequest(string Name, bool IsPrivate = false, GroupType? GroupType = null, string? Password = null, GroupRole? DefaultRole = null);
 public record JoinGroupRequest(string InviteCode, string? Password = null, string? Otp = null);
 public record UpdateGroupPasswordRequest(string? NewPassword);
 public record GenerateOtpResponse(string Code, DateTime ExpiresAt);
@@ -122,6 +122,7 @@ public record GroupDto(
     string InviteCode,
     int CreatedByUserId,
     bool IsPrivate,
+    GroupType GroupType,
     GroupRole DefaultRole,
     List<GroupMemberDto> Members,
     DateTime CreatedAt
@@ -137,6 +138,7 @@ public record GroupMemberDto(
 public record GroupInfoResponse(
     bool Exists,
     bool IsPrivate,
+    GroupType? GroupType,
     bool HasPassword,
     string? GroupName
 );

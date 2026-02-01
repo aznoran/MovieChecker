@@ -56,6 +56,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.GroupType,
             g.DefaultRole,
             g.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -86,6 +87,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.GroupType,
             g.DefaultRole,
             g.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -104,9 +106,12 @@ public static class GroupEndpoints
     {
         var userId = GetUserId(user);
 
+        // Determine group type from request
+        var groupType = request.GroupType ?? (request.IsPrivate ? GroupType.Private : GroupType.Public);
+        
         // For public groups, default role must be Viewer
         // For private groups, use the requested default role or default to Member
-        var defaultRole = request.IsPrivate 
+        var defaultRole = groupType == GroupType.Private 
             ? (request.DefaultRole ?? GroupRole.Member)
             : GroupRole.Viewer;
 
@@ -116,7 +121,8 @@ public static class GroupEndpoints
             Name = request.Name,
             InviteCode = GenerateInviteCode(),
             CreatedByUserId = userId,
-            IsPrivate = request.IsPrivate,
+            IsPrivate = groupType == GroupType.Private,  // Keep for backwards compatibility
+            GroupType = groupType,
             DefaultRole = defaultRole,
             PasswordHash = !string.IsNullOrWhiteSpace(request.Password) 
                 ? BCrypt.Net.BCrypt.HashPassword(request.Password) 
@@ -143,6 +149,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.GroupType,
             g.DefaultRole,
             [new GroupMemberDto(userId, displayName, GroupRole.Owner, DateTime.UtcNow)],
             g.CreatedAt
@@ -163,7 +170,7 @@ public static class GroupEndpoints
                 g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
 
         if (group == null)
-            return Results.Ok(new GroupInfoResponse(false, false, false, null));
+            return Results.Ok(new GroupInfoResponse(false, false, null, false, null));
 
         // Check if already a member
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
@@ -173,6 +180,7 @@ public static class GroupEndpoints
         return Results.Ok(new GroupInfoResponse(
             true,
             group.IsPrivate,
+            group.GroupType,
             !string.IsNullOrWhiteSpace(group.PasswordHash),
             group.Name
         ));
@@ -196,7 +204,7 @@ public static class GroupEndpoints
             return Results.NotFound(new { message = localizer["InvalidInviteCode"] });
 
         // 2. Check password or OTP for private groups
-        if (group.IsPrivate)
+        if (group.GroupType == GroupType.Private)
         {
             bool authenticated = false;
 
@@ -232,6 +240,12 @@ public static class GroupEndpoints
                 return Results.Unauthorized();
             }
         }
+        
+        // Personal groups cannot be joined
+        if (group.GroupType == GroupType.Personal)
+        {
+            return Results.BadRequest(new { message = localizer["CannotJoinPersonalGroup"] });
+        }
 
         // 3. Check membership
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
@@ -261,6 +275,7 @@ public static class GroupEndpoints
             updatedGroup.InviteCode,
             updatedGroup.CreatedByUserId,
             updatedGroup.IsPrivate,
+            updatedGroup.GroupType,
             updatedGroup.DefaultRole,
             updatedGroup.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -386,6 +401,7 @@ public static class GroupEndpoints
             group.InviteCode,
             group.CreatedByUserId,
             group.IsPrivate,
+            group.GroupType,
             group.DefaultRole,
             group.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -454,6 +470,7 @@ public static class GroupEndpoints
             group.InviteCode,
             group.CreatedByUserId,
             group.IsPrivate,
+            group.GroupType,
             group.DefaultRole,
             group.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -490,7 +507,7 @@ public static class GroupEndpoints
         }
 
         // Group must be private to generate OTP
-        if (!group.IsPrivate)
+        if (group.GroupType != GroupType.Private)
         {
             return Results.BadRequest(new { message = localizer["OtpOnlyForPrivate"] });
         }
@@ -525,7 +542,7 @@ public static class GroupEndpoints
         }
 
         // Group must be private to have a password
-        if (!group.IsPrivate)
+        if (group.GroupType != GroupType.Private)
         {
             return Results.BadRequest(new { message = localizer["OnlyPrivateGroupsPassword"] });
         }
