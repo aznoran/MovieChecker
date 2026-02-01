@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using MovieChecker.Domain.Models;
+using MovieChecker.Domain.Models.Entities;
 
 namespace MovieChecker.Infrastructure.Services;
 

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using MovieChecker.Domain.Models;
+using MovieChecker.Domain.Models.Dtos;
+using MovieChecker.Domain.Models.Entities;
 using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;

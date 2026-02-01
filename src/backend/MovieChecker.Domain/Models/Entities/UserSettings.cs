@@ -1,4 +1,4 @@
-namespace MovieChecker.Domain.Models;
+namespace MovieChecker.Domain.Models.Entities;
 
 public class UserSettings
 {
