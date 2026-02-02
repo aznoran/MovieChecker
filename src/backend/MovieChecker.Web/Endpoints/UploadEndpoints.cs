@@ -25,7 +25,7 @@ public static class UploadEndpoints
 
         // Public endpoint — no auth required to fetch images
         app.MapGet("/api/posters/{id:int}", GetPoster)
-            .Produces(StatusCodes.Status200OK, contentType: "image/*")
+            .Produces(StatusCodes.Status200OK, contentType: "image/jpeg", additionalContentTypes: ["image/png", "image/webp", "image/gif"])
             .Produces(StatusCodes.Status404NotFound)
             .WithSummary("Get a poster image")
             .WithDescription("Returns a poster image by its ID");
