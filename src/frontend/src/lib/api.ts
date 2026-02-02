@@ -1,33 +1,35 @@
-import axios from "axios";
-import {AuthResponse, Movie, WatchEntry, Stats, Group} from "@/types";
+import { Api, WatchStatus as GeneratedWatchStatus, GroupRole as GeneratedGroupRole, ContentType as GeneratedContentType, CreateMovieRequest, UpdateMovieRequest } from "./api.generated";
+import { AuthResponse, Movie, WatchEntry, Stats, Group, GroupMember } from "@/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+// Re-export types from types folder (these have proper enum names)
+export type { AuthResponse, Movie, WatchEntry, Stats, Group, GroupMember };
+export { ContentType, WatchStatus, Emotion, GroupRole } from "@/types";
 
-const api = axios.create({
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+// Create API instance with security worker for JWT
+const apiClient = new Api({
   baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  securityWorker: async () => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      const locale = localStorage.getItem("locale") || "en";
+      return {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "Accept-Language": locale,
+        },
+      };
     }
-    
-    // Add Accept-Language header based on stored locale
-    config.headers["Accept-Language"] = localStorage.getItem("locale") || "en";
-  }
-  return config;
+    return {};
+  },
+  secure: true,
 });
 
-api.interceptors.response.use(
+// Add response interceptor for 401 handling
+apiClient.instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Only redirect to login on 401 if the request was NOT to an auth endpoint
-    // (login/register should not trigger redirect on auth failure)
     const isAuthRequest = error.config?.url?.includes("/auth/");
     if (error.response?.status === 401 && typeof window !== "undefined" && !isAuthRequest) {
       localStorage.removeItem("token");
@@ -40,93 +42,81 @@ api.interceptors.response.use(
 );
 
 // Auth
-export const login = async (
-  username: string,
-  password: string
-): Promise<AuthResponse> => {
-  const response = await api.post<AuthResponse>("/auth/login", {
-    username,
-    password,
-  });
-  return response.data;
+export const login = async (username: string, password: string): Promise<AuthResponse> => {
+  const response = await apiClient.api.authLoginCreate({ username, password });
+  return response.data as unknown as AuthResponse;
 };
 
-export const register = async (
-  username: string,
-  password: string,
-  displayName: string
-): Promise<AuthResponse> => {
-  const response = await api.post<AuthResponse>("/auth/register", {
-    username,
-    password,
-    displayName,
-  });
-  return response.data;
+export const register = async (username: string, password: string, displayName: string): Promise<AuthResponse> => {
+  const response = await apiClient.api.authRegisterCreate({ username, password, displayName });
+  return response.data as unknown as AuthResponse;
 };
 
 export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
-  const response = await api.post<{ language: string }>("/auth/language", {
-    language,
-  });
-  // Update localStorage for Accept-Language header
+  const response = await apiClient.api.authLanguageCreate({ language });
   if (typeof window !== "undefined") {
-    localStorage.setItem("locale", response.data.language);
+    localStorage.setItem("locale", response.data.language || language);
   }
 };
 
 // Movies
 export const getMovies = async (type?: number): Promise<Movie[]> => {
-  const params = type !== undefined ? { type } : {};
-  const response = await api.get<Movie[]>("/movies", { params });
-  return response.data;
+  const response = await apiClient.api.moviesList(type !== undefined ? { type } : undefined);
+  return response.data as unknown as Movie[];
 };
 
 export const getMovie = async (id: number): Promise<Movie> => {
-  const response = await api.get<Movie>(`/movies/${id}`);
-  return response.data;
+  const response = await apiClient.api.moviesDetail(id);
+  return response.data as unknown as Movie;
 };
 
-export const createMovie = async (
-  movie: Omit<Movie, "id" | "createdAt">
-): Promise<Movie> => {
-  const response = await api.post<Movie>("/movies", movie);
-  return response.data;
+export const createMovie = async (movie: Omit<Movie, "id" | "createdAt">): Promise<Movie> => {
+  const request: CreateMovieRequest = {
+    title: movie.title,
+    description: movie.description,
+    type: movie.type as unknown as GeneratedContentType,
+    year: movie.year,
+    genre: movie.genre,
+    posterUrl: movie.posterUrl,
+  };
+  const response = await apiClient.api.moviesCreate(request);
+  return response.data as unknown as Movie;
 };
 
-export const updateMovie = async (
-  id: number,
-  movie: Partial<Movie>
-): Promise<Movie> => {
-  const response = await api.put<Movie>(`/movies/${id}`, movie);
-  return response.data;
+export const updateMovie = async (id: number, movie: Partial<Movie>): Promise<Movie> => {
+  const request: UpdateMovieRequest = {
+    title: movie.title,
+    description: movie.description,
+    type: movie.type !== undefined ? movie.type as unknown as GeneratedContentType : undefined,
+    year: movie.year,
+    genre: movie.genre,
+    posterUrl: movie.posterUrl,
+  };
+  const response = await apiClient.api.moviesUpdate(id, request);
+  return response.data as unknown as Movie;
 };
 
 export const deleteMovie = async (id: number): Promise<void> => {
-  await api.delete(`/movies/${id}`);
+  await apiClient.api.moviesDelete(id);
 };
 
 export const searchMovies = async (query: string): Promise<Movie[]> => {
-  const response = await api.get<Movie[]>("/movies/search", {
-    params: { q: query },
-  });
-  return response.data;
+  const response = await apiClient.api.moviesSearchList({ q: query });
+  return response.data as unknown as Movie[];
 };
 
 // Watch Entries
-export const getWatchEntries = async (
-  status?: number,
-  groupId?: number
-): Promise<WatchEntry[]> => {
-  const params: Record<string, number> = {};
-  if (status !== undefined) params.status = status;
-  if (groupId !== undefined) params.groupId = groupId;
-  const response = await api.get<WatchEntry[]>("/watch-entries", { params });
-  return response.data;
+export const getWatchEntries = async (status?: number, groupId?: number): Promise<WatchEntry[]> => {
+  const query: { status?: GeneratedWatchStatus; groupId?: number } = {};
+  if (status !== undefined) query.status = status as GeneratedWatchStatus;
+  if (groupId !== undefined) query.groupId = groupId;
+  const response = await apiClient.api.watchEntriesList(query);
+  return response.data as unknown as WatchEntry[];
 };
 
 export const getWatchEntry = async (id: number): Promise<WatchEntry> => {
-  const response = await api.get<WatchEntry>(`/watch-entries/${id}`);
-  return response.data;
+  const response = await apiClient.api.watchEntriesDetail(id);
+  return response.data as unknown as WatchEntry;
 };
 
 export const createWatchEntry = async (entry: {
@@ -139,8 +129,8 @@ export const createWatchEntry = async (entry: {
   ratings?: { userId: number; rating: number }[];
   viewers?: number[];
 }): Promise<WatchEntry> => {
-  const response = await api.post<WatchEntry>("/watch-entries", entry);
-  return response.data;
+  const response = await apiClient.api.watchEntriesCreate(entry);
+  return response.data as unknown as WatchEntry;
 };
 
 export const updateWatchEntry = async (
@@ -154,42 +144,42 @@ export const updateWatchEntry = async (
     viewers?: number[];
   }
 ): Promise<WatchEntry> => {
-  const response = await api.put<WatchEntry>(`/watch-entries/${id}`, entry);
-  return response.data;
+  const response = await apiClient.api.watchEntriesUpdate(id, entry);
+  return response.data as unknown as WatchEntry;
 };
 
-export const rateEntry = async (
-  entryId: number,
-  rating: number
-): Promise<void> => {
-  await api.post(`/watch-entries/${entryId}/rate`, { rating });
+export const rateEntry = async (entryId: number, rating: number): Promise<void> => {
+  await apiClient.api.watchEntriesRateCreate(entryId, { rating });
 };
 
 export const deleteWatchEntry = async (id: number): Promise<void> => {
-  await api.delete(`/watch-entries/${id}`);
+  await apiClient.api.watchEntriesDelete(id);
 };
 
 export const getStats = async (groupId?: number): Promise<Stats> => {
-  const params: Record<string, number> = {};
-  if (groupId !== undefined) params.groupId = groupId;
-  const response = await api.get<Stats>("/watch-entries/stats", { params });
-  return response.data;
+  const response = await apiClient.api.watchEntriesStatsList(groupId !== undefined ? { groupId } : undefined);
+  return response.data as unknown as Stats;
 };
 
 // Groups
 export const getMyGroups = async (): Promise<Group[]> => {
-  const response = await api.get<Group[]>("/groups");
-  return response.data;
+  const response = await apiClient.api.groupsList();
+  return response.data as unknown as Group[];
 };
 
 export const getGroup = async (id: number): Promise<Group> => {
-  const response = await api.get<Group>(`/groups/${id}`);
-  return response.data;
+  const response = await apiClient.api.groupsDetail(id);
+  return response.data as unknown as Group;
 };
 
 export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: number): Promise<Group> => {
-  const response = await api.post<Group>("/groups", { name, isPrivate, password, defaultRole });
-  return response.data;
+  const response = await apiClient.api.groupsCreate({ 
+    name, 
+    isPrivate, 
+    password, 
+    defaultRole: defaultRole as GeneratedGroupRole 
+  });
+  return response.data as unknown as Group;
 };
 
 export const checkInviteCode = async (inviteCode: string): Promise<{
@@ -198,54 +188,58 @@ export const checkInviteCode = async (inviteCode: string): Promise<{
   hasPassword: boolean;
   groupName: string | null;
 }> => {
-  const response = await api.post("/groups/check-invite", { inviteCode });
-  return response.data;
+  const response = await apiClient.api.groupsCheckInviteCreate({ inviteCode });
+  return {
+    exists: response.data.exists ?? false,
+    isPrivate: response.data.isPrivate ?? false,
+    hasPassword: response.data.hasPassword ?? false,
+    groupName: response.data.groupName ?? null,
+  };
 };
 
 export const joinGroup = async (inviteCode: string, password?: string, otp?: string): Promise<Group> => {
-  const response = await api.post<Group>("/groups/join", { inviteCode, password, otp });
-  return response.data;
+  const response = await apiClient.api.groupsJoinCreate({ inviteCode, password, otp });
+  return response.data as unknown as Group;
 };
 
 export const leaveGroup = async (id: number): Promise<void> => {
-  await api.delete(`/groups/${id}/leave`);
+  await apiClient.api.groupsLeaveDelete(id);
 };
 
 export const kickMember = async (groupId: number, userId: number): Promise<void> => {
-  await api.delete(`/groups/${groupId}/members/${userId}`);
+  await apiClient.api.groupsMembersDelete(groupId, userId);
 };
 
 export const transferOwnership = async (groupId: number, newOwnerId: number): Promise<void> => {
-  await api.put(`/groups/${groupId}/transfer`, { newOwnerId });
+  await apiClient.api.groupsTransferUpdate(groupId, { newOwnerId });
 };
 
 export const updateMemberRole = async (groupId: number, userId: number, role: number): Promise<void> => {
-  await api.put(`/groups/${groupId}/members/${userId}/role`, { role });
+  await apiClient.api.groupsMembersRoleUpdate(groupId, userId, { role: role as GeneratedGroupRole });
 };
 
 export const generateOtp = async (groupId: number): Promise<{ code: string; expiresAt: string }> => {
-  const response = await api.post(`/groups/${groupId}/generate-otp`);
-  return response.data;
+  const response = await apiClient.api.groupsGenerateOtpCreate(groupId);
+  return {
+    code: response.data.code ?? "",
+    expiresAt: response.data.expiresAt ?? "",
+  };
 };
 
 export const updateGroupPassword = async (groupId: number, newPassword?: string): Promise<void> => {
-  await api.put(`/groups/${groupId}/password`, { newPassword });
+  await apiClient.api.groupsPasswordUpdate(groupId, { newPassword });
 };
 
 // Upload
 export const uploadPoster = async (file: File): Promise<string> => {
-  const formData = new FormData();
-  formData.append("file", file);
-  const response = await api.post<{ id: number }>("/upload/poster", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return response.data.id.toString();
+  const response = await apiClient.api.uploadPosterCreate({ file });
+  return (response.data.id || 0).toString();
 };
 
 export const getPosterUrl = (posterIdOrPath: string | undefined | null): string | null => {
   if (!posterIdOrPath) return null;
   if (posterIdOrPath.startsWith("http")) return posterIdOrPath;
-  const base = API_URL.replace("/api", "");
+  const base = API_URL;
   if (/^\d+$/.test(posterIdOrPath)) {
     return `${base}/api/posters/${posterIdOrPath}`;
   }
@@ -257,11 +251,11 @@ export const getUserSettings = async (): Promise<{
   preventOthersAddingToMyPersonal: boolean;
   preventMeAddingToMyPersonal: boolean;
 }> => {
-  const response = await api.get<{ 
-    preventOthersAddingToMyPersonal: boolean;
-    preventMeAddingToMyPersonal: boolean;
-  }>("/user-settings");
-  return response.data;
+  const response = await apiClient.api.userSettingsList();
+  return {
+    preventOthersAddingToMyPersonal: response.data.preventOthersAddingToMyPersonal ?? false,
+    preventMeAddingToMyPersonal: response.data.preventMeAddingToMyPersonal ?? false,
+  };
 };
 
 export const updateUserSettings = async (settings: { 
@@ -271,11 +265,12 @@ export const updateUserSettings = async (settings: {
   preventOthersAddingToMyPersonal: boolean;
   preventMeAddingToMyPersonal: boolean;
 }> => {
-  const response = await api.put<{ 
-    preventOthersAddingToMyPersonal: boolean;
-    preventMeAddingToMyPersonal: boolean;
-  }>("/user-settings", settings);
-  return response.data;
+  const response = await apiClient.api.userSettingsUpdate(settings);
+  return {
+    preventOthersAddingToMyPersonal: response.data.preventOthersAddingToMyPersonal ?? false,
+    preventMeAddingToMyPersonal: response.data.preventMeAddingToMyPersonal ?? false,
+  };
 };
 
-export default api;
+// Export the API client instance for direct access if needed
+export default apiClient;
