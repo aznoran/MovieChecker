@@ -134,7 +134,7 @@ export default function LandingPage() {
                                 <Clapperboard className="h-16 w-16 text-primary"/>
                             </div>
                         </div>
-                        <h1 className="text-5xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                        <h1 className="text-5xl md:text-7xl font-bold mb-8">
                             {t("landingHeroTitle")}
                         </h1>
                         <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
@@ -177,10 +177,10 @@ export default function LandingPage() {
                             {features.map((feature, index) => {
                                 const Icon = feature.icon;
                                 return (
-                                    <Card key={index} className="border-2 hover:border-primary/50 transition-all duration-300 hover:shadow-xl group">
+                                    <Card key={index} className="border-2 hover:border-primary/50 focus-within:border-primary/50 transition-all duration-300 hover:shadow-xl focus-within:shadow-xl group">
                                         <CardContent className="p-8">
                                             <div className="flex flex-col items-center text-center">
-                                                <div className="mb-6 p-4 bg-primary/10 rounded-2xl group-hover:bg-primary/20 transition-colors">
+                                                <div className="mb-6 p-4 bg-primary/10 rounded-2xl group-hover:bg-primary/20 group-focus-within:bg-primary/20 transition-colors">
                                                     <Icon className="h-8 w-8 text-primary"/>
                                                 </div>
                                                 <h3 className="text-xl font-bold mb-3">
@@ -215,7 +215,7 @@ export default function LandingPage() {
                                 return (
                                     <div key={index} className="text-center group">
                                         <div className="flex justify-center mb-6">
-                                            <div className="p-5 bg-primary/10 rounded-2xl group-hover:bg-primary/20 transition-all duration-300 group-hover:scale-110 shadow-lg">
+                                            <div className="p-5 bg-primary/10 rounded-2xl group-hover:bg-primary/20 group-focus-within:bg-primary/20 transition-all duration-300 group-hover:scale-110 group-focus-within:scale-110 shadow-lg">
                                                 <Icon className="h-10 w-10 text-primary"/>
                                             </div>
                                         </div>
