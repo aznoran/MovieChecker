@@ -7,12 +7,15 @@ import { Footer } from "@/components/footer";
 import { LoadingScreen } from "@/components/loading-screen";
 import type { ReactNode } from "react";
 
+// Routes that don't require header/footer
+const PUBLIC_ROUTES = ["/landing", "/login"];
+
 export function LayoutContent({ children }: { children: ReactNode }) {
   const { isLoading } = useAuth();
   const pathname = usePathname();
 
   // Pages that don't need header/footer
-  const isPublicPage = pathname === "/landing" || pathname === "/login";
+  const isPublicPage = PUBLIC_ROUTES.includes(pathname);
 
   // Show full-page loader while checking authentication
   if (isLoading) {
