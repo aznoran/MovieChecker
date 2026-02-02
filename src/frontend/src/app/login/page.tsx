@@ -49,7 +49,7 @@ function LoginForm() {
     const {login, register, isAuthenticated} = useAuth();
     const router = useRouter();
 
-    // Check for register parameter on mount
+    // Check for register and session expired parameters on mount
     useEffect(() => {
         const registerParam = searchParams.get('register');
         if (registerParam === 'true') {
@@ -61,7 +61,8 @@ function LoginForm() {
         if (sessionExpired === 'true') {
             setError(t("authError"));
         }
-    }, [searchParams, t]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]); // Only depend on searchParams, not t
 
     // Real-time frontend validation
     const validationErrors = useMemo((): FieldErrors => {
