@@ -74,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    // Store logout timestamp to remember user was logged in
+    localStorage.setItem("wasLoggedIn", new Date().toISOString());
     setToken(null);
     setUser(null);
   };
