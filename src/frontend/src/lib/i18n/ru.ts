@@ -268,7 +268,36 @@ const ru: Record<TranslationKeys, string> = {
     displayNameRequired: "Имя обязательно",
     displayNameTooShort: "Имя должно содержать минимум 2 символа",
     displayNameTooLong: "Имя не должно превышать 100 символов",
-    usernameAlreadyExists: "Логин уже занят"
+    usernameAlreadyExists: "Логин уже занят",
+
+    // Landing Page
+    landingHeroTitle: "Отслеживайте свой киномаршрут",
+    landingHeroSubtitle: "Ваш личный дневник для фильмов, сериалов и аниме. Следите за просмотрами, ставьте оценки с друзьями и анализируйте свои предпочтения.",
+    landingGetStarted: "Начать бесплатно",
+    landingSignIn: "Войти",
+    landingFeaturesTitle: "Всё необходимое для учёта просмотров",
+    landingFeature1Title: "Личный кинодневник",
+    landingFeature1Desc: "Храните все фильмы, сериалы и аниме, которые вы смотрите, в одном организованном месте",
+    landingFeature2Title: "Смотрите вместе",
+    landingFeature2Desc: "Создавайте группы с друзьями и семьёй. Отслеживайте, что смотрите вместе, и сравнивайте оценки",
+    landingFeature3Title: "Оценивайте и обсуждайте",
+    landingFeature3Desc: "Ставьте оценки всему, что смотрите, делитесь мыслями и смотрите, как ваши вкусы сравниваются с другими",
+    landingFeature4Title: "Отслеживайте прогресс",
+    landingFeature4Desc: "Следите за эпизодами, сезонами и временем просмотра. Никогда не забывайте, на чём остановились",
+    landingFeature5Title: "Детальная статистика",
+    landingFeature5Desc: "Узнавайте свои паттерны просмотра, любимые жанры и сколько времени вы потратили на просмотры",
+    landingFeature6Title: "Красивые постеры",
+    landingFeature6Desc: "Добавляйте постеры к записям и создавайте визуально привлекательную коллекцию фильмов",
+    landingWhyTitle: "Почему MovieChecker?",
+    landingWhy1Title: "Просто и понятно",
+    landingWhy1Desc: "Простой в использовании интерфейс, который просто работает. Добавляйте записи за секунды.",
+    landingWhy2Title: "Для групп",
+    landingWhy2Desc: "Идеально подходит для пар, семей или групп друзей, которые смотрят вместе.",
+    landingWhy3Title: "Всегда бесплатно",
+    landingWhy3Desc: "Основные функции полностью бесплатны. Никаких скрытых платежей или подписок.",
+    landingCtaTitle: "Готовы начать отслеживание?",
+    landingCtaSubtitle: "Присоединяйтесь к MovieChecker сегодня и никогда не забывайте, что вы смотрели",
+    landingCtaButton: "Создать бесплатный аккаунт"
 };
 
 export default ru;

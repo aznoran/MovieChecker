@@ -5,7 +5,6 @@ import {Providers} from "@/components/providers";
 import {Header} from "@/components/header";
 import {Footer} from "@/components/footer";
 import {Toaster} from "@/components/ui/sonner";
-import {Cake} from "lucide-react";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -33,7 +32,6 @@ export default function RootLayout({
             className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
         >
         <Providers>
-            <header className="flex justify-center items-center bg-red-500 gap-3">СЕВА С ДНЕМ РОЖДЕНИЯ ПОЗДРАВЛЯЮ <Cake /></header>
             <Header/>
             <div className="flex-1">
                 {children}

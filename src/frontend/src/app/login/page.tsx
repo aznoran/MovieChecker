@@ -1,7 +1,7 @@
 "use client";
 
-import {useState, useMemo} from "react";
-import {useRouter} from "next/navigation";
+import {useState, useMemo, useEffect} from "react";
+import {useRouter, useSearchParams} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {Button} from "@/components/ui/button";
@@ -36,6 +36,7 @@ interface FieldErrors {
 
 export default function LoginPage() {
     const {locale, setLocale, t} = useLocale();
+    const searchParams = useSearchParams();
     const [isRegister, setIsRegister] = useState(false);
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -47,6 +48,14 @@ export default function LoginPage() {
 
     const {login, register, isAuthenticated} = useAuth();
     const router = useRouter();
+
+    // Check for register parameter on mount
+    useEffect(() => {
+        const registerParam = searchParams.get('register');
+        if (registerParam === 'true') {
+            setIsRegister(true);
+        }
+    }, [searchParams]);
 
     // Real-time frontend validation
     const validationErrors = useMemo((): FieldErrors => {
