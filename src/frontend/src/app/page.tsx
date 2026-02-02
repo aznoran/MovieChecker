@@ -93,7 +93,21 @@ export default function HomePage() {
     }
 
     if (!isAuthenticated) {
-        toast.error(t("authError"), { position: "top-center"})
+        // Check if user was recently logged in (within last 30 days)
+        const wasLoggedIn = localStorage.getItem("wasLoggedIn");
+        if (wasLoggedIn) {
+            const logoutDate = new Date(wasLoggedIn);
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            if (logoutDate > thirtyDaysAgo) {
+                // User was recently logged in, redirect to login
+                router.push("/login");
+                return null;
+            }
+        }
+        
+        // New user or logged out long ago, redirect to landing
         router.push("/landing");
         return null;
     }

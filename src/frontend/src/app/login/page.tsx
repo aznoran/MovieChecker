@@ -55,7 +55,13 @@ function LoginForm() {
         if (registerParam === 'true') {
             setIsRegister(true);
         }
-    }, [searchParams]);
+        
+        // Check for session expired parameter
+        const sessionExpired = searchParams.get('sessionExpired');
+        if (sessionExpired === 'true') {
+            setError(t("authError"));
+        }
+    }, [searchParams, t]);
 
     // Real-time frontend validation
     const validationErrors = useMemo((): FieldErrors => {
