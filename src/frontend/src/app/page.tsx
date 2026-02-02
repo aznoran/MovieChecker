@@ -44,7 +44,7 @@ const statusColors: Record<WatchStatus, string> = {
 };
 
 export default function HomePage() {
-    const {isAuthenticated, isLoading: authLoading} = useAuth();
+    const {isAuthenticated} = useAuth();
     const {locale, t} = useLocale();
     const {activeGroupId} = useGroup();
     const router = useRouter();
@@ -83,14 +83,6 @@ export default function HomePage() {
             toast.error(t("errorLoadingEntries"), { position: "top-center" });
         }
     }, [error, t]);
-
-    if (authLoading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
-            </div>
-        );
-    }
 
     if (!isAuthenticated) {
         // Check if user was recently logged in (within last 30 days)
