@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, useMemo, useEffect} from "react";
+import {useState, useMemo, useEffect, Suspense} from "react";
 import {useRouter, useSearchParams} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
@@ -34,7 +34,7 @@ interface FieldErrors {
     displayName?: string;
 }
 
-export default function LoginPage() {
+function LoginForm() {
     const {locale, setLocale, t} = useLocale();
     const searchParams = useSearchParams();
     const [isRegister, setIsRegister] = useState(false);
@@ -334,5 +334,21 @@ export default function LoginPage() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center bg-background px-4">
+                <Card className="w-full max-w-sm">
+                    <CardContent className="flex items-center justify-center p-6">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+                    </CardContent>
+                </Card>
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }
