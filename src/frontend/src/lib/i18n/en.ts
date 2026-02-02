@@ -266,7 +266,36 @@ const en = {
     displayNameRequired: "Display name is required",
     displayNameTooShort: "Display name must be at least 2 characters",
     displayNameTooLong: "Display name must not exceed 100 characters",
-    usernameAlreadyExists: "Username already exists"
+    usernameAlreadyExists: "Username already exists",
+
+    // Landing Page
+    landingHeroTitle: "Track Your Movie Journey",
+    landingHeroSubtitle: "Your personal diary for movies, series, and anime. Track what you watch, rate with friends, and discover your viewing patterns.",
+    landingGetStarted: "Get Started Free",
+    landingSignIn: "Sign In",
+    landingFeaturesTitle: "Everything You Need to Track Your Viewing",
+    landingFeature1Title: "Personal Movie Diary",
+    landingFeature1Desc: "Keep track of all the movies, series, and anime you watch in one organized place",
+    landingFeature2Title: "Watch Together",
+    landingFeature2Desc: "Create groups with friends and family. Track what you watch together and compare ratings",
+    landingFeature3Title: "Rate & Review",
+    landingFeature3Desc: "Rate everything you watch, share your thoughts, and see how your tastes compare with others",
+    landingFeature4Title: "Track Progress",
+    landingFeature4Desc: "Keep track of episodes, seasons, and viewing time. Never forget where you left off",
+    landingFeature5Title: "Rich Statistics",
+    landingFeature5Desc: "Discover your viewing patterns, favorite genres, and how much time you've spent watching",
+    landingFeature6Title: "Beautiful Posters",
+    landingFeature6Desc: "Add posters to your entries and create a visually appealing movie collection",
+    landingWhyTitle: "Why Choose MovieChecker?",
+    landingWhy1Title: "Simple & Intuitive",
+    landingWhy1Desc: "Easy to use interface that just works. Add entries in seconds.",
+    landingWhy2Title: "Group Friendly",
+    landingWhy2Desc: "Perfect for couples, families, or friend groups who watch together.",
+    landingWhy3Title: "Always Free",
+    landingWhy3Desc: "Core features are completely free. No hidden costs or subscriptions.",
+    landingCtaTitle: "Ready to Start Tracking?",
+    landingCtaSubtitle: "Join MovieChecker today and never forget what you've watched",
+    landingCtaButton: "Create Free Account"
 } as const;
 
 export type TranslationKeys = keyof typeof en;

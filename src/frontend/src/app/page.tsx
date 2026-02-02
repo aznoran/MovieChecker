@@ -94,7 +94,7 @@ export default function HomePage() {
 
     if (!isAuthenticated) {
         toast.error(t("authError"), { position: "top-center"})
-        router.push("/login");
+        router.push("/landing");
         return null;
     }
 

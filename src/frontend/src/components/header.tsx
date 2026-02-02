@@ -280,7 +280,7 @@ export function Header() {
     };
 
     // Hide header on login page
-    if (pathname === "/login") {
+    if (pathname === "/login" || pathname === "/landing") {
         return null;
     }
 
