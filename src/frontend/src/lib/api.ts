@@ -35,7 +35,9 @@ apiClient.instance.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("activeGroupId");
-      window.location.href = "/login";
+      // Mark that user was logged in for redirect logic
+      localStorage.setItem("wasLoggedIn", new Date().toISOString());
+      window.location.href = "/login?sessionExpired=true";
     }
     return Promise.reject(error);
   }

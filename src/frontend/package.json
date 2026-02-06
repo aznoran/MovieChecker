@@ -1,6 +1,6 @@
 {
   "name": "moviechecker",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "scripts": {
     "dev": "npx kill-port 3000 && next dev",

@@ -93,8 +93,28 @@ export default function HomePage() {
     }
 
     if (!isAuthenticated) {
-        toast.error(t("authError"), { position: "top-center"})
-        router.push("/login");
+        // Check if user was recently logged in (within last 30 days)
+        const RECENT_LOGIN_WINDOW_DAYS = 30;
+        const wasLoggedIn = localStorage.getItem("wasLoggedIn");
+        if (wasLoggedIn) {
+            try {
+                const logoutDate = new Date(wasLoggedIn);
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - RECENT_LOGIN_WINDOW_DAYS);
+                
+                if (!isNaN(logoutDate.getTime()) && logoutDate > thirtyDaysAgo) {
+                    // User was recently logged in, redirect to login
+                    router.push("/login");
+                    return null;
+                }
+            } catch (error) {
+                // Invalid date in localStorage, treat as new user
+                console.warn("Invalid wasLoggedIn date in localStorage:", error);
+            }
+        }
+        
+        // New user or logged out long ago, redirect to landing
+        router.push("/landing");
         return null;
     }
 
