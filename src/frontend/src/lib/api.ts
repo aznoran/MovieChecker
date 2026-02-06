@@ -1,9 +1,9 @@
-import { Api, WatchStatus as GeneratedWatchStatus, GroupRole as GeneratedGroupRole, ContentType as GeneratedContentType, CreateMovieRequest, UpdateMovieRequest } from "./api.generated";
+import { Api, WatchStatus, GroupRole, ContentType, CreateMovieRequest, UpdateMovieRequest } from "./api.generated";
 import { AuthResponse, Movie, WatchEntry, Stats, Group, GroupMember } from "@/types";
 
 // Re-export types from types folder (these have proper enum names)
 export type { AuthResponse, Movie, WatchEntry, Stats, Group, GroupMember };
-export { ContentType, WatchStatus, Emotion, GroupRole } from "@/types";
+export { ContentType as ContentTypeEnum, WatchStatus as WatchStatusEnum, Emotion, GroupRole as GroupRoleEnum } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -76,7 +76,7 @@ export const createMovie = async (movie: Omit<Movie, "id" | "createdAt">): Promi
   const request: CreateMovieRequest = {
     title: movie.title,
     description: movie.description,
-    type: movie.type as unknown as GeneratedContentType,
+    type: movie.type as unknown as ContentType,
     year: movie.year,
     genre: movie.genre,
     posterUrl: movie.posterUrl,
@@ -89,7 +89,7 @@ export const updateMovie = async (id: number, movie: Partial<Movie>): Promise<Mo
   const request: UpdateMovieRequest = {
     title: movie.title,
     description: movie.description,
-    type: movie.type !== undefined ? movie.type as unknown as GeneratedContentType : undefined,
+    type: movie.type !== undefined ? movie.type as unknown as ContentType : undefined,
     year: movie.year,
     genre: movie.genre,
     posterUrl: movie.posterUrl,
@@ -109,8 +109,8 @@ export const searchMovies = async (query: string): Promise<Movie[]> => {
 
 // Watch Entries
 export const getWatchEntries = async (status?: number, groupId?: number): Promise<WatchEntry[]> => {
-  const query: { status?: GeneratedWatchStatus; groupId?: number } = {};
-  if (status !== undefined) query.status = status as GeneratedWatchStatus;
+  const query: { status?: WatchStatus; groupId?: number } = {};
+  if (status !== undefined) query.status = status as WatchStatus;
   if (groupId !== undefined) query.groupId = groupId;
   const response = await apiClient.api.watchEntriesList(query);
   return response.data as unknown as WatchEntry[];
@@ -179,7 +179,7 @@ export const createGroup = async (name: string, isPrivate: boolean = false, pass
     name, 
     isPrivate, 
     password, 
-    defaultRole: defaultRole as GeneratedGroupRole 
+    defaultRole: defaultRole as GroupRole 
   });
   return response.data as unknown as Group;
 };
@@ -217,7 +217,7 @@ export const transferOwnership = async (groupId: number, newOwnerId: number): Pr
 };
 
 export const updateMemberRole = async (groupId: number, userId: number, role: number): Promise<void> => {
-  await apiClient.api.groupsMembersRoleUpdate(groupId, userId, { role: role as GeneratedGroupRole });
+  await apiClient.api.groupsMembersRoleUpdate(groupId, userId, { role: role as GroupRole });
 };
 
 export const generateOtp = async (groupId: number): Promise<{ code: string; expiresAt: string }> => {
