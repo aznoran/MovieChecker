@@ -62,7 +62,7 @@ services:
       context: ./src/frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: https://xui123qweqwe.org/api  # Изменено на HTTPS
+        NEXT_PUBLIC_API_URL: https://xui123qweqwe.org
     restart: unless-stopped
     expose:
       - "3000"
