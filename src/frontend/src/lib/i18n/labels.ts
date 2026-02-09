@@ -1,6 +1,19 @@
 import { ContentType, WatchStatus, Emotion, EmotionEmojis } from "@/types";
 import type { Locale } from "./index";
 import { t } from "./index";
+import en from "./en";
+import type { TranslationKeys } from "./en";
+
+// Build a mapping from English genre names to translation keys
+const genreEnglishToKey: Record<string, TranslationKeys> = {};
+const genreKeys: TranslationKeys[] = [
+  "genreAction", "genreComedy", "genreDrama", "genreHorror", "genreThriller",
+  "genreRomance", "genreSciFi", "genreFantasy", "genreAnimation", "genreDocumentary",
+  "genreAdventure", "genreMystery", "genreCrime", "genreFamily", "genreMusical",
+];
+genreKeys.forEach((key) => {
+  genreEnglishToKey[en[key]] = key;
+});
 
 export function getContentTypeLabels(locale: Locale): Record<ContentType, string> {
   return {
@@ -33,3 +46,19 @@ export function getEmotionLabels(locale: Locale): Record<Emotion, string> {
 }
 
 export { EmotionEmojis };
+
+/**
+ * Translate a genre string (comma-separated) from stored English names to the current locale.
+ * Custom (non-preset) genres are returned as-is.
+ */
+export function translateGenre(genreStr: string, locale: Locale): string {
+  return genreStr
+    .split(",")
+    .map((g) => g.trim())
+    .filter(Boolean)
+    .map((g) => {
+      const key = genreEnglishToKey[g];
+      return key ? t(key, locale) : g;
+    })
+    .join(", ");
+}

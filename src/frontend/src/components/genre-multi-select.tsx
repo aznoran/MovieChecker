@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus } from "lucide-react";
+import en from "@/lib/i18n/en";
+import type { TranslationKeys } from "@/lib/i18n/en";
 
 const GENRE_KEYS = [
   "genreAction",
@@ -25,6 +27,15 @@ const GENRE_KEYS = [
   "genreMusical",
 ] as const;
 
+// English genre names used as storage keys
+const GENRE_ENGLISH_NAMES = GENRE_KEYS.map((key) => en[key]);
+
+// Map from English name to translation key for reverse lookup
+const englishToKey: Record<string, TranslationKeys> = {};
+GENRE_KEYS.forEach((key) => {
+  englishToKey[en[key]] = key;
+});
+
 interface Props {
   value: string;
   onChange: (value: string) => void;
@@ -34,23 +45,34 @@ export function GenreMultiSelect({ value, onChange }: Props) {
   const { t } = useLocale();
   const [customInput, setCustomInput] = useState("");
 
+  // Selected values are stored in English for preset genres
   const selected = value
     ? value.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
 
-  const presetGenres = GENRE_KEYS.map((key) => t(key));
+  // Get display name for a stored genre value
+  const getDisplayName = (genre: string): string => {
+    const key = englishToKey[genre];
+    return key ? t(key) : genre;
+  };
 
-  const toggleGenre = (genre: string) => {
-    if (selected.includes(genre)) {
-      onChange(selected.filter((g) => g !== genre).join(", "));
+  // Check if a stored value is a preset genre
+  const isPresetGenre = (genre: string): boolean => {
+    return GENRE_ENGLISH_NAMES.includes(genre);
+  };
+
+  const toggleGenre = (englishName: string) => {
+    if (selected.includes(englishName)) {
+      onChange(selected.filter((g) => g !== englishName).join(", "));
     } else {
-      onChange([...selected, genre].join(", "));
+      onChange([...selected, englishName].join(", "));
     }
   };
 
   const addCustom = () => {
     const trimmed = customInput.trim();
     if (!trimmed || selected.includes(trimmed)) return;
+    if (trimmed.length > 50) return;
     onChange([...selected, trimmed].join(", "));
     setCustomInput("");
   };
@@ -68,7 +90,7 @@ export function GenreMultiSelect({ value, onChange }: Props) {
         <div className="flex flex-wrap gap-1.5">
           {selected.map((genre) => (
             <Badge key={genre} variant="secondary" className="gap-1 pr-1">
-              {genre}
+              {getDisplayName(genre)}
               <button
                 type="button"
                 onClick={() => toggleGenre(genre)}
@@ -82,18 +104,18 @@ export function GenreMultiSelect({ value, onChange }: Props) {
       )}
 
       <div className="flex flex-wrap gap-1.5">
-        {presetGenres
+        {GENRE_ENGLISH_NAMES
           .filter((g) => !selected.includes(g))
-          .map((genre) => (
+          .map((englishName) => (
             <Button
-              key={genre}
+              key={englishName}
               type="button"
               variant="outline"
               size="sm"
               className="h-7 text-xs"
-              onClick={() => toggleGenre(genre)}
+              onClick={() => toggleGenre(englishName)}
             >
-              {genre}
+              {getDisplayName(englishName)}
             </Button>
           ))}
       </div>
@@ -104,6 +126,7 @@ export function GenreMultiSelect({ value, onChange }: Props) {
           onChange={(e) => setCustomInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t("genrePlaceholder")}
+          maxLength={50}
           className="h-8 text-sm"
         />
         <Button
@@ -120,3 +143,6 @@ export function GenreMultiSelect({ value, onChange }: Props) {
     </div>
   );
 }
+
+// Export for use in stats page and other display contexts
+export { englishToKey, GENRE_ENGLISH_NAMES };

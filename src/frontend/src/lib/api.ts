@@ -236,6 +236,18 @@ export const updateGroupPassword = async (groupId: number, newPassword?: string)
   await apiClient.api.groupsPasswordUpdate(groupId, { newPassword });
 };
 
+export const updateGroupSettings = async (groupId: number, settings: { name?: string; isPrivate?: boolean }): Promise<Group> => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+  const response = await apiClient.instance.put(`/api/groups/${groupId}/settings`, settings, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "Accept-Language": locale,
+    },
+  });
+  return response.data as unknown as Group;
+};
+
 // Upload
 export const uploadPoster = async (file: File): Promise<string> => {
   const response = await apiClient.api.uploadPosterCreate({ file });

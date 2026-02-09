@@ -89,7 +89,8 @@ export function Header() {
         transferOwnership,
         updateMemberRole,
         generateOtp,
-        updatePassword
+        updatePassword,
+        updateGroupSettings
     } = useGroup();
 
     const [groupDialogOpen, setGroupDialogOpen] = useState(false);
@@ -107,6 +108,10 @@ export function Header() {
     const [changePasswordGroupId, setChangePasswordGroupId] = useState<number | null>(null);
     const [newPassword, setNewPassword] = useState("");
     
+    // Group settings state
+    const [settingsGroupId, setSettingsGroupId] = useState<number | null>(null);
+    const [editGroupName, setEditGroupName] = useState("");
+
     // Role change dialog state
     const [roleChangeDialog, setRoleChangeDialog] = useState<{ groupId: number; userId: number; currentRole: GroupRole } | null>(null);
     const [selectedNewRole, setSelectedNewRole] = useState<GroupRole | null>(null);
@@ -278,6 +283,19 @@ export function Header() {
         await navigator.clipboard.writeText(code);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleSaveGroupSettings = async (groupId: number, isPrivate: boolean) => {
+        try {
+            await updateGroupSettings(groupId, {
+                name: editGroupName.trim() || undefined,
+                isPrivate,
+            });
+            setSettingsGroupId(null);
+            setEditGroupName("");
+        } catch {
+            setError(t("groupSettingsError"));
+        }
     };
 
     // Hide header on login page
@@ -801,6 +819,100 @@ export function Header() {
                                                     </div>
                                                     )}
 
+
+                                                    {/* Group Settings (Owner/Admin only) */}
+                                                    {canManage && (
+                                                        <div className="">
+                                                            <FieldSeparator className="my-0.5"/>
+                                                            <div className="space-y-4 pt-6">
+                                                                <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">{t("groupSettings")}</p>
+                                                                
+                                                                {settingsGroupId === g.id ? (
+                                                                    <div className="space-y-3 bg-background/60 border border-border/60 p-3 rounded-xl animate-in slide-in-from-top-2">
+                                                                        <Field>
+                                                                            <FieldLabel className="text-sm font-medium">
+                                                                                {t("renameGroup")}
+                                                                            </FieldLabel>
+                                                                            <Input
+                                                                                value={editGroupName}
+                                                                                onChange={(e) => setEditGroupName(e.target.value)}
+                                                                                placeholder={g.name}
+                                                                                maxLength={50}
+                                                                                className="h-9 bg-background border-border/60"
+                                                                            />
+                                                                        </Field>
+                                                                        <Field>
+                                                                            <FieldLabel className="text-sm font-medium">
+                                                                                {t("groupVisibility")}
+                                                                            </FieldLabel>
+                                                                            <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant={!g.isPrivate ? "default" : "ghost"}
+                                                                                    size="sm"
+                                                                                    className={cn(
+                                                                                        "h-8 flex-1 text-xs transition-all",
+                                                                                        !g.isPrivate && "shadow-sm"
+                                                                                    )}
+                                                                                    onClick={() => handleSaveGroupSettings(g.id, false)}
+                                                                                >
+                                                                                    <LockOpen className="h-3 w-3 mr-1.5 text-green-500"/>
+                                                                                    {t("publicGroup")}
+                                                                                </Button>
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant={g.isPrivate ? "default" : "ghost"}
+                                                                                    size="sm"
+                                                                                    className={cn(
+                                                                                        "h-8 flex-1 text-xs transition-all",
+                                                                                        g.isPrivate && "shadow-sm"
+                                                                                    )}
+                                                                                    onClick={() => handleSaveGroupSettings(g.id, true)}
+                                                                                >
+                                                                                    <Lock className="h-3 w-3 mr-1.5 text-red-500"/>
+                                                                                    {t("privateGroup")}
+                                                                                </Button>
+                                                                            </div>
+                                                                        </Field>
+                                                                        <div className="flex gap-2 pt-2">
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                className="h-9 flex-1 border-border/60"
+                                                                                onClick={() => {
+                                                                                    setSettingsGroupId(null);
+                                                                                    setEditGroupName("");
+                                                                                }}
+                                                                            >
+                                                                                {t("cancel")}
+                                                                            </Button>
+                                                                            <Button
+                                                                                size="sm"
+                                                                                className="h-9 flex-1 bg-primary hover:bg-primary/90"
+                                                                                onClick={() => handleSaveGroupSettings(g.id, g.isPrivate)}
+                                                                            >
+                                                                                <Check className="h-3.5 w-3.5 mr-1.5"/>
+                                                                                {t("save")}
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="h-9 text-xs w-full border-border/60 hover:bg-primary/5 hover:border-primary/40"
+                                                                        onClick={() => {
+                                                                            setSettingsGroupId(g.id);
+                                                                            setEditGroupName(g.name);
+                                                                        }}
+                                                                    >
+                                                                        <Settings className="h-3.5 w-3.5 mr-1.5"/>
+                                                                        {t("groupSettings")}
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
 
                                                     {/* OTP Management for private groups (Owner/Admin only) */}
                                                     {g.isPrivate && canManage && (
