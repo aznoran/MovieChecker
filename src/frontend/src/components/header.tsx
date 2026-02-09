@@ -131,6 +131,10 @@ export function Header() {
         void setLocale(next);
     };
 
+    const getErrorMessage = (err: unknown): string | undefined => {
+        return err instanceof AxiosError ? err.response?.data?.message : undefined;
+    };
+
     const handleCreateGroup = async () => {
         if (!newGroupName.trim()) {
             toast.error(t("groupNameRequired"), { position: "top-center" });
@@ -186,8 +190,7 @@ export function Header() {
             setUseOtpMode(!result.hasPassword);
             setJoinStep("auth");
         } catch (err) {
-            const message = err instanceof AxiosError ? err.response?.data?.message : undefined;
-            setError(message || t("invalidCode"));
+            setError(getErrorMessage(err) || t("invalidCode"));
         }
     };
 
@@ -203,8 +206,7 @@ export function Header() {
             setJoinStep("code");
             setGroupToJoin(null);
         } catch (err) {
-            const message = err instanceof AxiosError ? err.response?.data?.message : undefined;
-            setError(message || t("joinError"));
+            setError(getErrorMessage(err) || t("joinError"));
         }
     };
 
