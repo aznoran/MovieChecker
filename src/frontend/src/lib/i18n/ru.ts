@@ -210,6 +210,8 @@ const ru: Record<TranslationKeys, string> = {
     groupCreated: "Группа создана!",
     joinedGroup: "Вы присоединились!",
     invalidCode: "Неверный код приглашения",
+    groupNameRequired: "Пожалуйста, введите название группы",
+    joinCodeRequired: "Пожалуйста, введите код приглашения",
     alreadyMember: "Вы уже участник",
     myRatingLabel: "Моя оценка",
     allRatings: "Все оценки",

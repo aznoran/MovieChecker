@@ -69,6 +69,8 @@ import {GroupRole, GroupType} from "@/types";
 import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {checkInviteCode} from "@/lib/api";
+import {AxiosError} from "axios";
+import {toast} from "sonner";
 import {Progress} from "@/components/ui/progress";
 import {ScrollArea} from "@/components/ui/scroll-area";
 
@@ -130,7 +132,10 @@ export function Header() {
     };
 
     const handleCreateGroup = async () => {
-        if (!newGroupName.trim()) return;
+        if (!newGroupName.trim()) {
+            toast.error(t("groupNameRequired"), { position: "top-center" });
+            return;
+        }
         try {
             // For public groups, default role is always Viewer
             const defaultRole = newGroupIsPrivate ? newGroupDefaultRole : GroupRole.Viewer;
@@ -148,7 +153,10 @@ export function Header() {
     };
 
     const handleCheckInviteCode = async () => {
-        if (!joinCode.trim()) return;
+        if (!joinCode.trim()) {
+            toast.error(t("joinCodeRequired"), { position: "top-center" });
+            return;
+        }
         try {
             setError("");
             const result = await checkInviteCode(joinCode.trim());
@@ -177,8 +185,9 @@ export function Header() {
             // Set default auth mode based on whether password exists
             setUseOtpMode(!result.hasPassword);
             setJoinStep("auth");
-        } catch {
-            setError(t("invalidCode"));
+        } catch (err) {
+            const message = err instanceof AxiosError ? err.response?.data?.message : undefined;
+            setError(message || t("invalidCode"));
         }
     };
 
@@ -193,8 +202,9 @@ export function Header() {
             setError("");
             setJoinStep("code");
             setGroupToJoin(null);
-        } catch {
-            setError(t("invalidCode"));
+        } catch (err) {
+            const message = err instanceof AxiosError ? err.response?.data?.message : undefined;
+            setError(message || t("joinError"));
         }
     };
 
@@ -303,7 +313,7 @@ export function Header() {
                                         key={link.href}
                                         href={link.href}
                                         className={cn(
-                                            "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                                            "flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors min-w-[6rem]",
                                             pathname === link.href
                                                 ? "bg-accent text-accent-foreground"
                                                 : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
@@ -360,7 +370,7 @@ export function Header() {
                             variant="ghost"
                             size="sm"
                             onClick={toggleLocale}
-                            className="gap-1.5 text-muted-foreground"
+                            className="gap-1.5 text-muted-foreground min-w-[4rem]"
                         >
                             <Languages className="h-4 w-4"/>
                             {locale.toUpperCase()}

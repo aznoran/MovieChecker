@@ -1,7 +1,7 @@
 "use client";
 
 import {useState, useEffect} from "react";
-import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
+import {useQuery, useMutation, useQueryClient, keepPreviousData} from "@tanstack/react-query";
 import {useRouter} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
@@ -65,6 +65,7 @@ export default function HomePage() {
             getWatchEntries(statusFilter !== null ? statusFilter : undefined, activeGroupId),
         enabled: isAuthenticated,
         retry: false,
+        placeholderData: keepPreviousData,
     });
 
     const deleteMutation = useMutation({
@@ -130,7 +131,7 @@ export default function HomePage() {
                         <Popcorn className="h-6 w-6"/>
                         {t("movieDiary")}
                     </h1>
-                    <Button onClick={() => setAddOpen(true)}>
+                    <Button className="min-w-[10rem]" onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4 mr-1.5"/>
                         {t("addEntry")}
                     </Button>
@@ -140,6 +141,7 @@ export default function HomePage() {
                     <Button
                         variant={statusFilter === null ? "default" : "outline"}
                         size="sm"
+                        className="min-w-[4rem]"
                         onClick={() => setStatusFilter(null)}
                     >
                         {t("all")}
@@ -149,6 +151,7 @@ export default function HomePage() {
                             key={value}
                             variant={statusFilter === Number(value) ? "default" : "outline"}
                             size="sm"
+                            className="min-w-[7rem]"
                             onClick={() => setStatusFilter(Number(value) as WatchStatus)}
                         >
                             {label}
