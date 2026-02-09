@@ -1,11 +1,12 @@
 "use client";
 
-import {useState, useRef, useEffect} from "react";
+import {useState, useRef, useEffect, useCallback} from "react";
 import {useMutation, useQueryClient} from "@tanstack/react-query";
 import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useAuth} from "@/context/auth-context";
 import {useGroup} from "@/context/group-context";
+import {ImageEditor} from "@/components/image-editor";
 import {ContentType, WatchEntry} from "@/types";
 import {
     WatchStatus,
@@ -44,6 +45,7 @@ import {
     Film,
     Calendar,
     ClipboardPaste,
+    Crop,
 } from "lucide-react";
 import {
     Field,
@@ -92,6 +94,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [posterPreview, setPosterPreview] = useState<string | null>(
         getPosterUrl(entry.movie.posterUrl)
     );
+    const [editorOpen, setEditorOpen] = useState(false);
+    const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -236,15 +240,24 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setImageFile(file);
+        openImageEditor(file);
     };
 
-    const setImageFile = (file: File) => {
-        setPosterFile(file);
+    const openImageEditor = (file: File) => {
         const reader = new FileReader();
-        reader.onloadend = () => setPosterPreview(reader.result as string);
+        reader.onloadend = () => {
+            setEditorImageSrc(reader.result as string);
+            setEditorOpen(true);
+        };
         reader.readAsDataURL(file);
     };
+
+    const handleEditorConfirm = useCallback((croppedFile: File) => {
+        setPosterFile(croppedFile);
+        const reader = new FileReader();
+        reader.onloadend = () => setPosterPreview(reader.result as string);
+        reader.readAsDataURL(croppedFile);
+    }, []);
 
     const handlePasteFromClipboard = async () => {
         try {
@@ -255,7 +268,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     const blob = await item.getType(imageType);
                     const ext = imageType.split("/")[1] || "png";
                     const file = new File([blob], `clipboard.${ext}`, {type: imageType});
-                    setImageFile(file);
+                    openImageEditor(file);
                     return;
                 }
             }
@@ -268,6 +281,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const removePoster = () => {
         setPosterFile(null);
         setPosterPreview(null);
+        setEditorImageSrc(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
@@ -315,6 +329,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     };
 
     return (
+        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -353,13 +368,25 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             </FieldDescription>
                         </FieldContent>
                         {posterPreview ? (
-                            <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                            <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border">
                                 <img
                                     src={posterPreview}
                                     alt="Poster preview"
                                     className="w-full h-full object-cover"
                                 />
                                 <div className="absolute top-2 right-2 flex gap-1">
+                                    {editorImageSrc && (
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            aria-label={t("imageEditorTitle")}
+                                            onClick={() => setEditorOpen(true)}
+                                        >
+                                            <Crop className="h-3.5 w-3.5"/>
+                                        </Button>
+                                    )}
                                     <Button
                                         type="button"
                                         variant="secondary"
@@ -785,5 +812,14 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 </form>
             </DialogContent>
         </Dialog>
+            {editorImageSrc && (
+                <ImageEditor
+                    imageSrc={editorImageSrc}
+                    open={editorOpen}
+                    onOpenChange={setEditorOpen}
+                    onConfirm={handleEditorConfirm}
+                />
+            )}
+        </>
     );
 }
