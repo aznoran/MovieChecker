@@ -1,7 +1,7 @@
 "use client";
 
 import {useState, useEffect} from "react";
-import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
+import {useQuery, useMutation, useQueryClient, keepPreviousData} from "@tanstack/react-query";
 import {useRouter} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
@@ -81,6 +81,7 @@ export default function HomePage() {
             getWatchEntries(statusFilter !== null ? statusFilter : undefined, activeGroupId),
         enabled: isAuthenticated,
         retry: false,
+        placeholderData: keepPreviousData,
     });
 
     const deleteMutation = useMutation({
@@ -147,10 +148,10 @@ export default function HomePage() {
                         {t("movieDiary")}
                     </h1>
                     {canCreate && (
-                    <Button onClick={() => setAddOpen(true)}>
-                        <Plus className="h-4 w-4 mr-1.5"/>
-                        {t("addEntry")}
-                    </Button>
+                        <Button className="min-w-[12rem]"  onClick={() => setAddOpen(true)}>
+                            <Plus className="h-4 w-4 mr-1.5"/>
+                            {t("addEntry")}
+                        </Button>
                     )}
                 </div>
 
@@ -158,6 +159,7 @@ export default function HomePage() {
                     <Button
                         variant={statusFilter === null ? "default" : "outline"}
                         size="sm"
+                        className="min-w-[5rem]"
                         onClick={() => setStatusFilter(null)}
                     >
                         {t("all")}
@@ -167,6 +169,7 @@ export default function HomePage() {
                             key={value}
                             variant={statusFilter === Number(value) ? "default" : "outline"}
                             size="sm"
+                            className="min-w-[9rem]"
                             onClick={() => setStatusFilter(Number(value) as WatchStatus)}
                         >
                             {label}

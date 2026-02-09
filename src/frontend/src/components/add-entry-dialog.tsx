@@ -312,9 +312,9 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     return;
                 }
             }
-            setError(t("clipboardNoImage"));
+            toast.error(t("clipboardNoImage"), { position: "top-center"})
         } catch {
-            setError(t("clipboardFailed"));
+            toast.error(t("clipboardNoImage"), { position: "top-center"})
         }
     };
 
@@ -328,7 +328,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validate all fields
         const errors: Record<string, string> = {};
         const fieldsToValidate = [
             { name: "title", value: title },

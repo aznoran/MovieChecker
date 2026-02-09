@@ -208,6 +208,8 @@ const en = {
     groupCreated: "Group created!",
     joinedGroup: "Joined group!",
     invalidCode: "Invalid invite code",
+    groupNameRequired: "Please enter a group name",
+    joinCodeRequired: "Please enter an invite code",
     alreadyMember: "Already a member",
     groupSettingsUpdated: "Group settings updated",
     groupSettingsError: "Failed to update group settings",

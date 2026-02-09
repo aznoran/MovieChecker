@@ -104,9 +104,9 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const createMutation = useMutation({
         mutationFn: ({ name, isPrivate, password, defaultRole }: { name: string, isPrivate?: boolean, password?: string, defaultRole?: number }) =>
             apiCreateGroup(name, isPrivate, password, defaultRole),
-        onSuccess: (group) => {
+        onSuccess: async (group) => {
             toast.success(t("groupCreateSuccess"), { position: "top-center" });
-            queryClient.invalidateQueries({queryKey: ["groups"]});
+            await queryClient.invalidateQueries({queryKey: ["groups"]});
             setActiveGroupId(group.id);
         },
         onError: () => {
@@ -117,9 +117,9 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const joinMutation = useMutation({
         mutationFn: ({ code, password, otp }: { code: string, password?: string, otp?: string }) => 
             apiJoinGroup(code, password, otp),
-        onSuccess: (group) => {
+        onSuccess: async (group) => {
             toast.success(t("joinSuccess"), { position: "top-center" })
-            queryClient.invalidateQueries({queryKey: ["groups"]});
+            await queryClient.invalidateQueries({queryKey: ["groups"]});
             setActiveGroupId(group.id);
         },
         onError: () => {
