@@ -325,15 +325,20 @@ export function Header() {
                             <SelectContent position="popper" sideOffset={4}>
                                 {personalGroup && (
                                     <SelectItem value={personalGroup.id.toString()}>
-                                        <User />
+                                        <User className="h-3 w-3"/>
                                         {t("personal")}
                                     </SelectItem>
                                 )}
                                 {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => (
                                     <SelectItem key={g.id} value={g.id.toString()}>
                                         <div className="flex items-center gap-1.5">
-                                            {g.isPrivate ? <Lock color="red" className="h-3 w-3"/> :
-                                                <LockOpen color="green" className="h-3 w-3"/>}
+                                            {g.groupType === GroupType.Private ? (
+                                                <Lock className="h-3 w-3 text-red-500"/>
+                                            ) : g.groupType === GroupType.Public ? (
+                                                <LockOpen className="h-3 w-3 text-green-500"/>
+                                            ) : (
+                                                <User className="h-3 w-3"/>
+                                            )}
                                             {g.name}
                                         </div>
                                     </SelectItem>
@@ -691,22 +696,25 @@ export function Header() {
                                             return (
                                                 <FieldGroup key={g.id}
                                                             className="bg-muted/30 border border-border/50 rounded-xl p-4 hover:bg-muted/40 transition-colors">
-                                                    {/* Group header */}
                                                     <div className="flex items-center justify-between mb-2">
                                                         <div className="flex items-center gap-2.5">
                                                             <div className="flex items-center gap-1.5">
-                                                                {g.isPrivate ? (
+                                                                {g.groupType === GroupType.Private ? (
                                                                     <div
                                                                         className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                                                         <Lock
-                                                                            color="red"
-                                                                            className="h-4 w-4 text-primary"/>
+                                                                            className="h-4 w-4 text-red-500"/>
+                                                                    </div>
+                                                                ) : g.groupType === GroupType.Public ? (
+                                                                    <div
+                                                                        className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                                                                        <LockOpen
+                                                                            className="h-4 w-4 text-green-500"/>
                                                                     </div>
                                                                 ) : (
                                                                     <div
                                                                         className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                                                                        <LockOpen
-                                                                            color="green"
+                                                                        <User
                                                                             className="h-4 w-4 text-muted-foreground"/>
                                                                     </div>
                                                                 )}
@@ -719,7 +727,7 @@ export function Header() {
                                                                         <Crown
                                                                             className="h-3.5 w-3.5 text-yellow-500"/>}
                                                                 </div>
-                                                                {g.isPrivate && (
+                                                                {g.groupType === GroupType.Private && (
                                                                     <span
                                                                         className="text-xs text-muted-foreground">
                                                                 {t("privateGroup")}
