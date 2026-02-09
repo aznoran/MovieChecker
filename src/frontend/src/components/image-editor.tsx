@@ -3,6 +3,7 @@
 import {useState, useCallback} from "react";
 import Cropper, {Area} from "react-easy-crop";
 import {useLocale} from "@/context/locale-context";
+import {toast} from "sonner";
 import {
     Dialog,
     DialogContent,
@@ -99,7 +100,7 @@ export function ImageEditor({
             onConfirm(file);
             onOpenChange(false);
         } catch {
-            // silently fail - user can retry
+            toast.error(t("clipboardFailed"), { position: "top-center" });
         }
     };
 

@@ -407,6 +407,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                             variant="secondary"
                                             size="icon"
                                             className="h-7 w-7"
+                                            aria-label={t("imageEditorTitle")}
                                             onClick={() => setEditorOpen(true)}
                                         >
                                             <Crop className="h-3.5 w-3.5"/>
