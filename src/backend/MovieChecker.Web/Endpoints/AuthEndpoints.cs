@@ -72,7 +72,7 @@ public static class AuthEndpoints
         // Create personal group for the new user
         var personalGroup = new Group
         {
-            Name = $"{user.DisplayName}'s Personal",
+            Name = $"{user.DisplayName} Personal",
             InviteCode = null,
             CreatedByUserId = user.Id,
             IsPrivate = false,

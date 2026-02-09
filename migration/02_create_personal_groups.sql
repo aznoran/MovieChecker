@@ -3,7 +3,7 @@
 
 INSERT INTO groups (name, invite_code, created_by_user_id, is_private, group_type, password_hash, default_role, created_at)
 SELECT
-    u.display_name || '''s Personal',
+    u.display_name || ' Personal',
     NULL,
     u.id,
     false,
