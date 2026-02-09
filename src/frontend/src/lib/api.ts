@@ -37,7 +37,11 @@ apiClient.instance.interceptors.response.use(
       localStorage.removeItem("activeGroupId");
       // Mark that user was logged in for redirect logic
       localStorage.setItem("wasLoggedIn", new Date().toISOString());
-      window.location.href = "/login?sessionExpired=true";
+      // Defer the redirect to allow the promise rejection to be handled first
+      // This prevents the "message channel closed" error
+      setTimeout(() => {
+        window.location.href = "/login?sessionExpired=true";
+      }, 0);
     }
     return Promise.reject(error);
   }
