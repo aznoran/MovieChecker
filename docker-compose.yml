@@ -20,15 +20,15 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-moviechecker}
-      POSTGRES_USER: ${POSTGRES_USER:-moviechecker}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-moviechecker_secret}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-moviechecker}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -41,9 +41,9 @@ services:
     volumes:
       - ./db/migration:/flyway/sql
     environment:
-      FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-moviechecker}
-      FLYWAY_USER: ${POSTGRES_USER:-moviechecker}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-moviechecker_secret}
+      FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      FLYWAY_USER: ${POSTGRES_USER}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
       FLYWAY_BASELINE_ON_MIGRATE: "true"
       FLYWAY_BASELINE_VERSION: "0"
     command: migrate
@@ -58,10 +58,10 @@ services:
     expose:
       - "5000"
     environment:
-      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-moviechecker};Username=${POSTGRES_USER:-moviechecker};Password=${POSTGRES_PASSWORD:-moviechecker_secret}"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
-      Jwt__Key: ${JWT_KEY:-MovieCheckerSuperSecretKey123456789012345678901234567890}
+      Jwt__Key: ${JWT_KEY}
       Jwt__Issuer: MovieChecker
       Jwt__Audience: MovieChecker
       Cors__Origins__0: https://xui123qweqwe.org
@@ -96,8 +96,8 @@ services:
     expose:
       - "80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@xui123qweqwe.org}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change_me_now}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: "True"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
