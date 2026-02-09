@@ -28,7 +28,7 @@ const GENRE_KEYS = [
 ] as const;
 
 // English genre names used as storage keys
-const GENRE_ENGLISH_NAMES = GENRE_KEYS.map((key) => en[key]);
+const GENRE_ENGLISH_NAMES: string[] = GENRE_KEYS.map((key) => en[key]);
 
 // Map from English name to translation key for reverse lookup
 const englishToKey: Record<string, TranslationKeys> = {};
@@ -54,11 +54,6 @@ export function GenreMultiSelect({ value, onChange }: Props) {
   const getDisplayName = (genre: string): string => {
     const key = englishToKey[genre];
     return key ? t(key) : genre;
-  };
-
-  // Check if a stored value is a preset genre
-  const isPresetGenre = (genre: string): boolean => {
-    return GENRE_ENGLISH_NAMES.includes(genre);
   };
 
   const toggleGenre = (englishName: string) => {
