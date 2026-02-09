@@ -163,4 +163,43 @@
   <data name="CannotJoinPersonalGroup" xml:space="preserve">
     <value>Нельзя присоединиться к личной группе</value>
   </data>
+  <data name="UsernameRequired" xml:space="preserve">
+    <value>Логин обязателен</value>
+  </data>
+  <data name="UsernameTooShort" xml:space="preserve">
+    <value>Логин должен содержать минимум 3 символа</value>
+  </data>
+  <data name="UsernameTooLong" xml:space="preserve">
+    <value>Логин не должен превышать 50 символов</value>
+  </data>
+  <data name="UsernameInvalidChars" xml:space="preserve">
+    <value>Логин может содержать только буквы, цифры, подчёркивания и дефисы</value>
+  </data>
+  <data name="PasswordRequired" xml:space="preserve">
+    <value>Пароль обязателен</value>
+  </data>
+  <data name="PasswordHasSpaces" xml:space="preserve">
+    <value>Пароль не может начинаться или заканчиваться пробелами</value>
+  </data>
+  <data name="PasswordTooShort" xml:space="preserve">
+    <value>Пароль должен содержать минимум 8 символов</value>
+  </data>
+  <data name="PasswordTooLong" xml:space="preserve">
+    <value>Пароль не должен превышать 50 символов</value>
+  </data>
+  <data name="PasswordMissingRequirements" xml:space="preserve">
+    <value>Пароль должен содержать хотя бы одну заглавную букву, одну строчную букву и одну цифру</value>
+  </data>
+  <data name="DisplayNameRequired" xml:space="preserve">
+    <value>Имя обязательно</value>
+  </data>
+  <data name="DisplayNameHasSpaces" xml:space="preserve">
+    <value>Имя не может начинаться или заканчиваться пробелами</value>
+  </data>
+  <data name="DisplayNameTooShort" xml:space="preserve">
+    <value>Имя должно содержать минимум 2 символа</value>
+  </data>
+  <data name="DisplayNameTooLong" xml:space="preserve">
+    <value>Имя не должно превышать 50 символов</value>
+  </data>
 </root>
