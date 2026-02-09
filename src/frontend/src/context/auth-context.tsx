@@ -61,8 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await apiLogin(username, password);
     // Save to localStorage synchronously before state update
     if (response.token && response.user) {
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("user", JSON.stringify(response.user));
+      }
       setToken(response.token);
       setUser(response.user);
     } else {
@@ -78,8 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await apiRegister(username, password, displayName);
     // Save to localStorage synchronously before state update
     if (response.token && response.user) {
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("user", JSON.stringify(response.user));
+      }
       setToken(response.token);
       setUser(response.user);
     } else {
@@ -88,12 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    // Store logout timestamp to remember user was logged in
-    localStorage.setItem("wasLoggedIn", new Date().toISOString());
-    // Remove token and user synchronously before state update
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("activeGroupId");
+    if (typeof window !== "undefined") {
+      // Store logout timestamp to remember user was logged in
+      localStorage.setItem("wasLoggedIn", new Date().toISOString());
+      // Remove token and user synchronously before state update
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("activeGroupId");
+    }
     setToken(null);
     setUser(null);
   };
