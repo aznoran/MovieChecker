@@ -19,6 +19,7 @@ import {EditEntryDialog} from "@/components/edit-entry-dialog";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
+import {cn} from "@/lib/utils";
 import {
     Plus,
     Trash2,
@@ -131,7 +132,7 @@ export default function HomePage() {
                         <Popcorn className="h-6 w-6"/>
                         {t("movieDiary")}
                     </h1>
-                    <Button className="min-w-[10rem]" onClick={() => setAddOpen(true)}>
+                    <Button className="min-w-[12rem]" onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4 mr-1.5"/>
                         {t("addEntry")}
                     </Button>
@@ -139,9 +140,12 @@ export default function HomePage() {
 
                 <div className="flex flex-wrap gap-2 mb-6">
                     <Button
-                        variant={statusFilter === null ? "default" : "outline"}
+                        variant="outline"
                         size="sm"
-                        className="min-w-[4rem]"
+                        className={cn(
+                            "min-w-[5rem]",
+                            statusFilter === null && "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:text-primary-foreground"
+                        )}
                         onClick={() => setStatusFilter(null)}
                     >
                         {t("all")}
@@ -149,9 +153,12 @@ export default function HomePage() {
                     {Object.entries(watchStatusLabels).map(([value, label]) => (
                         <Button
                             key={value}
-                            variant={statusFilter === Number(value) ? "default" : "outline"}
+                            variant="outline"
                             size="sm"
-                            className="min-w-[7rem]"
+                            className={cn(
+                                "min-w-[9rem]",
+                                statusFilter === Number(value) && "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:text-primary-foreground"
+                            )}
                             onClick={() => setStatusFilter(Number(value) as WatchStatus)}
                         >
                             {label}
