@@ -263,13 +263,16 @@ const en = {
     usernameTooShort: "Username must be at least 3 characters",
     usernameTooLong: "Username must not exceed 50 characters",
     usernameInvalidChars: "Username can only contain letters, numbers, underscores, and hyphens",
+    usernameHasCyrillic: "Username contains Cyrillic letters. Please use English layout",
     passwordRequired: "Password is required",
     passwordTooShort: "Password must be at least 8 characters",
-    passwordTooLong: "Password must not exceed 72 characters",
+    passwordTooLong: "Password must not exceed 50 characters",
     passwordMissingRequirements: "Password must contain at least one uppercase letter, one lowercase letter, and one digit",
+    passwordHasSpaces: "Password cannot have leading or trailing spaces",
     displayNameRequired: "Display name is required",
     displayNameTooShort: "Display name must be at least 2 characters",
-    displayNameTooLong: "Display name must not exceed 100 characters",
+    displayNameTooLong: "Display name must not exceed 50 characters",
+    displayNameHasSpaces: "Display name cannot have leading or trailing spaces",
     usernameAlreadyExists: "Username already exists",
 
     // Landing Page

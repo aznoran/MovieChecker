@@ -32,13 +32,17 @@ public class ValidationService
         {
             errors.Add(new ValidationError("Password", "Password is required"));
         }
+        else if (password != password.Trim())
+        {
+            errors.Add(new ValidationError("Password", "Password cannot have leading or trailing spaces"));
+        }
         else if (password.Length < 8)
         {
             errors.Add(new ValidationError("Password", "Password must be at least 8 characters"));
         }
-        else if (password.Length > 72)
+        else if (password.Length > 50)
         {
-            errors.Add(new ValidationError("Password", "Password must not exceed 72 characters (BCrypt limitation)"));
+            errors.Add(new ValidationError("Password", "Password must not exceed 50 characters"));
         }
         else
         {
@@ -57,13 +61,17 @@ public class ValidationService
         {
             errors.Add(new ValidationError("DisplayName", "Display name is required"));
         }
+        else if (displayName != displayName.Trim())
+        {
+            errors.Add(new ValidationError("DisplayName", "Display name cannot have leading or trailing spaces"));
+        }
         else if (displayName.Length < 2)
         {
             errors.Add(new ValidationError("DisplayName", "Display name must be at least 2 characters"));
         }
-        else if (displayName.Length > 100)
+        else if (displayName.Length > 50)
         {
-            errors.Add(new ValidationError("DisplayName", "Display name must not exceed 100 characters"));
+            errors.Add(new ValidationError("DisplayName", "Display name must not exceed 50 characters"));
         }
 
         return new ValidationResult(errors.Count == 0, errors);

@@ -265,13 +265,16 @@ const ru: Record<TranslationKeys, string> = {
     usernameTooShort: "Логин должен содержать минимум 3 символа",
     usernameTooLong: "Логин не должен превышать 50 символов",
     usernameInvalidChars: "Логин может содержать только буквы, цифры, подчёркивания и дефисы",
+    usernameHasCyrillic: "Логин содержит русские буквы. Пожалуйста, используйте английскую раскладку",
     passwordRequired: "Пароль обязателен",
     passwordTooShort: "Пароль должен содержать минимум 8 символов",
-    passwordTooLong: "Пароль не должен превышать 72 символа",
+    passwordTooLong: "Пароль не должен превышать 50 символов",
     passwordMissingRequirements: "Пароль должен содержать хотя бы одну заглавную букву, одну строчную букву и одну цифру",
+    passwordHasSpaces: "Пароль не может начинаться или заканчиваться пробелами",
     displayNameRequired: "Имя обязательно",
     displayNameTooShort: "Имя должно содержать минимум 2 символа",
-    displayNameTooLong: "Имя не должно превышать 100 символов",
+    displayNameTooLong: "Имя не должно превышать 50 символов",
+    displayNameHasSpaces: "Имя не может начинаться или заканчиваться пробелами",
     usernameAlreadyExists: "Логин уже занят",
 
     // Landing Page
