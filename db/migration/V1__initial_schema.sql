@@ -1,6 +1,7 @@
 -- V1: Initial schema — movies, users, groups, group_members, watch_entries, entry_ratings, poster_images, user_settings
--- Converted from EF Core migration 20260201150328_initi
+-- Converted from EF Core initial migration (20260201150328_initi)
 -- Uses IF NOT EXISTS for production safety
+-- Note: invite_code is NOT NULL here to match original schema; V2 makes it nullable
 
 -- movies
 CREATE TABLE IF NOT EXISTS movies (
