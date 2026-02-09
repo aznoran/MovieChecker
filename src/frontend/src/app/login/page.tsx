@@ -142,6 +142,7 @@ function LoginForm() {
     const handleBlur = (field: string) => {
         setTouched((prev) => ({...prev, [field]: true}));
     };
+    console.log("ASa")
 
     const parseBackendError = (err: unknown): string => {
         if (err instanceof AxiosError && err.response?.data) {
@@ -168,6 +169,9 @@ function LoginForm() {
                     setFieldErrors(newFieldErrors);
                     return t("fixValidationErrors");
                 }
+            }
+            else if (data.message) {
+                return data.message;
             }
         }
 
