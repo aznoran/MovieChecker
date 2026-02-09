@@ -80,7 +80,7 @@ export function ImageEditor({
     open,
     onOpenChange,
     onConfirm,
-    aspectRatio = 2 / 3,
+    aspectRatio = 4 / 3,
 }: ImageEditorProps) {
     const {t} = useLocale();
     const [crop, setCrop] = useState({x: 0, y: 0});

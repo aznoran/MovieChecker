@@ -368,7 +368,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             </FieldDescription>
                         </FieldContent>
                         {posterPreview ? (
-                            <div className="relative w-full aspect-[2/3] rounded-lg overflow-hidden border">
+                            <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border">
                                 <img
                                     src={posterPreview}
                                     alt="Poster preview"
