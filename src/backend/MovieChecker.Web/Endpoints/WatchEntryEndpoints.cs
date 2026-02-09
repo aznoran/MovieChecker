@@ -253,6 +253,12 @@ public static class WatchEntryEndpoints
                 .Where(g => g.GroupType == GroupType.Personal && viewerUserIds.Contains(g.CreatedByUserId))
                 .ToDictionaryAsync(g => g.CreatedByUserId);
 
+            // Pre-fetch existing WatchEntryGroup links for this entry to avoid N+1 queries
+            var existingLinks = await db.WatchEntryGroups
+                .Where(weg => weg.WatchEntryId == entry.Id)
+                .Select(weg => weg.GroupId)
+                .ToHashSetAsync();
+
             foreach (var viewerUserId in viewerUserIds)
             {
                 // Check if user has disabled auto-add to personal
@@ -269,17 +275,14 @@ public static class WatchEntryEndpoints
 
                 if (!preventAutoAdd && personalGroups.TryGetValue(viewerUserId, out var personalGroup))
                 {
-                    // Check if entry is already linked to this personal group
-                    var alreadyLinked = await db.WatchEntryGroups
-                        .AnyAsync(weg => weg.WatchEntryId == entry.Id && weg.GroupId == personalGroup.Id);
-
-                    if (!alreadyLinked)
+                    if (!existingLinks.Contains(personalGroup.Id))
                     {
                         db.WatchEntryGroups.Add(new WatchEntryGroup
                         {
                             WatchEntryId = entry.Id,
                             GroupId = personalGroup.Id
                         });
+                        existingLinks.Add(personalGroup.Id);
                     }
                 }
             }

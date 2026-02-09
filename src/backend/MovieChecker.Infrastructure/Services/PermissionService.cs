@@ -47,6 +47,8 @@ public class PermissionService
             if (member == null) return false;
             if (member.Role == GroupRole.Viewer) return false;
             if (member.Role >= GroupRole.Admin) return true;
+
+            // Members can only edit their own entries
             return entry.UserId == userId;
         }
 
