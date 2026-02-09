@@ -155,10 +155,12 @@ export function Header() {
         }
         if (newGroupName.length > 50) {
             setGroupNameError(t("groupNameTooLong"));
+            toast.error(t("groupNameTooLong"), { position: "top-center" });
             return;
         }
         if (newGroupPassword && newGroupPassword.length > 50) {
             setGroupPasswordError(t("groupPasswordTooLong"));
+            toast.error(t("groupPasswordTooLong"), { position: "top-center" });
             return;
         }
         try {

@@ -142,7 +142,6 @@ function LoginForm() {
     const handleBlur = (field: string) => {
         setTouched((prev) => ({...prev, [field]: true}));
     };
-    console.log("ASa")
 
     const parseBackendError = (err: unknown): string => {
         if (err instanceof AxiosError && err.response?.data) {
