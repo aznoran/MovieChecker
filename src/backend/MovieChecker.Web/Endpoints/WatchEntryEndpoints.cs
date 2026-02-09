@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
-using MovieChecker.Domain.Models;
+using MovieChecker.Domain.Models.Dtos;
+using MovieChecker.Domain.Models.Entities;
+using MovieChecker.Domain.Models.Enums;
 using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
@@ -14,13 +16,51 @@ public static class WatchEntryEndpoints
     {
         var group = app.MapGroup("/api/watch-entries").RequireAuthorization();
 
-        group.MapGet("/", GetAll);
-        group.MapGet("/{id:int}", GetById);
-        group.MapPost("/", Create);
-        group.MapPut("/{id:int}", Update);
-        group.MapDelete("/{id:int}", Delete);
-        group.MapGet("/stats", GetStats);
-        group.MapPost("/{id:int}/rate", Rate);
+        group.MapGet("/", GetAll)
+            .Produces<List<WatchEntryDto>>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .WithSummary("Get all watch entries")
+            .WithDescription("Returns all watch entries for the current user or group");
+
+        group.MapGet("/{id:int}", GetById)
+            .Produces<WatchEntryDto>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Get watch entry by ID")
+            .WithDescription("Returns a single watch entry by its ID");
+
+        group.MapPost("/", Create)
+            .Produces<WatchEntryDto>(StatusCodes.Status201Created)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .WithSummary("Create a new watch entry")
+            .WithDescription("Creates a new watch entry for a movie");
+
+        group.MapPut("/{id:int}", Update)
+            .Produces<WatchEntryDto>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Update a watch entry")
+            .WithDescription("Updates an existing watch entry");
+
+        group.MapDelete("/{id:int}", Delete)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Delete a watch entry")
+            .WithDescription("Deletes a watch entry by its ID");
+
+        group.MapGet("/stats", GetStats)
+            .Produces<StatsDto>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .WithSummary("Get watch statistics")
+            .WithDescription("Returns statistics for the current user's or group's watch entries");
+
+        group.MapPost("/{id:int}/rate", Rate)
+            .Produces<RatingResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Rate a watch entry")
+            .WithDescription("Adds or updates a rating for a watch entry");
     }
 
     private static int GetUserId(ClaimsPrincipal user) =>
@@ -75,7 +115,7 @@ public static class WatchEntryEndpoints
         {
             // Verify user can view this group
             if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsView"] });
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsView"]));
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
@@ -118,7 +158,7 @@ public static class WatchEntryEndpoints
             var isMember = await db.GroupMembers
                 .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
             if (!isMember)
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsViewEntry"] });
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsViewEntry"]));
         }
         else if (entry.UserId != userId)
         {
@@ -137,25 +177,25 @@ public static class WatchEntryEndpoints
         var userId = GetUserId(user);
 
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
-            return Results.BadRequest(new { message = localizer["MovieNotFound"] });
+            return Results.BadRequest(new ErrorResponse(localizer["MovieNotFound"]));
 
         // Validate group membership if group specified
         if (request.GroupId.HasValue)
         {
             // Check if user can create in this group
             if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsCreate"] });
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsCreate"]));
 
             // Check duplicate within group
             if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.GroupId == request.GroupId.Value))
-                return Results.BadRequest(new { message = localizer["EntryAlreadyExistsGroup"] });
+                return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExistsGroup"]));
         }
         else
         {
             // Check duplicate for personal entries
             if (await db.WatchEntries.AnyAsync(w =>
                     w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
-                return Results.BadRequest(new { message = localizer["EntryAlreadyExists"] });
+                return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExists"]));
         }
 
         var entry = new WatchEntry
@@ -340,7 +380,7 @@ public static class WatchEntryEndpoints
 
         // Check edit permission
         if (!await PermissionService.CanEditEntry(db, userId, entry))
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsEdit"] });
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
         if (request.MyRating.HasValue) entry.MyRating = Math.Clamp(request.MyRating.Value, 1, 10);
@@ -439,7 +479,7 @@ public static class WatchEntryEndpoints
         if (entry.GroupId.HasValue)
         {
             if (!await PermissionService.CanViewGroup(db, userId, entry.GroupId.Value))
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsRate"] });
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
         }
         else if (entry.UserId != userId)
         {
@@ -463,7 +503,7 @@ public static class WatchEntryEndpoints
         }
 
         await db.SaveChangesAsync();
-        return Results.Ok(new { rating });
+        return Results.Ok(new RatingResponse(rating));
     }
 
     private static async Task<IResult> Delete(
@@ -477,7 +517,7 @@ public static class WatchEntryEndpoints
 
         // Check delete permission
         if (!await PermissionService.CanDeleteEntry(db, userId, entry))
-            return Results.BadRequest(new { message = localizer["InsufficientPermissionsDelete"] });
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsDelete"]));
 
         db.WatchEntries.Remove(entry);
         await db.SaveChangesAsync();
@@ -498,7 +538,7 @@ public static class WatchEntryEndpoints
         if (groupId.HasValue)
         {
             if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
-                return Results.BadRequest(new { message = localizer["InsufficientPermissionsStats"] });
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsStats"]));
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
