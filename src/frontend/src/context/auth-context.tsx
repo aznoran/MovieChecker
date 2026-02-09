@@ -59,6 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     const response = await apiLogin(username, password);
+    // Save to localStorage synchronously before state update
+    localStorage.setItem("token", response.token);
+    localStorage.setItem("user", JSON.stringify(response.user));
     setToken(response.token);
     setUser(response.user);
   };
@@ -69,6 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     displayName: string
   ) => {
     const response = await apiRegister(username, password, displayName);
+    // Save to localStorage synchronously before state update
+    localStorage.setItem("token", response.token);
+    localStorage.setItem("user", JSON.stringify(response.user));
     setToken(response.token);
     setUser(response.user);
   };
@@ -76,6 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     // Store logout timestamp to remember user was logged in
     localStorage.setItem("wasLoggedIn", new Date().toISOString());
+    // Remove token and user synchronously before state update
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("activeGroupId");
     setToken(null);
     setUser(null);
   };
