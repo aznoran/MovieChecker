@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
     public DbSet<EntryRating> EntryRatings => Set<EntryRating>();
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
+    public DbSet<WatchEntryGroup> WatchEntryGroups => Set<WatchEntryGroup>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

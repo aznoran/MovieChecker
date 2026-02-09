@@ -16,4 +16,5 @@ public class Group
 
     public User CreatedBy { get; set; } = null!;
     public ICollection<GroupMember> Members { get; set; } = [];
+    public ICollection<WatchEntryGroup> WatchEntryGroups { get; set; } = [];
 }

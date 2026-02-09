@@ -64,14 +64,25 @@ After running the SQL scripts, the repository owner should create an EF Core mig
 
 ```bash
 cd src/backend/MovieChecker.Web
-dotnet ef migrations add AddGroupType
+dotnet ef migrations add AddGroupTypeAndWatchEntryGroups
 ```
+
+### Step 6: Create `watch_entry_groups` junction table
+
+```bash
+psql -U your_user -d your_database -f 06_create_watch_entry_groups_table.sql
+```
+
+Creates the `watch_entry_groups` many-to-many junction table between `watch_entries` and `groups`. Populates it from existing entries that already have a `group_id`. This replaces the entry duplication approach — a single watch entry can now be linked to multiple groups (e.g., the group where it was created + the personal groups of viewers).
 
 ## Rollback
 
 If needed, you can reverse the migration (before running Step 5):
 
 ```sql
+-- Drop junction table (Step 6)
+DROP TABLE IF EXISTS watch_entry_groups;
+
 -- Move entries back to NULL group_id
 UPDATE watch_entries we
 SET group_id = NULL

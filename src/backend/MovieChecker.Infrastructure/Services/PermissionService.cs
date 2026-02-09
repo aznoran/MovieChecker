@@ -26,23 +26,41 @@ public class PermissionService
     /// </summary>
     public static async Task<bool> CanEditEntry(AppDbContext db, int userId, WatchEntry entry)
     {
-        // Personal entries: only owner can edit
+        // Personal entries (legacy with no group): only owner can edit
         if (!entry.GroupId.HasValue)
         {
+            // Check if this entry has any group links via junction table
+            var linkedGroupIds = await db.WatchEntryGroups
+                .Where(weg => weg.WatchEntryId == entry.Id)
+                .Select(weg => weg.GroupId)
+                .ToListAsync();
+
+            if (linkedGroupIds.Count == 0)
+                return entry.UserId == userId;
+
+            // Check role in any linked group
+            var member = await db.GroupMembers
+                .Where(m => linkedGroupIds.Contains(m.GroupId) && m.UserId == userId)
+                .OrderByDescending(m => m.Role)
+                .FirstOrDefaultAsync();
+
+            if (member == null) return false;
+            if (member.Role == GroupRole.Viewer) return false;
+            if (member.Role >= GroupRole.Admin) return true;
             return entry.UserId == userId;
         }
 
         // Group entries: check role
-        var member = await db.GroupMembers
+        var groupMember = await db.GroupMembers
             .FirstOrDefaultAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
 
-        if (member == null) return false;
+        if (groupMember == null) return false;
 
         // Viewers cannot edit
-        if (member.Role == GroupRole.Viewer) return false;
+        if (groupMember.Role == GroupRole.Viewer) return false;
 
         // Owner and Admin can edit all entries
-        if (member.Role >= GroupRole.Admin) return true;
+        if (groupMember.Role >= GroupRole.Admin) return true;
 
         // Members can only edit their own entries
         return entry.UserId == userId;
