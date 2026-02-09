@@ -1,13 +1,13 @@
--- Step 6: Create watch_entry_groups junction table for many-to-many relationship
--- This replaces the entry duplication logic with a link table
+-- V3: WatchEntryGroups junction table — many-to-many relationship between watch_entries and groups
+-- Replaces entry duplication with a link table
 
 CREATE TABLE IF NOT EXISTS watch_entry_groups (
     id SERIAL PRIMARY KEY,
     watch_entry_id integer NOT NULL,
     group_id integer NOT NULL,
-    CONSTRAINT fk_watch_entry_groups_watch_entry FOREIGN KEY (watch_entry_id)
+    CONSTRAINT fk_watch_entry_groups_watch_entries FOREIGN KEY (watch_entry_id)
         REFERENCES watch_entries (id) ON DELETE CASCADE,
-    CONSTRAINT fk_watch_entry_groups_group FOREIGN KEY (group_id)
+    CONSTRAINT fk_watch_entry_groups_groups FOREIGN KEY (group_id)
         REFERENCES groups (id) ON DELETE CASCADE
 );
 
