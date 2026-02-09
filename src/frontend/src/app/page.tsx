@@ -225,31 +225,28 @@ export default function HomePage() {
                                         </div>
                                     )}
 
-                                    <CardContent className="p-4 flex flex-col justify-between min-h-0">
-                                        <div>
+                                    <CardContent className="p-4 flex flex-col justify-between min-h-0 overflow-hidden">
+                                        <div className="min-w-0">
                                             <div className="flex items-start justify-between gap-2 mb-4">
-                                                <div className="min-w-0">
-                                                    <h3 className="font-semibold mb-2" title={entry.movie.title}>
-                                                        {entry.movie.title.length > 15 ? entry.movie.title.slice(0, 15) + "..." : entry.movie.title}
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="font-semibold mb-2 truncate" title={entry.movie.title}>
+                                                        {entry.movie.title}
                                                     </h3>
-                                                    <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-                                                        <Film className="h-3 w-3"/>
+                                                    <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap min-w-0">
+                                                        <Film className="h-3 w-3 shrink-0"/>
                                                         {contentTypeLabels[entry.movie.type]}
                                                         {entry.movie.year && (
                                                             <>
-                                                                <Calendar className="h-3 w-3 ml-1"/>
+                                                                <Calendar className="h-3 w-3 ml-1 shrink-0"/>
                                                                 {entry.movie.year}
                                                             </>
                                                         )}
-                                                        {entry.movie.genre && (() => {
-                                                            const genreText = translateGenre(entry.movie.genre, locale);
-                                                            return (
-                                                                <>
-                                                                    <Tag className="h-3 w-3 ml-1"/>
-                                                                    {genreText.length > 20 ? genreText.slice(0, 20) + "..." : genreText}
-                                                                </>
-                                                            );
-                                                        })()}
+                                                        {entry.movie.genre && (
+                                                            <>
+                                                                <Tag className="h-3 w-3 ml-1 shrink-0"/>
+                                                                <span className="truncate">{translateGenre(entry.movie.genre, locale)}</span>
+                                                            </>
+                                                        )}
                                                     </p>
                                                 </div>
                                                 {entry.emotion !== undefined && entry.emotion !== null && (
@@ -305,11 +302,11 @@ export default function HomePage() {
                                                 return (
                                                     <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm mb-4">
                                                         {sorted.slice(0, 3).map((r) => (
-                                                            <span key={r.id} className="flex items-center gap-1">
-                                                              <Star className="h-3.5 w-3.5 text-yellow-400"/>
+                                                            <span key={r.id} className="flex items-center gap-1 min-w-0">
+                                                              <Star className="h-3.5 w-3.5 text-yellow-400 shrink-0"/>
                                                               <span
-                                                                  className="text-muted-foreground">{r.displayName}:</span>
-                                                              <strong>{r.rating}/10</strong>
+                                                                  className="text-muted-foreground truncate max-w-[80px]">{r.displayName}:</span>
+                                                              <strong className="shrink-0">{r.rating}/10</strong>
                                                             </span>
                                                         ))}
                                                         {sorted.length > 3 && (
@@ -321,10 +318,16 @@ export default function HomePage() {
                                                 );
                                             })()}
 
+                                            {entry.movie.description && (
+                                                <p className="text-xs text-muted-foreground mb-4 break-words line-clamp-2" title={entry.movie.description}>
+                                                    {entry.movie.description.length > 100 ? entry.movie.description.slice(0, 100) + "..." : entry.movie.description}
+                                                </p>
+                                            )}
+
                                             {entry.comment && (
-                                                <p className="text-sm text-muted-foreground line-clamp-2 flex items-start gap-1">
+                                                <p className="text-sm text-muted-foreground line-clamp-2 break-words flex items-start gap-1">
                                                     <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0"/>
-                                                    {entry.comment}
+                                                    <span className="min-w-0 break-words">{entry.comment.length > 100 ? entry.comment.slice(0, 100) + "..." : entry.comment}</span>
                                                 </p>
                                             )}
                                         </div>

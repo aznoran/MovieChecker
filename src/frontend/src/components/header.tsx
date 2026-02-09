@@ -803,9 +803,9 @@ export function Header() {
                                             return (
                                                 <FieldGroup key={g.id}
                                                             className="bg-muted/30 border border-border/50 rounded-xl p-4 hover:bg-muted/40 transition-colors">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className="flex items-center gap-1.5">
+                                                    <div className="flex items-center justify-between mb-2 gap-2">
+                                                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1.5 shrink-0">
                                                                 {g.groupType === GroupType.Private ? (
                                                                     <div
                                                                         className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -826,13 +826,13 @@ export function Header() {
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <div className="flex flex-col">
-                                                                <div className="flex items-center gap-2">
+                                                            <div className="flex flex-col min-w-0">
+                                                                <div className="flex items-center gap-2 min-w-0">
                                                             <span
-                                                                className="font-semibold text-sm">{g.name}</span>
+                                                                className="font-semibold text-sm truncate" title={g.name}>{g.name}</span>
                                                                     {isOwner &&
                                                                         <Crown
-                                                                            className="h-3.5 w-3.5 text-yellow-500"/>}
+                                                                            className="h-3.5 w-3.5 text-yellow-500 shrink-0"/>}
                                                                 </div>
                                                                 {g.groupType === GroupType.Private && (
                                                                     <span
