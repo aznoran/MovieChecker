@@ -478,7 +478,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                     }}
                                     required
                                     autoFocus
-                                    maxLength={255}
                                     aria-invalid={!!validationErrors.title}
                                 />
                                 {validationErrors.title && <FieldError>{validationErrors.title}</FieldError>}
@@ -554,7 +553,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                     handleFieldChange("description", e.target.value);
                                 }}
                                 rows={2}
-                                maxLength={1000}
                                 aria-invalid={!!validationErrors.description}
                             />
                             {validationErrors.description && <FieldError>{validationErrors.description}</FieldError>}
@@ -981,7 +979,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                     handleFieldChange("comment", e.target.value);
                                 }}
                                 rows={2}
-                                maxLength={1000}
                                 placeholder={t("commentPlaceholder")}
                                 aria-invalid={!!validationErrors.comment}
                             />

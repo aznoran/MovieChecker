@@ -229,8 +229,8 @@ export default function HomePage() {
                                         <div>
                                             <div className="flex items-start justify-between gap-2 mb-4">
                                                 <div className="min-w-0">
-                                                    <h3 className="font-semibold truncate mb-2">
-                                                        {entry.movie.title}
+                                                    <h3 className="font-semibold mb-2" title={entry.movie.title}>
+                                                        {entry.movie.title.length > 15 ? entry.movie.title.slice(0, 15) + "..." : entry.movie.title}
                                                     </h3>
                                                     <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
                                                         <Film className="h-3 w-3"/>
@@ -244,7 +244,9 @@ export default function HomePage() {
                                                         {entry.movie.genre && (
                                                             <>
                                                                 <Tag className="h-3 w-3 ml-1"/>
-                                                                {translateGenre(entry.movie.genre, locale)}
+                                                                {translateGenre(entry.movie.genre, locale).length > 20
+                                                                    ? translateGenre(entry.movie.genre, locale).slice(0, 20) + "..."
+                                                                    : translateGenre(entry.movie.genre, locale)}
                                                             </>
                                                         )}
                                                     </p>

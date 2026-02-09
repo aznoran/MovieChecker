@@ -266,6 +266,12 @@ const ru: Record<TranslationKeys, string> = {
     invalidTimeComponent: "Должно быть от 0 до 59",
     invalidRating: "Оценка должна быть от 1 до 10",
     fixValidationErrors: "Исправьте ошибки в форме",
+    groupNameTooLong: "Название группы слишком длинное (макс. 50 символов)",
+    groupPasswordTooLong: "Пароль слишком длинный (макс. 50 символов)",
+    genreTooLong: "Название жанра слишком длинное (макс. 50 символов)",
+    switchToPrivate: "Сделать приватной",
+    switchToPublic: "Сделать публичной",
+    setPasswordForPrivate: "Установите пароль для приватной группы (опционально)",
 
     // Registration Validation Errors
     usernameRequired: "Логин обязателен",

@@ -264,6 +264,12 @@ const en = {
     invalidTimeComponent: "Must be between 0 and 59",
     invalidRating: "Rating must be between 1 and 10",
     fixValidationErrors: "Please fix validation errors",
+    groupNameTooLong: "Group name is too long (max 50 characters)",
+    groupPasswordTooLong: "Password is too long (max 50 characters)",
+    genreTooLong: "Genre name is too long (max 50 characters)",
+    switchToPrivate: "Switch to Private",
+    switchToPublic: "Switch to Public",
+    setPasswordForPrivate: "Set password for private group (optional)",
 
     // Registration Validation Errors
     usernameRequired: "Username is required",

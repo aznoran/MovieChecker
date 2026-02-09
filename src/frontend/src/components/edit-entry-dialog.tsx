@@ -807,7 +807,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                     handleFieldChange("comment", e.target.value);
                                 }}
                                 rows={3}
-                                maxLength={1000}
                                 placeholder={t("commentPlaceholder")}
                                 aria-invalid={!!validationErrors.comment}
                             />

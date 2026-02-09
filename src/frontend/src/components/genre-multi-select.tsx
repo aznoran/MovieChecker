@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus } from "lucide-react";
+import { FieldError } from "@/components/ui/field";
 import en from "@/lib/i18n/en";
 import type { TranslationKeys } from "@/lib/i18n/en";
 
@@ -44,6 +45,7 @@ interface Props {
 export function GenreMultiSelect({ value, onChange }: Props) {
   const { t } = useLocale();
   const [customInput, setCustomInput] = useState("");
+  const [genreError, setGenreError] = useState("");
 
   // Selected values are stored in English for preset genres
   const selected = value
@@ -67,7 +69,11 @@ export function GenreMultiSelect({ value, onChange }: Props) {
   const addCustom = () => {
     const trimmed = customInput.trim();
     if (!trimmed || selected.includes(trimmed)) return;
-    if (trimmed.length > 50) return;
+    if (trimmed.length > 50) {
+      setGenreError(t("genreTooLong"));
+      return;
+    }
+    setGenreError("");
     onChange([...selected, trimmed].join(", "));
     setCustomInput("");
   };
@@ -115,25 +121,31 @@ export function GenreMultiSelect({ value, onChange }: Props) {
           ))}
       </div>
 
-      <div className="flex gap-2">
-        <Input
-          value={customInput}
-          onChange={(e) => setCustomInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={t("genrePlaceholder")}
-          maxLength={50}
-          className="h-8 text-sm"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 px-2 shrink-0"
-          onClick={addCustom}
-          disabled={!customInput.trim()}
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
+      <div className="space-y-1">
+        <div className="flex gap-2">
+          <Input
+            value={customInput}
+            onChange={(e) => {
+              setCustomInput(e.target.value);
+              setGenreError(e.target.value.trim().length > 50 ? t("genreTooLong") : "");
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={t("genrePlaceholder")}
+            className="h-8 text-sm"
+            aria-invalid={!!genreError}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 shrink-0"
+            onClick={addCustom}
+            disabled={!customInput.trim() || !!genreError}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        {genreError && <FieldError>{genreError}</FieldError>}
       </div>
     </div>
   );
