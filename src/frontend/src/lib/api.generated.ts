@@ -19,6 +19,13 @@ export enum WatchStatus {
 }
 
 /** @format int32 */
+export enum GroupType {
+  Value0 = 0,
+  Value1 = 1,
+  Value2 = 2,
+}
+
+/** @format int32 */
 export enum GroupRole {
   Value0 = 0,
   Value1 = 1,
@@ -126,6 +133,7 @@ export interface GroupDto {
   /** @format int32 */
   createdByUserId?: number;
   isPrivate?: boolean;
+  groupType?: GroupType;
   defaultRole?: GroupRole;
   members?: GroupMemberDto[] | null;
   /** @format date-time */

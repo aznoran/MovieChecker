@@ -95,6 +95,10 @@ function LoginForm() {
                 errors.password = t("passwordTooShort");
             } else if (password.length > 50) {
                 errors.password = t("passwordTooLong");
+            } else if (/[а-яА-ЯёЁ]/.test(password)) {
+                errors.password  = t("passwordHasCyrillic");
+            } else if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+                errors.username = t("passwordInvalidChars");
             } else {
                 const hasUpper = /[A-Z]/.test(password);
                 const hasLower = /[a-z]/.test(password);
@@ -164,15 +168,6 @@ function LoginForm() {
                     setFieldErrors(newFieldErrors);
                     return t("fixValidationErrors");
                 }
-            }
-
-            // Handle simple message (e.g., "Username already exists")
-            if (data.message) {
-                if (data.message.toLowerCase().includes("username already exists")) {
-                    setFieldErrors({username: t("usernameAlreadyExists")});
-                    return t("usernameAlreadyExists");
-                }
-                return data.message;
             }
         }
 

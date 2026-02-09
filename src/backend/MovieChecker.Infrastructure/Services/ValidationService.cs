@@ -44,6 +44,10 @@ public class ValidationService
         {
             errors.Add(new ValidationError("Password", "Password must not exceed 50 characters"));
         }
+        else if (!Regex.IsMatch(password, @"^[a-zA-Z0-9_-]+$"))
+        {
+            errors.Add(new ValidationError("Password", "Password can only contain letters, numbers, underscores, and hyphens"));
+        }
         else
         {
             var hasUpper = Regex.IsMatch(password, @"[A-Z]");

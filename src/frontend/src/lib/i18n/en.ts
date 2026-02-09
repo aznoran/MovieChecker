@@ -264,6 +264,8 @@ const en = {
     usernameTooLong: "Username must not exceed 50 characters",
     usernameInvalidChars: "Username can only contain letters, numbers, underscores, and hyphens",
     usernameHasCyrillic: "Username contains Cyrillic letters. Please use English layout",
+    passwordHasCyrillic: "Password contains Cyrillic letters. Please use English layout",
+    passwordInvalidChars: "Password can only contain letters, numbers, underscores, and hyphens",
     passwordRequired: "Password is required",
     passwordTooShort: "Password must be at least 8 characters",
     passwordTooLong: "Password must not exceed 50 characters",
