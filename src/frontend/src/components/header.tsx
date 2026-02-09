@@ -752,6 +752,7 @@ export function Header() {
                                                     </div>
 
                                                     {/* Invite code */}
+                                                    {g.inviteCode && (
                                                     <div
                                                         className="flex items-center gap-2 bg-background/60 p-2 rounded-lg border border-border/40">
                                                         <code
@@ -762,12 +763,13 @@ export function Header() {
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-7 w-7 p-0 hover:bg-primary/10"
-                                                            onClick={() => handleCopyCode(g.inviteCode)}
+                                                            onClick={() => handleCopyCode(g.inviteCode!)}
                                                         >
                                                             {copied ? <Check className="h-3.5 w-3.5 text-primary"/> :
                                                                 <Copy className="h-3.5 w-3.5"/>}
                                                         </Button>
                                                     </div>
+                                                    )}
 
 
                                                     {/* OTP Management for private groups (Owner/Admin only) */}
