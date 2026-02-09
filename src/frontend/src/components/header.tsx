@@ -430,26 +430,44 @@ export function Header() {
                                                 value={newGroupName}
                                                 onChange={(e) => setNewGroupName(e.target.value)}
                                                 placeholder={t("groupName")}
+                                                maxLength={50}
                                                 className="h-10 bg-background border-border/60 focus-visible:ring-primary/20"
                                                 onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
                                             />
                                         </Field>
 
-                                        <Field orientation="horizontal" className="items-center py-1">
-                                            <Checkbox
-                                                id="isPrivate"
-                                                checked={newGroupIsPrivate}
-                                                onCheckedChange={(checked) => setNewGroupIsPrivate(checked as boolean)}
-                                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                            />
-                                            <FieldLabel
-                                                htmlFor="isPrivate"
-                                                className="cursor-pointer flex items-center gap-2 text-sm font-medium"
-                                            >
-                                                {newGroupIsPrivate ? <Lock color="red" className="h-4 w-4 text-primary"/> :
-                                                    <LockOpen color="green" className="h-4 w-4 text-muted-foreground"/>}
-                                                {newGroupIsPrivate ? t("privateGroup") : t("publicGroup")}
+                                        <Field>
+                                            <FieldLabel className="text-sm font-medium">
+                                                {t("type")}
                                             </FieldLabel>
+                                            <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+                                                <Button
+                                                    type="button"
+                                                    variant={!newGroupIsPrivate ? "default" : "ghost"}
+                                                    size="sm"
+                                                    className={cn(
+                                                        "h-9 flex-1 transition-all",
+                                                        !newGroupIsPrivate && "shadow-sm"
+                                                    )}
+                                                    onClick={() => setNewGroupIsPrivate(false)}
+                                                >
+                                                    <LockOpen className="h-3.5 w-3.5 mr-2 text-green-500"/>
+                                                    {t("publicGroup")}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant={newGroupIsPrivate ? "default" : "ghost"}
+                                                    size="sm"
+                                                    className={cn(
+                                                        "h-9 flex-1 transition-all",
+                                                        newGroupIsPrivate && "shadow-sm"
+                                                    )}
+                                                    onClick={() => setNewGroupIsPrivate(true)}
+                                                >
+                                                    <Lock className="h-3.5 w-3.5 mr-2 text-red-500"/>
+                                                    {t("privateGroup")}
+                                                </Button>
+                                            </div>
                                         </Field>
 
                                         {newGroupIsPrivate && (
@@ -464,6 +482,7 @@ export function Header() {
                                                         value={newGroupPassword}
                                                         onChange={(e) => setNewGroupPassword(e.target.value)}
                                                         placeholder={t("groupPassword")}
+                                                        maxLength={50}
                                                         className="h-10 bg-background border-border/60 focus-visible:ring-primary/20"
                                                         onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
                                                     />
@@ -872,6 +891,7 @@ export function Header() {
                                                                                 value={newPassword}
                                                                                 onChange={(e) => setNewPassword(e.target.value)}
                                                                                 placeholder={t("newPassword")}
+                                                                                maxLength={50}
                                                                                 className="h-9 bg-background border-border/60"
                                                                             />
                                                                             <FieldDescription className="text-xs">

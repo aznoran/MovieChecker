@@ -182,6 +182,14 @@ public static class WatchEntryEndpoints
     {
         var userId = GetUserId(user);
 
+        // Validate field lengths
+        if (request.Comment != null && request.Comment.Length > 1000)
+            return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
+
+        // Validate emotion - cannot set emotion for Planned or Watching status
+        if (request.Emotion.HasValue && (request.Status == WatchStatus.Planned || request.Status == WatchStatus.Watching))
+            return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
+
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
             return Results.BadRequest(new ErrorResponse(localizer["MovieNotFound"]));
 
@@ -357,6 +365,15 @@ public static class WatchEntryEndpoints
         // Check edit permission
         if (!await PermissionService.CanEditEntry(db, userId, entry))
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
+
+        // Validate field lengths
+        if (request.Comment != null && request.Comment.Length > 1000)
+            return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
+
+        // Validate emotion - cannot set emotion for Planned or Watching status
+        var effectiveStatus = request.Status ?? entry.Status;
+        if (request.Emotion.HasValue && (effectiveStatus == WatchStatus.Planned || effectiveStatus == WatchStatus.Watching))
+            return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
         if (request.MyRating.HasValue) entry.MyRating = Math.Clamp(request.MyRating.Value, 1, 10);

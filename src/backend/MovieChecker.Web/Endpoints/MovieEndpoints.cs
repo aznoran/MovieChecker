@@ -94,6 +94,14 @@ public static class MovieEndpoints
 
     private static async Task<IResult> Create(CreateMovieRequest request, AppDbContext db)
     {
+        // Validate field lengths
+        if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Length > 255)
+            return Results.BadRequest(new ErrorResponse("Title is required and must not exceed 255 characters"));
+        if (request.Description != null && request.Description.Length > 1000)
+            return Results.BadRequest(new ErrorResponse("Description must not exceed 1000 characters"));
+        if (request.Genre != null && request.Genre.Length > 500)
+            return Results.BadRequest(new ErrorResponse("Genre must not exceed 500 characters"));
+
         var movie = new Movie
         {
             Title = request.Title,

@@ -167,6 +167,12 @@ public static class GroupEndpoints
     {
         var userId = GetUserId(user);
 
+        // Validate field lengths
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 50)
+            return Results.BadRequest(new ErrorResponse("Group name is required and must not exceed 50 characters"));
+        if (request.Password != null && request.Password.Length > 50)
+            return Results.BadRequest(new ErrorResponse("Password must not exceed 50 characters"));
+
         // For public groups, default role must be Viewer
         // For private groups, use the requested default role or default to Member
         var defaultRole = request.IsPrivate 
@@ -604,6 +610,12 @@ public static class GroupEndpoints
         if (!group.IsPrivate)
         {
             return Results.BadRequest(new ErrorResponse(localizer["OnlyPrivateGroupsPassword"]));
+        }
+
+        // Validate password length
+        if (request.NewPassword != null && request.NewPassword.Length > 50)
+        {
+            return Results.BadRequest(new ErrorResponse("Password must not exceed 50 characters"));
         }
 
         // Update password (null removes it, making group OTP-only)
