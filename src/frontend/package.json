@@ -6,7 +6,8 @@
     "dev": "npx kill-port 3000 && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate_api": "npx swagger-typescript-api generate -p http://localhost:5000/swagger/v1/swagger.json -o src/lib -n api.generated.ts --axios"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using MovieChecker.Domain.Models;
+using MovieChecker.Domain.Models.Dtos;
+using MovieChecker.Domain.Models.Entities;
 using MovieChecker.Infrastructure.Data;
 
 namespace MovieChecker.Web.Endpoints;
@@ -11,8 +12,15 @@ public static class UserSettingsEndpoints
     {
         var group = app.MapGroup("/api/user-settings").RequireAuthorization();
 
-        group.MapGet("/", GetSettings);
-        group.MapPut("/", UpdateSettings);
+        group.MapGet("/", GetSettings)
+            .Produces<UserSettingsDto>(StatusCodes.Status200OK)
+            .WithSummary("Get user settings")
+            .WithDescription("Returns current user's settings");
+
+        group.MapPut("/", UpdateSettings)
+            .Produces<UserSettingsDto>(StatusCodes.Status200OK)
+            .WithSummary("Update user settings")
+            .WithDescription("Updates current user's settings");
     }
 
     private static int GetUserId(ClaimsPrincipal user) =>
