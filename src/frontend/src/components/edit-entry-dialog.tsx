@@ -7,7 +7,7 @@ import {useLocale} from "@/context/locale-context";
 import {useAuth} from "@/context/auth-context";
 import {useGroup} from "@/context/group-context";
 import {ImageEditor} from "@/components/image-editor";
-import {ContentType, WatchEntry} from "@/types";
+import {ContentType, WatchEntry, GroupType} from "@/types";
 import {
     WatchStatus,
     Emotion,
@@ -69,7 +69,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const {locale, t} = useLocale();
     const {user} = useAuth();
     const {activeGroup} = useGroup();
-    const isGroupMode = !!entry.groupId && !!activeGroup;
+    const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     const [status, setStatus] = useState<WatchStatus>(entry.status);
     // Personal mode: single rating

@@ -43,6 +43,8 @@ const statusColors: Record<WatchStatus, string> = {
     [WatchStatus.Dropped]: "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function HomePage() {
     const {isAuthenticated, isLoading: authLoading} = useAuth();
     const {locale, t} = useLocale();
@@ -94,22 +96,24 @@ export default function HomePage() {
 
     if (!isAuthenticated) {
         // Check if user was recently logged in (within last 30 days)
-        const RECENT_LOGIN_WINDOW_DAYS = 30;
-        const wasLoggedIn = localStorage.getItem("wasLoggedIn");
-        if (wasLoggedIn) {
-            try {
-                const logoutDate = new Date(wasLoggedIn);
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - RECENT_LOGIN_WINDOW_DAYS);
-                
-                if (!isNaN(logoutDate.getTime()) && logoutDate > thirtyDaysAgo) {
-                    // User was recently logged in, redirect to login
-                    router.push("/login");
-                    return null;
+        if (typeof window !== "undefined") {
+            const RECENT_LOGIN_WINDOW_DAYS = 30;
+            const wasLoggedIn = localStorage.getItem("wasLoggedIn");
+            if (wasLoggedIn) {
+                try {
+                    const logoutDate = new Date(wasLoggedIn);
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - RECENT_LOGIN_WINDOW_DAYS);
+                    
+                    if (!isNaN(logoutDate.getTime()) && logoutDate > thirtyDaysAgo) {
+                        // User was recently logged in, redirect to login
+                        router.push("/login");
+                        return null;
+                    }
+                } catch (error) {
+                    // Invalid date in localStorage, treat as new user
+                    console.warn("Invalid wasLoggedIn date in localStorage:", error);
                 }
-            } catch (error) {
-                // Invalid date in localStorage, treat as new user
-                console.warn("Invalid wasLoggedIn date in localStorage:", error);
             }
         }
         

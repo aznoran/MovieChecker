@@ -117,6 +117,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.GroupType,
             g.DefaultRole,
             g.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -147,6 +148,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.GroupType,
             g.DefaultRole,
             g.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -204,6 +206,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.GroupType,
             g.DefaultRole,
             [new GroupMemberDto(userId, displayName, GroupRole.Owner, DateTime.UtcNow)],
             g.CreatedAt
@@ -225,6 +228,10 @@ public static class GroupEndpoints
 
         if (group == null)
             return Results.Ok(new GroupInfoResponse(false, false, false, null));
+
+        // Cannot join personal groups
+        if (group.GroupType == GroupType.Personal)
+            return Results.BadRequest(new ErrorResponse(localizer["CannotJoinPersonalGroup"]));
 
         // Check if already a member
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
@@ -255,6 +262,10 @@ public static class GroupEndpoints
 
         if (group == null)
             return Results.NotFound(new ErrorResponse(localizer["InvalidInviteCode"]));
+
+        // Cannot join personal groups
+        if (group.GroupType == GroupType.Personal)
+            return Results.BadRequest(new ErrorResponse(localizer["CannotJoinPersonalGroup"]));
 
         // 2. Check password or OTP for private groups
         if (group.IsPrivate)
@@ -322,6 +333,7 @@ public static class GroupEndpoints
             updatedGroup.InviteCode,
             updatedGroup.CreatedByUserId,
             updatedGroup.IsPrivate,
+            updatedGroup.GroupType,
             updatedGroup.DefaultRole,
             updatedGroup.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -447,6 +459,7 @@ public static class GroupEndpoints
             group.InviteCode,
             group.CreatedByUserId,
             group.IsPrivate,
+            group.GroupType,
             group.DefaultRole,
             group.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -515,6 +528,7 @@ public static class GroupEndpoints
             group.InviteCode,
             group.CreatedByUserId,
             group.IsPrivate,
+            group.GroupType,
             group.DefaultRole,
             group.Members.Select(m => new GroupMemberDto(
                 m.UserId,

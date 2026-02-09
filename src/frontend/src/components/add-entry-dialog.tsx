@@ -13,6 +13,7 @@ import {
     WatchStatus,
     Emotion,
     EmotionEmojis,
+    GroupType,
 } from "@/types";
 import {
     getContentTypeLabels,
@@ -71,7 +72,7 @@ interface Props {
 export function AddEntryDialog({open, onOpenChange}: Props) {
     const {locale, t} = useLocale();
     const {activeGroupId, activeGroup} = useGroup();
-    const isGroupMode = !!activeGroupId && !!activeGroup;
+    const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [type, setType] = useState<ContentType>(ContentType.Movie);

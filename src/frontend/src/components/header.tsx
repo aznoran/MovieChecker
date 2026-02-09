@@ -65,7 +65,7 @@ import {
     Settings,
 } from "lucide-react";
 import type {Locale} from "@/lib/i18n";
-import {GroupRole} from "@/types";
+import {GroupRole, GroupType} from "@/types";
 import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {checkInviteCode} from "@/lib/api";
@@ -79,6 +79,7 @@ export function Header() {
     const {locale, setLocale, t} = useLocale();
     const {
         groups,
+        personalGroup,
         activeGroupId,
         setActiveGroupId,
         createGroup,
@@ -315,18 +316,20 @@ export function Header() {
                             })}
                         </nav>
                         <Select
-                            value={activeGroupId?.toString() ?? "personal"}
-                            onValueChange={(v) => setActiveGroupId(v === "personal" ? undefined : parseInt(v))}
+                            value={activeGroupId?.toString() ?? personalGroup?.id.toString() ?? ""}
+                            onValueChange={(v) => setActiveGroupId(parseInt(v))}
                         >
                             <SelectTrigger className="w-[180px] h-8 text-sm">
                                 <SelectValue/>
                             </SelectTrigger>
                             <SelectContent position="popper" sideOffset={4}>
-                                <SelectItem value="personal">
-                                    <User />
-                                    {t("personal")}
-                                </SelectItem>
-                                {groups.map((g) => (
+                                {personalGroup && (
+                                    <SelectItem value={personalGroup.id.toString()}>
+                                        <User />
+                                        {t("personal")}
+                                    </SelectItem>
+                                )}
+                                {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => (
                                     <SelectItem key={g.id} value={g.id.toString()}>
                                         <div className="flex items-center gap-1.5">
                                             {g.isPrivate ? <Lock color="red" className="h-3 w-3"/> :
@@ -679,7 +682,7 @@ export function Header() {
                                         {t("yourGroups")}
                                     </h3>
                                     <FieldGroup>
-                                        {groups.map((g) => {
+                                        {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => {
                                             const isOwner = user?.id === g.createdByUserId;
                                             const currentUserMember = g.members.find(m => m.userId === user?.id);
                                             const isAdmin = currentUserMember?.role === GroupRole.Admin;
@@ -752,6 +755,7 @@ export function Header() {
                                                     </div>
 
                                                     {/* Invite code */}
+                                                    {g.inviteCode && (
                                                     <div
                                                         className="flex items-center gap-2 bg-background/60 p-2 rounded-lg border border-border/40">
                                                         <code
@@ -762,12 +766,13 @@ export function Header() {
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-7 w-7 p-0 hover:bg-primary/10"
-                                                            onClick={() => handleCopyCode(g.inviteCode)}
+                                                            onClick={() => handleCopyCode(g.inviteCode!)}
                                                         >
                                                             {copied ? <Check className="h-3.5 w-3.5 text-primary"/> :
                                                                 <Copy className="h-3.5 w-3.5"/>}
                                                         </Button>
                                                     </div>
+                                                    )}
 
 
                                                     {/* OTP Management for private groups (Owner/Admin only) */}
