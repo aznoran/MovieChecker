@@ -1,12 +1,13 @@
 "use client";
 
 import { toast } from "sonner"
-import {useState, useRef, useEffect} from "react";
+import {useState, useRef, useEffect, useCallback} from "react";
 import {useMutation, useQueryClient} from "@tanstack/react-query";
 import {createMovie, createWatchEntry, uploadPoster} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {useAuth} from "@/context/auth-context";
+import {ImageEditor} from "@/components/image-editor";
 import {
     ContentType,
     WatchStatus,
@@ -48,6 +49,7 @@ import {
     MessageSquare,
     Loader2,
     ClipboardPaste,
+    Crop,
 } from "lucide-react";
 import * as React from "react";
 import {
@@ -84,6 +86,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const [comment, setComment] = useState("");
     const [posterFile, setPosterFile] = useState<File | null>(null);
     const [posterPreview, setPosterPreview] = useState<string | null>(null);
+    const [editorOpen, setEditorOpen] = useState(false);
+    const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -275,15 +279,24 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setImageFile(file);
+        openImageEditor(file);
     };
 
-    const setImageFile = (file: File) => {
-        setPosterFile(file);
+    const openImageEditor = (file: File) => {
         const reader = new FileReader();
-        reader.onloadend = () => setPosterPreview(reader.result as string);
+        reader.onloadend = () => {
+            setEditorImageSrc(reader.result as string);
+            setEditorOpen(true);
+        };
         reader.readAsDataURL(file);
     };
+
+    const handleEditorConfirm = useCallback((croppedFile: File) => {
+        setPosterFile(croppedFile);
+        const reader = new FileReader();
+        reader.onloadend = () => setPosterPreview(reader.result as string);
+        reader.readAsDataURL(croppedFile);
+    }, []);
 
     const handlePasteFromClipboard = async () => {
         try {
@@ -294,7 +307,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     const blob = await item.getType(imageType);
                     const ext = imageType.split("/")[1] || "png";
                     const file = new File([blob], `clipboard.${ext}`, {type: imageType});
-                    setImageFile(file);
+                    openImageEditor(file);
                     return;
                 }
             }
@@ -307,6 +320,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const removePoster = () => {
         setPosterFile(null);
         setPosterPreview(null);
+        setEditorImageSrc(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
@@ -357,6 +371,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     };
 
     return (
+        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -385,15 +400,37 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                     alt="Poster preview"
                                     className="w-full h-full object-cover"
                                 />
-                                <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-7 w-7"
-                                    onClick={removePoster}
-                                >
-                                    <X className="h-4 w-4"/>
-                                </Button>
+                                <div className="absolute top-2 right-2 flex gap-1">
+                                    {editorImageSrc && (
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            onClick={() => setEditorOpen(true)}
+                                        >
+                                            <Crop className="h-3.5 w-3.5"/>
+                                        </Button>
+                                    )}
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <ImagePlus className="h-3.5 w-3.5"/>
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={removePoster}
+                                    >
+                                        <X className="h-4 w-4"/>
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
                             <div className="flex gap-2">
@@ -977,5 +1014,14 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 </form>
             </DialogContent>
         </Dialog>
+            {editorImageSrc && (
+                <ImageEditor
+                    imageSrc={editorImageSrc}
+                    open={editorOpen}
+                    onOpenChange={setEditorOpen}
+                    onConfirm={handleEditorConfirm}
+                />
+            )}
+        </>
     );
 }
