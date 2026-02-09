@@ -1,0 +1,3 @@
+namespace MovieChecker.Domain.Models.Dtos;
+
+public sealed record TransferGroupRequest(int NewOwnerId);
