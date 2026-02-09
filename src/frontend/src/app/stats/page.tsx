@@ -388,7 +388,7 @@ export default function StatsPage() {
                             /* Personal mode: single rating card, prominent */
                             <Card>
                                 <CardContent className="pt-6">
-                                    <div className="flex items-start gap-2 mb-3">
+                                    <div className="flex items-center gap-2 mb-3">
                                         <Star className="h-5 w-5 text-yellow-400"/>
                                         <span className="text-sm font-medium text-muted-foreground">
                           {t("averageRating")}
