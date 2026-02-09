@@ -241,14 +241,15 @@ export default function HomePage() {
                                                                 {entry.movie.year}
                                                             </>
                                                         )}
-                                                        {entry.movie.genre && (
-                                                            <>
-                                                                <Tag className="h-3 w-3 ml-1"/>
-                                                                {translateGenre(entry.movie.genre, locale).length > 20
-                                                                    ? translateGenre(entry.movie.genre, locale).slice(0, 20) + "..."
-                                                                    : translateGenre(entry.movie.genre, locale)}
-                                                            </>
-                                                        )}
+                                                        {entry.movie.genre && (() => {
+                                                            const genreText = translateGenre(entry.movie.genre, locale);
+                                                            return (
+                                                                <>
+                                                                    <Tag className="h-3 w-3 ml-1"/>
+                                                                    {genreText.length > 20 ? genreText.slice(0, 20) + "..." : genreText}
+                                                                </>
+                                                            );
+                                                        })()}
                                                     </p>
                                                 </div>
                                                 {entry.emotion !== undefined && entry.emotion !== null && (
