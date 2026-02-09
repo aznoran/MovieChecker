@@ -1,10 +1,18 @@
 using MovieChecker.Domain.Models.Dtos;
+using MovieChecker.Infrastructure.Abstractions;
 using System.Text.RegularExpressions;
 
 namespace MovieChecker.Infrastructure.Services;
 
 public class ValidationService
 {
+    private readonly ILocalizationService _localizer;
+
+    public ValidationService(ILocalizationService localizer)
+    {
+        _localizer = localizer;
+    }
+
     public ValidationResult ValidateRegistration(string username, string password, string displayName)
     {
         var errors = new List<ValidationError>();
@@ -12,33 +20,37 @@ public class ValidationService
         // Username validation
         if (string.IsNullOrWhiteSpace(username))
         {
-            errors.Add(new ValidationError("Username", "Username is required"));
+            errors.Add(new ValidationError("Username", _localizer["UsernameRequired"]));
         }
         else if (username.Length < 3)
         {
-            errors.Add(new ValidationError("Username", "Username must be at least 3 characters"));
+            errors.Add(new ValidationError("Username", _localizer["UsernameTooShort"]));
         }
         else if (username.Length > 50)
         {
-            errors.Add(new ValidationError("Username", "Username must not exceed 50 characters"));
+            errors.Add(new ValidationError("Username", _localizer["UsernameTooLong"]));
         }
         else if (!Regex.IsMatch(username, @"^[a-zA-Z0-9_-]+$"))
         {
-            errors.Add(new ValidationError("Username", "Username can only contain letters, numbers, underscores, and hyphens"));
+            errors.Add(new ValidationError("Username", _localizer["UsernameInvalidChars"]));
         }
 
         // Password validation
         if (string.IsNullOrWhiteSpace(password))
         {
-            errors.Add(new ValidationError("Password", "Password is required"));
+            errors.Add(new ValidationError("Password", _localizer["PasswordRequired"]));
+        }
+        else if (password != password.Trim())
+        {
+            errors.Add(new ValidationError("Password", _localizer["PasswordHasSpaces"]));
         }
         else if (password.Length < 8)
         {
-            errors.Add(new ValidationError("Password", "Password must be at least 8 characters"));
+            errors.Add(new ValidationError("Password", _localizer["PasswordTooShort"]));
         }
-        else if (password.Length > 72)
+        else if (password.Length > 50)
         {
-            errors.Add(new ValidationError("Password", "Password must not exceed 72 characters (BCrypt limitation)"));
+            errors.Add(new ValidationError("Password", _localizer["PasswordTooLong"]));
         }
         else
         {
@@ -48,22 +60,26 @@ public class ValidationService
             
             if (!hasUpper || !hasLower || !hasDigit)
             {
-                errors.Add(new ValidationError("Password", "Password must contain at least one uppercase letter, one lowercase letter, and one digit"));
+                errors.Add(new ValidationError("Password", _localizer["PasswordMissingRequirements"]));
             }
         }
 
         // DisplayName validation
         if (string.IsNullOrWhiteSpace(displayName))
         {
-            errors.Add(new ValidationError("DisplayName", "Display name is required"));
+            errors.Add(new ValidationError("DisplayName", _localizer["DisplayNameRequired"]));
+        }
+        else if (displayName != displayName.Trim())
+        {
+            errors.Add(new ValidationError("DisplayName", _localizer["DisplayNameHasSpaces"]));
         }
         else if (displayName.Length < 2)
         {
-            errors.Add(new ValidationError("DisplayName", "Display name must be at least 2 characters"));
+            errors.Add(new ValidationError("DisplayName", _localizer["DisplayNameTooShort"]));
         }
-        else if (displayName.Length > 100)
+        else if (displayName.Length > 50)
         {
-            errors.Add(new ValidationError("DisplayName", "Display name must not exceed 100 characters"));
+            errors.Add(new ValidationError("DisplayName", _localizer["DisplayNameTooLong"]));
         }
 
         return new ValidationResult(errors.Count == 0, errors);

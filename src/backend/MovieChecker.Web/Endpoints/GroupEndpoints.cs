@@ -180,6 +180,7 @@ public static class GroupEndpoints
             InviteCode = GenerateInviteCode(),
             CreatedByUserId = userId,
             IsPrivate = request.IsPrivate,
+            GroupType = request.IsPrivate ? GroupType.Private : GroupType.Public,
             DefaultRole = defaultRole,
             PasswordHash = !string.IsNullOrWhiteSpace(request.Password) 
                 ? BCrypt.Net.BCrypt.HashPassword(request.Password) 
