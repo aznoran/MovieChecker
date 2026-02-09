@@ -136,6 +136,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             setSeconds((wt % 60).toString());
             setValidationErrors({});
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, entry]);
 
     // Validation errors
