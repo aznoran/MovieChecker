@@ -1,6 +1,22 @@
-using MovieChecker.Domain.Models.Enums;
+namespace MovieChecker.Domain.Models;
 
-namespace MovieChecker.Domain.Models.Entities;
+public enum WatchStatus
+{
+    Planned,
+    Watching,
+    Completed,
+    Dropped
+}
+
+public enum Emotion
+{
+    Joy,
+    Sadness,
+    Excitement,
+    Cringe,
+    Confused,
+    Neutral
+}
 
 public class WatchEntry
 {

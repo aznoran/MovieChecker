@@ -57,15 +57,7 @@ MovieChecker is a full-stack web application for tracking and managing movie wat
    - Custom hooks in `src/hooks`
 
 2. **API Communication**:
-   - **IMPORTANT**: All API calls MUST use the generated API client from `src/lib/api.generated.ts`
-   - The API client is generated from the backend's OpenAPI/Swagger specification using `swagger-typescript-api`
-   - The wrapper module `src/lib/api.ts` provides backward-compatible function exports that use the generated client internally
-   - When the backend API changes, regenerate the TypeScript client by running:
-     ```bash
-     cd src/frontend
-     npm run generate_api  # Backend must be running on port 5000
-     ```
-   - **NEVER** manually create API call functions - always regenerate from the OpenAPI spec
+   - All API calls should go through the centralized `src/lib/api.ts` module
    - Use TanStack Query for data fetching and caching
    - Handle loading and error states consistently
 
@@ -179,7 +171,6 @@ npm install          # Install dependencies
 npm run dev          # Development server
 npm run build        # Production build
 npm run lint         # Run ESLint
-npm run generate_api # Regenerate API client (backend must be running on port 5000)
 ```
 
 ## Testing Guidelines
@@ -199,40 +190,13 @@ npm run generate_api # Regenerate API client (backend must be running on port 50
 4. **Request the owner to create and apply database migration** (agent must NOT create migrations)
 5. Add endpoint methods in `MovieChecker.Web/Endpoints/`
 6. Map the endpoints in `Program.cs`
-7. Add OpenAPI documentation with `.Produces<T>()`, `.WithSummary()`, and `.WithDescription()`
-8. **Regenerate the frontend API client** after backend changes (see below)
-
-### Regenerating the Frontend API Client
-When backend API endpoints are added, modified, or removed:
-
-1. Ensure the backend is running on port 5000:
-   ```bash
-   cd src/backend/MovieChecker.Web
-   dotnet run
-   ```
-
-2. Regenerate the TypeScript API client:
-   ```bash
-   cd src/frontend
-   npm run generate_api
-   ```
-
-3. The generated file `src/lib/api.generated.ts` will be updated with:
-   - All DTOs and request/response types
-   - Typed API methods for each endpoint
-   - Proper TypeScript interfaces
-
-4. Update `src/lib/api.ts` if new wrapper functions are needed for backward compatibility
-
-**IMPORTANT**: Never manually edit `api.generated.ts` - it will be overwritten on regeneration.
 
 ### Adding a New Frontend Page
 1. Create page component in `src/app/[route]/page.tsx`
 2. Define types in `src/types/index.ts` if needed
-3. **Regenerate API client** if backend endpoints have changed: `npm run generate_api`
-4. Use functions from `src/lib/api.ts` which wrap the generated API client
-5. Use TanStack Query hooks for data fetching
-6. Add i18n labels in `src/lib/i18n/` if needed
+3. Create API functions in `src/lib/api.ts`
+4. Use TanStack Query hooks for data fetching
+5. Add i18n labels in `src/lib/i18n/` if needed
 
 ### Authentication
 - JWT tokens are issued by the backend on successful login

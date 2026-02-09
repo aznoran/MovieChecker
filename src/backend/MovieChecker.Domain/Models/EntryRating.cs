@@ -1,4 +1,4 @@
-namespace MovieChecker.Domain.Models.Entities;
+namespace MovieChecker.Domain.Models;
 
 public class EntryRating
 {

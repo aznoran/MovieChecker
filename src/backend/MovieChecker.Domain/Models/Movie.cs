@@ -1,6 +1,13 @@
-using MovieChecker.Domain.Models.Enums;
+namespace MovieChecker.Domain.Models;
 
-namespace MovieChecker.Domain.Models.Entities;
+public enum ContentType
+{
+    Movie,
+    Series,
+    Anime,
+    Cartoon,
+    Show
+}
 
 public class Movie
 {

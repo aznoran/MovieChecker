@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using MovieChecker.Domain.Models.Entities;
+using MovieChecker.Domain.Models;
 
 namespace MovieChecker.Infrastructure.Data;
 

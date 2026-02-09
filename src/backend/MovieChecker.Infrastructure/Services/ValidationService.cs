@@ -1,4 +1,4 @@
-using MovieChecker.Domain.Models.Dtos;
+using MovieChecker.Domain.Models;
 using System.Text.RegularExpressions;
 
 namespace MovieChecker.Infrastructure.Services;
