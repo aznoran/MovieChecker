@@ -6,7 +6,7 @@ import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
-import {EmotionEmojis} from "@/types";
+import {EmotionEmojis, GroupType} from "@/types";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {
@@ -77,7 +77,7 @@ export default function StatsPage() {
     const {t} = useLocale();
     const {activeGroupId, activeGroup} = useGroup();
     const router = useRouter();
-    const isGroupMode = !!activeGroupId && !!activeGroup;
+    const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     const {data: stats, isLoading, error, refetch} = useQuery({
         queryKey: ["stats", activeGroupId],

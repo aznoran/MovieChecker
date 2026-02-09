@@ -15,11 +15,13 @@ import {
     updateGroupPassword as apiUpdateGroupPassword,
 } from "@/lib/api";
 import type {Group, GroupRole} from "@/types";
+import {GroupType} from "@/types";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 
 interface GroupContextValue {
     groups: Group[];
+    personalGroup: Group | undefined;
     activeGroupId: number | undefined;
     activeGroup: Group | undefined;
     setActiveGroupId: (id: number | undefined) => void;
@@ -79,12 +81,21 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         }
     }, [isAuthenticated, wasAuthenticated, setActiveGroupId, queryClient]);
 
-    // If activeGroupId is set but not in groups list, reset to personal
+    const personalGroup = groups.find((g) => g.groupType === GroupType.Personal);
+
+    // Auto-select personal group as default when groups are loaded and no active group is set
+    useEffect(() => {
+        if (isAuthenticated && !isLoading && activeGroupId === undefined && personalGroup) {
+            setActiveGroupId(personalGroup.id);
+        }
+    }, [isAuthenticated, isLoading, activeGroupId, personalGroup, setActiveGroupId]);
+
+    // If activeGroupId is set but not in groups list, reset to personal group
     useEffect(() => {
         if (isAuthenticated && !isLoading && activeGroupId !== undefined && !groups.find((g) => g.id === activeGroupId)) {
-            setActiveGroupId(undefined);
+            setActiveGroupId(personalGroup?.id);
         }
-    }, [groups, activeGroupId, isLoading, isAuthenticated, setActiveGroupId]);
+    }, [groups, activeGroupId, isLoading, isAuthenticated, setActiveGroupId, personalGroup]);
 
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 
@@ -185,6 +196,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         <GroupContext.Provider
             value={{
                 groups,
+                personalGroup,
                 activeGroupId,
                 activeGroup,
                 setActiveGroupId,

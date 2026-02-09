@@ -79,6 +79,7 @@ export function Header() {
     const {locale, setLocale, t} = useLocale();
     const {
         groups,
+        personalGroup,
         activeGroupId,
         setActiveGroupId,
         createGroup,
@@ -315,17 +316,19 @@ export function Header() {
                             })}
                         </nav>
                         <Select
-                            value={activeGroupId?.toString() ?? "personal"}
-                            onValueChange={(v) => setActiveGroupId(v === "personal" ? undefined : parseInt(v))}
+                            value={activeGroupId?.toString() ?? personalGroup?.id.toString() ?? ""}
+                            onValueChange={(v) => setActiveGroupId(parseInt(v))}
                         >
                             <SelectTrigger className="w-[180px] h-8 text-sm">
                                 <SelectValue/>
                             </SelectTrigger>
                             <SelectContent position="popper" sideOffset={4}>
-                                <SelectItem value="personal">
-                                    <User />
-                                    {t("personal")}
-                                </SelectItem>
+                                {personalGroup && (
+                                    <SelectItem value={personalGroup.id.toString()}>
+                                        <User />
+                                        {t("personal")}
+                                    </SelectItem>
+                                )}
                                 {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => (
                                     <SelectItem key={g.id} value={g.id.toString()}>
                                         <div className="flex items-center gap-1.5">
