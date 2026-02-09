@@ -217,7 +217,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
                 ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
-                emotion: emotion ?? undefined,
+                emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
                 comment: comment || undefined,
                 groupId: activeGroupId,
                 // Series/Anime tracking
@@ -925,6 +925,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     )}
 
                     <FieldGroup className="gap-4">
+                        {(status === WatchStatus.Completed || status === WatchStatus.Dropped) && (
                         <Field>
                             <FieldContent>
                                 <FieldLabel>{t("emotion")}</FieldLabel>
@@ -958,6 +959,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             )}
                             </div>
                         </Field>
+                        )}
 
                         <Field>
                             <FieldContent>

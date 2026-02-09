@@ -7,6 +7,10 @@ import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
 import {EmotionEmojis, GroupType} from "@/types";
+import {
+    getContentTypeLabels,
+    getEmotionLabels,
+} from "@/lib/i18n/labels";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {
@@ -74,7 +78,7 @@ function StarRating({rating}: { rating: number }) {
 
 export default function StatsPage() {
     const {isAuthenticated, isLoading: authLoading} = useAuth();
-    const {t} = useLocale();
+    const {locale, t} = useLocale();
     const {activeGroupId, activeGroup} = useGroup();
     const router = useRouter();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
@@ -407,6 +411,15 @@ export default function StatsPage() {
 
                         {/* ── By Content Type ── */}
                         {Object.keys(stats.byType).length > 0 && (() => {
+                            const contentTypeLabels = getContentTypeLabels(locale);
+                            // Map enum names to ContentType enum values for translation
+                            const typeNameMap: Record<string, string> = {
+                                "Movie": contentTypeLabels[0],
+                                "Series": contentTypeLabels[1],
+                                "Anime": contentTypeLabels[2],
+                                "Cartoon": contentTypeLabels[3],
+                                "Show": contentTypeLabels[4],
+                            };
                             const typeEntries = Object.entries(stats.byType);
                             const maxTypeCount = Math.max(...typeEntries.map(([, c]) => c));
                             const typeColors = [
@@ -429,7 +442,7 @@ export default function StatsPage() {
                                             {typeEntries.map(([typeName, count], i) => (
                                                 <div key={typeName} className="space-y-1">
                                                     <div className="flex items-center justify-between text-sm">
-                                                        <span>{typeName}</span>
+                                                        <span>{typeNameMap[typeName] || typeName}</span>
                                                         <span className="font-semibold">{count}</span>
                                                     </div>
                                                     <ProgressBar
@@ -449,16 +462,14 @@ export default function StatsPage() {
                         {Object.keys(stats.byEmotion).length > 0 && (() => {
                             const emotionEntries = Object.entries(stats.byEmotion);
                             const maxEmotionCount = Math.max(...emotionEntries.map(([, c]) => c));
-                            // Map emotion names to emojis
+                            const emotionLabels = getEmotionLabels(locale);
+                            // Map emotion enum names to emojis and translated labels
+                            const emotionEnumNames = ["Joy", "Sadness", "Excitement", "Cringe", "Confused", "Neutral"];
                             const emotionNameToEmoji: Record<string, string> = {};
-                            Object.entries(EmotionEmojis).forEach(([key, emoji]) => {
-                                // The backend returns emotion names like "Joy", "Sadness", etc.
-                                // EmotionEmojis is keyed by enum number
-                                const names = ["Joy", "Sadness", "Excitement", "Cringe", "Confused", "Neutral"];
-                                const namesRu = ["Радость", "Грусть", "Восторг", "Кринж", "Что это было?", "Нейтрально"];
-                                const idx = Number(key);
-                                if (names[idx]) emotionNameToEmoji[names[idx]] = emoji;
-                                if (namesRu[idx]) emotionNameToEmoji[namesRu[idx]] = emoji;
+                            const emotionNameToLabel: Record<string, string> = {};
+                            emotionEnumNames.forEach((name, idx) => {
+                                emotionNameToEmoji[name] = EmotionEmojis[idx as keyof typeof EmotionEmojis] || "";
+                                emotionNameToLabel[name] = emotionLabels[idx as keyof typeof emotionLabels] || name;
                             });
                             return (
                                 <Card>
@@ -472,6 +483,7 @@ export default function StatsPage() {
                                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                             {emotionEntries.map(([emotionName, count]) => {
                                                 const emoji = emotionNameToEmoji[emotionName] || "";
+                                                const displayName = emotionNameToLabel[emotionName] || emotionName;
                                                 const pct = maxEmotionCount > 0 ? Math.round((count / maxEmotionCount) * 100) : 0;
                                                 return (
                                                     <div
@@ -482,7 +494,7 @@ export default function StatsPage() {
                                                         <div className="flex-1 min-w-0">
                                                             <div
                                                                 className="flex items-center justify-between text-sm mb-1">
-                                                                <span className="truncate">{emotionName}</span>
+                                                                <span className="truncate">{displayName}</span>
                                                                 <span className="font-semibold ml-2">{count}</span>
                                                             </div>
                                                             <div

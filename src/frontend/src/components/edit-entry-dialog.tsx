@@ -108,6 +108,37 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [minutes, setMinutes] = useState(Math.floor((existingWatchingTime % 3600) / 60).toString());
     const [seconds, setSeconds] = useState((existingWatchingTime % 60).toString());
 
+    // Reset form state when entry changes or dialog opens
+    useEffect(() => {
+        if (open) {
+            const myRat = entry.ratings?.find((r) => r.userId === user?.id);
+            setStatus(entry.status);
+            setMyRating(myRat?.rating?.toString() || "");
+            setSelectedMembers(entry.ratings?.map((r) => r.userId) ?? []);
+            const map: Record<number, string> = {};
+            entry.ratings?.forEach((r) => {
+                map[r.userId] = r.rating.toString();
+            });
+            setMemberRatings(map);
+            setEmotion(entry.emotion ?? null);
+            setComment(entry.comment || "");
+            setPosterFile(null);
+            setPosterPreview(getPosterUrl(entry.movie.posterUrl));
+            setEditorOpen(false);
+            setEditorImageSrc(null);
+            setError("");
+            setCurrentEpisode(entry.currentEpisode?.toString() || "");
+            setTotalEpisodes(entry.totalEpisodes?.toString() || "");
+            setCurrentSeason(entry.currentSeason?.toString() || "");
+            const wt = entry.watchingTime || 0;
+            setHours(Math.floor(wt / 3600).toString());
+            setMinutes(Math.floor((wt % 3600) / 60).toString());
+            setSeconds((wt % 60).toString());
+            setValidationErrors({});
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, entry]);
+
     // Validation errors
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const validationTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
@@ -208,7 +239,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
                 ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
-                emotion: emotion ?? undefined,
+                emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
                 comment: comment || undefined,
                 // Series/Anime tracking
                 ...(status === WatchStatus.Watching && (
@@ -722,6 +753,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     )}
 
                     <FieldGroup className="gap-4">
+                        {(status === WatchStatus.Completed || status === WatchStatus.Dropped) && (
                         <Field>
                             <FieldContent>
                                 <FieldLabel>{t("emotion")}</FieldLabel>
@@ -755,6 +787,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             )}
                             </div>
                         </Field>
+                        )}
 
                         <Field>
                             <FieldContent>

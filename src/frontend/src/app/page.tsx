@@ -8,11 +8,12 @@ import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {ConfirmDialog} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
-import {WatchStatus, EmotionEmojis} from "@/types";
+import {WatchStatus, EmotionEmojis, GroupRole, GroupType} from "@/types";
 import type {WatchEntry} from "@/types";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
+    translateGenre,
 } from "@/lib/i18n/labels";
 import {AddEntryDialog} from "@/components/add-entry-dialog";
 import {EditEntryDialog} from "@/components/edit-entry-dialog";
@@ -46,14 +47,29 @@ const statusColors: Record<WatchStatus, string> = {
 export const dynamic = "force-dynamic";
 
 export default function HomePage() {
-    const {isAuthenticated, isLoading: authLoading} = useAuth();
+    const {isAuthenticated, isLoading: authLoading, user} = useAuth();
     const {locale, t} = useLocale();
-    const {activeGroupId} = useGroup();
+    const {activeGroupId, activeGroup} = useGroup();
     const router = useRouter();
     const queryClient = useQueryClient();
 
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
+
+    const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
+    const currentMember = activeGroup?.members.find(m => m.userId === user?.id);
+
+    // Check if user can delete/edit an entry based on their role
+    const canModifyEntry = (entry: WatchEntry): boolean => {
+        if (!isGroupMode) return true; // Personal mode: always can modify own entries
+        if (!currentMember) return false;
+        if (currentMember.role >= GroupRole.Admin) return true; // Owner/Admin can modify all
+        if (currentMember.role === GroupRole.Member) return entry.ratings?.some(r => r.userId === user?.id) || false;
+        return false; // Viewer cannot modify
+    };
+
+    // Check if user can create entries
+    const canCreate = !isGroupMode || (currentMember !== undefined && currentMember.role >= GroupRole.Member);
 
     const [addOpen, setAddOpen] = useState(false);
     const [editEntry, setEditEntry] = useState<WatchEntry | null>(null);
@@ -131,10 +147,12 @@ export default function HomePage() {
                         <Popcorn className="h-6 w-6"/>
                         {t("movieDiary")}
                     </h1>
-                    <Button className="min-w-[12rem]" onClick={() => setAddOpen(true)}>
-                        <Plus className="h-4 w-4 mr-1.5"/>
-                        {t("addEntry")}
-                    </Button>
+                    {canCreate && (
+                        <Button className="min-w-[12rem]"  onClick={() => setAddOpen(true)}>
+                            <Plus className="h-4 w-4 mr-1.5"/>
+                            {t("addEntry")}
+                        </Button>
+                    )}
                 </div>
 
                 <div className="flex flex-wrap gap-2 mb-6">
@@ -176,10 +194,12 @@ export default function HomePage() {
                     <div className="text-center py-12">
                         <Film className="h-12 w-12 mx-auto text-muted-foreground mb-4"/>
                         <p className="text-muted-foreground mb-4">{t("noEntries")}</p>
+                        {canCreate && (
                         <Button onClick={() => setAddOpen(true)}>
                             <Plus className="h-4 w-4 mr-1.5"/>
                             {t("addFirstEntry")}
                         </Button>
+                        )}
                     </div>
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -205,26 +225,26 @@ export default function HomePage() {
                                         </div>
                                     )}
 
-                                    <CardContent className="p-4 flex flex-col justify-between min-h-0">
-                                        <div>
+                                    <CardContent className="p-4 flex flex-col justify-between min-h-0 overflow-hidden">
+                                        <div className="min-w-0">
                                             <div className="flex items-start justify-between gap-2 mb-4">
-                                                <div className="min-w-0">
-                                                    <h3 className="font-semibold truncate mb-2">
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="font-semibold mb-2 truncate" title={entry.movie.title}>
                                                         {entry.movie.title}
                                                     </h3>
-                                                    <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-                                                        <Film className="h-3 w-3"/>
+                                                    <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap min-w-0">
+                                                        <Film className="h-3 w-3 shrink-0"/>
                                                         {contentTypeLabels[entry.movie.type]}
                                                         {entry.movie.year && (
                                                             <>
-                                                                <Calendar className="h-3 w-3 ml-1"/>
+                                                                <Calendar className="h-3 w-3 ml-1 shrink-0"/>
                                                                 {entry.movie.year}
                                                             </>
                                                         )}
                                                         {entry.movie.genre && (
                                                             <>
-                                                                <Tag className="h-3 w-3 ml-1"/>
-                                                                {entry.movie.genre}
+                                                                <Tag className="h-3 w-3 ml-1 shrink-0"/>
+                                                                <span className="truncate">{translateGenre(entry.movie.genre, locale)}</span>
                                                             </>
                                                         )}
                                                     </p>
@@ -282,11 +302,11 @@ export default function HomePage() {
                                                 return (
                                                     <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm mb-4">
                                                         {sorted.slice(0, 3).map((r) => (
-                                                            <span key={r.id} className="flex items-center gap-1">
-                                                              <Star className="h-3.5 w-3.5 text-yellow-400"/>
+                                                            <span key={r.id} className="flex items-center gap-1 min-w-0">
+                                                              <Star className="h-3.5 w-3.5 text-yellow-400 shrink-0"/>
                                                               <span
-                                                                  className="text-muted-foreground">{r.displayName}:</span>
-                                                              <strong>{r.rating}/10</strong>
+                                                                  className="text-muted-foreground truncate max-w-[80px]">{r.displayName}:</span>
+                                                              <strong className="shrink-0">{r.rating}/10</strong>
                                                             </span>
                                                         ))}
                                                         {sorted.length > 3 && (
@@ -298,13 +318,20 @@ export default function HomePage() {
                                                 );
                                             })()}
 
+                                            {entry.movie.description && (
+                                                <p className="text-xs text-muted-foreground mb-4 break-words line-clamp-2" title={entry.movie.description}>
+                                                    {entry.movie.description.length > 100 ? entry.movie.description.slice(0, 100) + "..." : entry.movie.description}
+                                                </p>
+                                            )}
+
                                             {entry.comment && (
-                                                <p className="text-sm text-muted-foreground line-clamp-2 flex items-start gap-1">
+                                                <p className="text-sm text-muted-foreground line-clamp-2 break-words flex items-start gap-1">
                                                     <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0"/>
-                                                    {entry.comment}
+                                                    <span className="min-w-0 break-words">{entry.comment.length > 100 ? entry.comment.slice(0, 100) + "..." : entry.comment}</span>
                                                 </p>
                                             )}
                                         </div>
+                                        {canModifyEntry(entry) && (
                                         <div className="flex justify-end pt-3 shrink-0">
                                             <div onClick={(e) => e.stopPropagation()}>
                                                 <ConfirmDialog
@@ -328,6 +355,7 @@ export default function HomePage() {
                                                 />
                                             </div>
                                         </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             );

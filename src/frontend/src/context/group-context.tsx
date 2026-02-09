@@ -13,6 +13,7 @@ import {
     updateMemberRole as apiUpdateMemberRole,
     generateOtp as apiGenerateOtp,
     updateGroupPassword as apiUpdateGroupPassword,
+    updateGroupSettings as apiUpdateGroupSettings,
 } from "@/lib/api";
 import type {Group, GroupRole} from "@/types";
 import {GroupType} from "@/types";
@@ -33,6 +34,7 @@ interface GroupContextValue {
     updateMemberRole: (groupId: number, userId: number, role: number) => Promise<void>;
     generateOtp: (groupId: number) => Promise<{ code: string; expiresAt: string }>;
     updatePassword: (groupId: number, newPassword?: string) => Promise<void>;
+    updateGroupSettings: (groupId: number, settings: { name?: string; isPrivate?: boolean }) => Promise<Group>;
     isLoading: boolean;
 }
 
@@ -192,6 +194,18 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         }
     });
 
+    const updateSettingsMutation = useMutation({
+        mutationFn: ({groupId, settings}: { groupId: number; settings: { name?: string; isPrivate?: boolean } }) =>
+            apiUpdateGroupSettings(groupId, settings),
+        onSuccess: () => {
+            toast.success(t("groupSettingsUpdated"), { position: "top-center" })
+            queryClient.invalidateQueries({queryKey: ["groups"]});
+        },
+        onError: () => {
+            toast.error(t("groupSettingsError"), { position: "top-center" })
+        }
+    });
+
     return (
         <GroupContext.Provider
             value={{
@@ -208,6 +222,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
                 updateMemberRole: (groupId, userId, role) => updateRoleMutation.mutateAsync({groupId, userId, role}),
                 generateOtp: (groupId) => generateOtpMutation.mutateAsync(groupId),
                 updatePassword: (groupId, newPassword) => updatePasswordMutation.mutateAsync({groupId, newPassword}),
+                updateGroupSettings: (groupId, settings) => updateSettingsMutation.mutateAsync({groupId, settings}),
                 isLoading,
             }}
         >
