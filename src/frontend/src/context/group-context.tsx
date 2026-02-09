@@ -1,6 +1,6 @@
 "use client";
 
-import {createContext, useContext, useState, useEffect, useCallback} from "react";
+import {createContext, useContext, useState, useEffect, useCallback, useMemo} from "react";
 import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
 import {useAuth} from "@/context/auth-context";
 import {
@@ -81,7 +81,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         }
     }, [isAuthenticated, wasAuthenticated, setActiveGroupId, queryClient]);
 
-    const personalGroup = groups.find((g) => g.groupType === GroupType.Personal);
+    const personalGroup = useMemo(() => groups.find((g) => g.groupType === GroupType.Personal), [groups]);
 
     // Auto-select personal group as default when groups are loaded and no active group is set
     useEffect(() => {
