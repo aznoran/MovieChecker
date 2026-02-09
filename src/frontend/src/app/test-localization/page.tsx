@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import apiClient from '@/lib/api';
+import {useState, useEffect} from 'react';
+import api from '@/lib/api';
 
 export default function TestLocalizationPage() {
     const [allErrors, setAllErrors] = useState<any>(null);
@@ -15,7 +15,7 @@ export default function TestLocalizationPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await apiClient.api.testLocalizationAllErrorsList({
+            const response = await api.get('/test-localization/all-errors', {
                 headers: {
                     'Accept-Language': lang
                 }
@@ -33,7 +33,7 @@ export default function TestLocalizationPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await apiClient.api.testLocalizationTestErrorDetail(key, {
+            const response = await api.get(`/test-localization/test-error/${key}`, {
                 headers: {
                     'Accept-Language': lang
                 }

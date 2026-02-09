@@ -32,10 +32,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Swagger/OpenAPI
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
 var app = builder.Build();
 
 // Create/migrate database
@@ -59,14 +55,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Swagger
-app.UseSwagger();
-app.UseSwaggerUI(options =>
-{
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "MovieChecker API v1");
-    options.RoutePrefix = "swagger";
-});
-
 app.UseCors();
 app.UseRequestLocalization();
 app.UseAuthentication();
@@ -81,10 +69,7 @@ app.MapGroupEndpoints();
 app.MapUserSettingsEndpoints();
 
 // Health check
-app.MapGet("/api/health", () => Results.Ok(new MovieChecker.Domain.Models.Dtos.HealthResponse("healthy")))
-    .Produces<MovieChecker.Domain.Models.Dtos.HealthResponse>(StatusCodes.Status200OK)
-    .WithSummary("Health check")
-    .WithDescription("Returns the health status of the API");
+app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 
 // Test localization endpoint
 app.MapTestLocalizationEndpoints();

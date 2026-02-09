@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using MovieChecker.Domain.Models.Dtos;
-using MovieChecker.Domain.Models.Entities;
-using MovieChecker.Domain.Models.Enums;
+using MovieChecker.Domain.Models;
 using MovieChecker.Infrastructure.Data;
 
 namespace MovieChecker.Web.Endpoints;
@@ -12,38 +10,12 @@ public static class MovieEndpoints
     {
         var group = app.MapGroup("/api/movies").RequireAuthorization();
 
-        group.MapGet("/", GetAll)
-            .Produces<List<MovieDto>>(StatusCodes.Status200OK)
-            .WithSummary("Get all movies")
-            .WithDescription("Returns a list of all movies, optionally filtered by type");
-
-        group.MapGet("/{id:int}", GetById)
-            .Produces<MovieDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status404NotFound)
-            .WithSummary("Get movie by ID")
-            .WithDescription("Returns a single movie by its ID");
-
-        group.MapPost("/", Create)
-            .Produces<MovieDto>(StatusCodes.Status201Created)
-            .WithSummary("Create a new movie")
-            .WithDescription("Creates a new movie entry");
-
-        group.MapPut("/{id:int}", Update)
-            .Produces<MovieDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status404NotFound)
-            .WithSummary("Update a movie")
-            .WithDescription("Updates an existing movie");
-
-        group.MapDelete("/{id:int}", Delete)
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status404NotFound)
-            .WithSummary("Delete a movie")
-            .WithDescription("Deletes a movie by its ID");
-
-        group.MapGet("/search", Search)
-            .Produces<List<MovieDto>>(StatusCodes.Status200OK)
-            .WithSummary("Search movies")
-            .WithDescription("Searches movies by title or description");
+        group.MapGet("/", GetAll);
+        group.MapGet("/{id:int}", GetById);
+        group.MapPost("/", Create);
+        group.MapPut("/{id:int}", Update);
+        group.MapDelete("/{id:int}", Delete);
+        group.MapGet("/search", Search);
     }
 
     private static async Task<IResult> GetAll(AppDbContext db, int? type = null)
