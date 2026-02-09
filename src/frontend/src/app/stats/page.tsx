@@ -30,6 +30,8 @@ import {
 import {toast} from "sonner";
 import {useEffect} from "react";
 
+export const dynamic = "force-dynamic";
+
 function ProgressBar({
                          value,
                          max,
