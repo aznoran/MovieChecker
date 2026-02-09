@@ -65,7 +65,7 @@ import {
     Settings,
 } from "lucide-react";
 import type {Locale} from "@/lib/i18n";
-import {GroupRole} from "@/types";
+import {GroupRole, GroupType} from "@/types";
 import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {checkInviteCode} from "@/lib/api";
@@ -326,7 +326,7 @@ export function Header() {
                                     <User />
                                     {t("personal")}
                                 </SelectItem>
-                                {groups.map((g) => (
+                                {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => (
                                     <SelectItem key={g.id} value={g.id.toString()}>
                                         <div className="flex items-center gap-1.5">
                                             {g.isPrivate ? <Lock color="red" className="h-3 w-3"/> :
@@ -679,7 +679,7 @@ export function Header() {
                                         {t("yourGroups")}
                                     </h3>
                                     <FieldGroup>
-                                        {groups.map((g) => {
+                                        {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => {
                                             const isOwner = user?.id === g.createdByUserId;
                                             const currentUserMember = g.members.find(m => m.userId === user?.id);
                                             const isAdmin = currentUserMember?.role === GroupRole.Admin;

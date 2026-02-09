@@ -13,7 +13,7 @@ ALTER TABLE groups ALTER COLUMN invite_code DROP NOT NULL;
 -- Step 3: Create Personal groups for existing users who don't already have one
 INSERT INTO groups (name, invite_code, created_by_user_id, is_private, group_type, password_hash, default_role, created_at)
 SELECT
-    u.display_name || ' Personal',
+    'Personal',
     NULL,
     u.id,
     false,
