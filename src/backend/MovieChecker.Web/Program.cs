@@ -38,7 +38,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Create/migrate database
+// Wait for database to be ready (migrations are handled by Flyway)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -47,7 +47,7 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
-            db.Database.Migrate();
+            db.Database.CanConnect();
             break;
         }
         catch

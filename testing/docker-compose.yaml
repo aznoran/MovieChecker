@@ -35,6 +35,23 @@ services:
     networks:
       - backend_network
 
+  flyway:
+    image: flyway/flyway:11
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ../db/migration:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      FLYWAY_USER: ${POSTGRES_USER}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_BASELINE_VERSION: "0"
+    command: migrate
+    networks:
+      - backend_network
+
   backend:
     build:
       context: ../src/backend
@@ -53,6 +70,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
     ports:
       - "5000:5000"
     networks:
