@@ -60,10 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     const response = await apiLogin(username, password);
     // Save to localStorage synchronously before state update
-    localStorage.setItem("token", response.token);
-    localStorage.setItem("user", JSON.stringify(response.user));
-    setToken(response.token);
-    setUser(response.user);
+    if (response.token && response.user) {
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      setToken(response.token);
+      setUser(response.user);
+    } else {
+      throw new Error("Invalid authentication response");
+    }
   };
 
   const register = async (
@@ -73,10 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ) => {
     const response = await apiRegister(username, password, displayName);
     // Save to localStorage synchronously before state update
-    localStorage.setItem("token", response.token);
-    localStorage.setItem("user", JSON.stringify(response.user));
-    setToken(response.token);
-    setUser(response.user);
+    if (response.token && response.user) {
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      setToken(response.token);
+      setUser(response.user);
+    } else {
+      throw new Error("Invalid authentication response");
+    }
   };
 
   const logout = () => {
