@@ -180,6 +180,7 @@ const en = {
     dropped: "Dropped",
     myAvgRating: "My Average Rating",
     partnerAvgRating: "Partner Average Rating",
+    friendAvgRating: "Friend's Average Rating",
     watchedTogether: "Watched Together",
     byContentType: "By Content Type",
     emotionsAfterWatching: "Emotions After Watching",

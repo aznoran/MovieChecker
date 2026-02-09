@@ -182,6 +182,7 @@ const ru: Record<TranslationKeys, string> = {
     dropped: "Брошено",
     myAvgRating: "Моя средняя оценка",
     partnerAvgRating: "Средняя оценка партнёра",
+    friendAvgRating: "Средняя оценка друга",
     watchedTogether: "Смотрели вместе",
     byContentType: "По типу контента",
     emotionsAfterWatching: "Эмоции после просмотра",
