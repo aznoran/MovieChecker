@@ -59,6 +59,7 @@ import {
     Crop,
     ZoomIn,
     RotateCw,
+    RotateCcw,
 } from "lucide-react";
 import * as React from "react";
 import {
@@ -71,6 +72,8 @@ import {
     FieldSet,
     FieldLegend,
 } from "@/components/ui/field";
+import {Switch} from "@/components/ui/switch";
+import {Label} from "@/components/ui/label";
 
 interface Props {
     open: boolean;
@@ -100,6 +103,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const [crop, setCrop] = useState({x: 0, y: 0});
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
+    const [withGrid, setWithGrid] = useState(false);
+    const [allowOverflow, setAllowOverflow] = useState(false);
     const croppedAreaPixelsRef = useRef<CropperAreaData | null>(null);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -277,9 +282,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setPosterPreview(null);
         setEditorImageSrc(null);
         setIsCropping(false);
-        setCrop({x: 0, y: 0});
-        setZoom(1);
-        setRotation(0);
+        onCropReset();
         croppedAreaPixelsRef.current = null;
         setError("");
         setCurrentEpisode("");
@@ -301,13 +304,17 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         startCropping(file);
     };
 
+    const onCropReset = useCallback(() => {
+        setCrop({x: 0, y: 0});
+        setZoom(1);
+        setRotation(0);
+    }, []);
+
     const startCropping = (file: File) => {
         const reader = new FileReader();
         reader.onloadend = () => {
             setEditorImageSrc(reader.result as string);
-            setCrop({x: 0, y: 0});
-            setZoom(1);
-            setRotation(0);
+            onCropReset();
             croppedAreaPixelsRef.current = null;
             setIsCropping(true);
         };
@@ -364,9 +371,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setPosterPreview(null);
         setEditorImageSrc(null);
         setIsCropping(false);
-        setCrop({x: 0, y: 0});
-        setZoom(1);
-        setRotation(0);
+        onCropReset();
         croppedAreaPixelsRef.current = null;
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
@@ -447,6 +452,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                         zoom={zoom}
                                         rotation={rotation}
                                         aspectRatio={4 / 3}
+                                        withGrid={withGrid}
+                                        allowOverflow={allowOverflow}
                                         onCropChange={setCrop}
                                         onZoomChange={setZoom}
                                         onRotationChange={setRotation}
@@ -496,10 +503,23 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                             <RotateCw className="h-3.5 w-3.5"/>
                                         </Button>
                                     </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Switch id="add-crop-grid" checked={withGrid} onCheckedChange={setWithGrid} size="sm"/>
+                                            <Label htmlFor="add-crop-grid" className="text-sm text-muted-foreground">{t("showGrid")}</Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Switch id="add-crop-overflow" checked={allowOverflow} onCheckedChange={setAllowOverflow} size="sm"/>
+                                            <Label htmlFor="add-crop-overflow" className="text-sm text-muted-foreground">{t("allowOverflow")}</Label>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button type="button" onClick={handleApplyCrop} className="flex-1">
                                         {t("applyCrop")}
+                                    </Button>
+                                    <Button type="button" variant="outline" size="icon" onClick={onCropReset}>
+                                        <RotateCcw className="h-3.5 w-3.5"/>
                                     </Button>
                                     <Button type="button" variant="outline" onClick={handleCancelCrop}>
                                         {t("cancel")}

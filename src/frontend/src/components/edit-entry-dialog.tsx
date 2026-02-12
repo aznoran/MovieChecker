@@ -54,6 +54,7 @@ import {
     Crop,
     ZoomIn,
     RotateCw,
+    RotateCcw,
 } from "lucide-react";
 import {
     Field,
@@ -65,6 +66,8 @@ import {
     FieldSet,
     FieldLegend,
 } from "@/components/ui/field";
+import {Switch} from "@/components/ui/switch";
+import {Label} from "@/components/ui/label";
 import {toast} from "sonner";
 
 interface Props {
@@ -107,6 +110,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [crop, setCrop] = useState({x: 0, y: 0});
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
+    const [withGrid, setWithGrid] = useState(false);
+    const [allowOverflow, setAllowOverflow] = useState(false);
     const croppedAreaPixelsRef = useRef<CropperAreaData | null>(null);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -119,6 +124,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [hours, setHours] = useState(Math.floor(existingWatchingTime / 3600).toString());
     const [minutes, setMinutes] = useState(Math.floor((existingWatchingTime % 3600) / 60).toString());
     const [seconds, setSeconds] = useState((existingWatchingTime % 60).toString());
+
+    const onCropReset = useCallback(() => {
+        setCrop({x: 0, y: 0});
+        setZoom(1);
+        setRotation(0);
+    }, []);
 
     // Reset form state when entry changes or dialog opens
     useEffect(() => {
@@ -138,9 +149,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             setPosterPreview(getPosterUrl(entry.movie.posterUrl));
             setIsCropping(false);
             setEditorImageSrc(null);
-            setCrop({x: 0, y: 0});
-            setZoom(1);
-            setRotation(0);
+            onCropReset();
             croppedAreaPixelsRef.current = null;
             setError("");
             setCurrentEpisode(entry.currentEpisode?.toString() || "");
@@ -294,9 +303,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         const reader = new FileReader();
         reader.onloadend = () => {
             setEditorImageSrc(reader.result as string);
-            setCrop({x: 0, y: 0});
-            setZoom(1);
-            setRotation(0);
+            onCropReset();
             croppedAreaPixelsRef.current = null;
             setIsCropping(true);
         };
@@ -353,9 +360,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         setPosterPreview(null);
         setEditorImageSrc(null);
         setIsCropping(false);
-        setCrop({x: 0, y: 0});
-        setZoom(1);
-        setRotation(0);
+        onCropReset();
         croppedAreaPixelsRef.current = null;
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
@@ -450,6 +455,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         zoom={zoom}
                                         rotation={rotation}
                                         aspectRatio={4 / 3}
+                                        withGrid={withGrid}
+                                        allowOverflow={allowOverflow}
                                         onCropChange={setCrop}
                                         onZoomChange={setZoom}
                                         onRotationChange={setRotation}
@@ -499,10 +506,23 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                             <RotateCw className="h-3.5 w-3.5"/>
                                         </Button>
                                     </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Switch id="edit-crop-grid" checked={withGrid} onCheckedChange={setWithGrid} size="sm"/>
+                                            <Label htmlFor="edit-crop-grid" className="text-sm text-muted-foreground">{t("showGrid")}</Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Switch id="edit-crop-overflow" checked={allowOverflow} onCheckedChange={setAllowOverflow} size="sm"/>
+                                            <Label htmlFor="edit-crop-overflow" className="text-sm text-muted-foreground">{t("allowOverflow")}</Label>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button type="button" onClick={handleApplyCrop} className="flex-1">
                                         {t("applyCrop")}
+                                    </Button>
+                                    <Button type="button" variant="outline" size="icon" onClick={onCropReset}>
+                                        <RotateCcw className="h-3.5 w-3.5"/>
                                     </Button>
                                     <Button type="button" variant="outline" onClick={handleCancelCrop}>
                                         {t("cancel")}
