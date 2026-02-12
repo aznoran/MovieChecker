@@ -10,5 +10,7 @@ public record MovieDto(
     int? Year,
     string? Genre,
     string? PosterUrl,
+    string? TmdbId,
+    string? AnilistId,
     DateTime CreatedAt
 );

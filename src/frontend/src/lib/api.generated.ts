@@ -72,6 +72,8 @@ export interface CreateMovieRequest {
   year?: number | null;
   genre?: string | null;
   posterUrl?: string | null;
+  tmdbId?: string | null;
+  anilistId?: string | null;
 }
 
 export interface CreateWatchEntryRequest {
@@ -117,6 +119,31 @@ export interface EntryRatingDto {
 
 export interface ErrorResponse {
   message?: string | null;
+}
+
+export interface ExternalContentResult {
+  externalId?: string | null;
+  source?: string | null;
+  title?: string | null;
+  description?: string | null;
+  posterUrl?: string | null;
+  /** @format int32 */
+  year?: number | null;
+  genres?: string | null;
+  type?: ContentType;
+  /** @format double */
+  rating?: number | null;
+  /** @format int32 */
+  episodes?: number | null;
+  /** @format int32 */
+  seasons?: number | null;
+}
+
+export interface ExternalSearchResponse {
+  results?: ExternalContentResult[] | null;
+  /** @format int32 */
+  totalResults?: number;
+  source?: string | null;
 }
 
 export interface GenerateOtpResponse {
@@ -195,6 +222,8 @@ export interface MovieDto {
   year?: number | null;
   genre?: string | null;
   posterUrl?: string | null;
+  tmdbId?: string | null;
+  anilistId?: string | null;
   /** @format date-time */
   createdAt?: string;
 }
@@ -250,6 +279,11 @@ export interface UpdateGroupPasswordRequest {
   newPassword?: string | null;
 }
 
+export interface UpdateGroupSettingsRequest {
+  name?: string | null;
+  isPrivate?: boolean | null;
+}
+
 export interface UpdateMemberRoleRequest {
   role?: GroupRole;
 }
@@ -262,6 +296,8 @@ export interface UpdateMovieRequest {
   year?: number | null;
   genre?: string | null;
   posterUrl?: string | null;
+  tmdbId?: string | null;
+  anilistId?: string | null;
 }
 
 export interface UpdateUserSettingsRequest {
@@ -601,6 +637,102 @@ export class Api<
       }),
 
     /**
+     * @description Search TMDB database for movies, TV shows, and cartoons
+     *
+     * @tags External Content
+     * @name SearchTmdb
+     * @summary Search for movies and TV shows in TMDB
+     * @request GET:/api/external/tmdb/search
+     */
+    searchTmdb: (
+      query: {
+        query: string;
+        /** @format int32 */
+        page: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<ExternalSearchResponse, any>({
+        path: `/api/external/tmdb/search`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Fetch detailed information about a specific movie from TMDB by its ID
+     *
+     * @tags External Content
+     * @name GetTmdbMovieDetails
+     * @summary Get detailed movie information from TMDB
+     * @request GET:/api/external/tmdb/movie/{tmdbId}
+     */
+    getTmdbMovieDetails: (tmdbId: string, params: RequestParams = {}) =>
+      this.request<ExternalContentResult, void>({
+        path: `/api/external/tmdb/movie/${tmdbId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Fetch detailed information about a specific TV show from TMDB by its ID
+     *
+     * @tags External Content
+     * @name GetTmdbTvDetails
+     * @summary Get detailed TV show information from TMDB
+     * @request GET:/api/external/tmdb/tv/{tmdbId}
+     */
+    getTmdbTvDetails: (tmdbId: string, params: RequestParams = {}) =>
+      this.request<ExternalContentResult, void>({
+        path: `/api/external/tmdb/tv/${tmdbId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Search AniList database for anime content
+     *
+     * @tags External Content
+     * @name SearchAniList
+     * @summary Search for anime in AniList
+     * @request GET:/api/external/anilist/search
+     */
+    searchAniList: (
+      query: {
+        query: string;
+        /** @format int32 */
+        page: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<ExternalSearchResponse, any>({
+        path: `/api/external/anilist/search`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Fetch detailed information about a specific anime from AniList by its ID
+     *
+     * @tags External Content
+     * @name GetAniListAnimeDetails
+     * @summary Get detailed anime information from AniList
+     * @request GET:/api/external/anilist/anime/{anilistId}
+     */
+    getAniListAnimeDetails: (anilistId: string, params: RequestParams = {}) =>
+      this.request<ExternalContentResult, void>({
+        path: `/api/external/anilist/anime/${anilistId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
      * @description Returns all groups the current user is a member of
      *
      * @tags GroupEndpoints
@@ -799,6 +931,28 @@ export class Api<
     ) =>
       this.request<SuccessResponse, ErrorResponse | void>({
         path: `/api/groups/${id}/password`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Updates group name and/or privacy settings (Owner/Admin only)
+     *
+     * @tags GroupEndpoints
+     * @name GroupsSettingsUpdate
+     * @summary Update group settings
+     * @request PUT:/api/groups/{id}/settings
+     */
+    groupsSettingsUpdate: (
+      id: number,
+      data: UpdateGroupSettingsRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<GroupDto, ErrorResponse | void>({
+        path: `/api/groups/${id}/settings`,
         method: "PUT",
         body: data,
         type: ContentType.Json,
