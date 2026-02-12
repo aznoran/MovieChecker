@@ -41,6 +41,8 @@ export interface Movie {
   year?: number;
   genre?: string;
   posterUrl?: string;
+  tmdbId?: string;
+  anilistId?: string;
   createdAt: string;
 }
 
@@ -167,3 +169,24 @@ export const GroupTypeLabels: Record<GroupType, string> = {
   [GroupType.Private]: "Private",
   [GroupType.Personal]: "Personal",
 };
+
+// External content types
+export interface ExternalContentResult {
+  externalId: string;
+  source: 'tmdb' | 'anilist';
+  title: string;
+  description?: string;
+  posterUrl?: string;
+  year?: number;
+  genres?: string;
+  type: ContentType;
+  rating?: number;
+  episodes?: number;
+  seasons?: number;
+}
+
+export interface ExternalSearchResponse {
+  results: ExternalContentResult[];
+  totalResults: number;
+  source: string;
+}

@@ -8,6 +8,8 @@ import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {useAuth} from "@/context/auth-context";
 import {ImageEditor} from "@/components/image-editor";
+import {ExternalContentSearch} from "@/components/external-content-search";
+import type {ExternalContentResult} from "@/lib/api.generated";
 import {
     ContentType,
     WatchStatus,
@@ -51,6 +53,8 @@ import {
     Loader2,
     ClipboardPaste,
     Crop,
+    Search,
+    Database,
 } from "lucide-react";
 import * as React from "react";
 import {
@@ -99,6 +103,10 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const [hours, setHours] = useState("");
     const [minutes, setMinutes] = useState("");
     const [seconds, setSeconds] = useState("");
+
+    // External search state
+    const [showExternalSearch, setShowExternalSearch] = useState(false);
+    const [externalIds, setExternalIds] = useState<{ tmdbId?: string; anilistId?: string }>({});
 
     // Validation errors
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -192,8 +200,13 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const mutation = useMutation({
         mutationFn: async () => {
             let posterUrl: string | undefined;
+            // If posterFile exists, upload it
             if (posterFile) {
                 posterUrl = await uploadPoster(posterFile);
+            }
+            // If no file but posterPreview exists (from external source), use it
+            else if (posterPreview && (externalIds.tmdbId || externalIds.anilistId)) {
+                posterUrl = posterPreview;
             }
 
             const movie = await createMovie({
@@ -203,6 +216,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 year: year ? parseInt(year) : undefined,
                 genre: genre || undefined,
                 posterUrl,
+                tmdbId: externalIds.tmdbId,
+                anilistId: externalIds.anilistId,
             });
 
             const ratingsArray = isGroupMode
@@ -271,6 +286,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setMinutes("");
         setSeconds("");
         setValidationErrors({});
+        setShowExternalSearch(false);
+        setExternalIds({});
     };
 
     useEffect(() => {
@@ -324,6 +341,39 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setEditorImageSrc(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
+
+    const handleExternalContentSelect = useCallback((content: ExternalContentResult) => {
+        // Populate form with external content data
+        if (content.title) setTitle(content.title);
+        if (content.description) {
+            // Strip HTML tags from description
+            const plainDescription = content.description.replace(/<[^>]*>/g, '');
+            setDescription(plainDescription);
+        }
+        if (content.type !== undefined) setType(Number(content.type) as ContentType);
+        if (content.year) setYear(content.year.toString());
+        if (content.genres) setGenre(content.genres);
+        
+        // Set external IDs
+        if (content.source === 'tmdb' && content.externalId) {
+            setExternalIds({ tmdbId: content.externalId });
+        } else if (content.source === 'anilist' && content.externalId) {
+            setExternalIds({ anilistId: content.externalId });
+        }
+
+        // Use external poster if available (don't upload, just use URL)
+        if (content.posterUrl) {
+            setPosterPreview(content.posterUrl);
+            // Note: We'll pass posterUrl directly to createMovie, no file upload needed
+        }
+
+        // Close external search
+        setShowExternalSearch(false);
+        
+        toast.success("Content selected from external database", {
+            position: "top-center"
+        });
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -382,6 +432,30 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* External Search Toggle */}
+                    <div className="flex justify-end">
+                        <Button
+                            type="button"
+                            variant={showExternalSearch ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setShowExternalSearch(!showExternalSearch)}
+                            className="gap-2"
+                        >
+                            <Database className="h-4 w-4" />
+                            {showExternalSearch ? "Hide External Search" : "Search External Databases"}
+                        </Button>
+                    </div>
+
+                    {/* External Content Search */}
+                    {showExternalSearch && (
+                        <div className="border rounded-lg p-4 bg-muted/30">
+                            <ExternalContentSearch
+                                onSelect={handleExternalContentSelect}
+                                contentType={type}
+                            />
+                        </div>
+                    )}
+
                     {/* Poster Upload */}
                     <Field>
                         <FieldContent>

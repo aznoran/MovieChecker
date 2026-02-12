@@ -290,5 +290,31 @@ export const updateUserSettings = async (settings: {
   };
 };
 
+// External Content
+export const searchTmdb = async (query: string, page: number = 1) => {
+  const response = await apiClient.api.searchTmdb({ query, page });
+  return response.data;
+};
+
+export const getTmdbMovieDetails = async (tmdbId: string) => {
+  const response = await apiClient.api.getTmdbMovieDetails(tmdbId);
+  return response.data;
+};
+
+export const getTmdbTvDetails = async (tmdbId: string) => {
+  const response = await apiClient.api.getTmdbTvDetails(tmdbId);
+  return response.data;
+};
+
+export const searchAniList = async (query: string, page: number = 1) => {
+  const response = await apiClient.api.searchAniList({ query, page });
+  return response.data;
+};
+
+export const getAniListAnimeDetails = async (anilistId: string) => {
+  const response = await apiClient.api.getAniListAnimeDetails(anilistId);
+  return response.data;
+};
+
 // Export the API client instance for direct access if needed
 export default apiClient;
