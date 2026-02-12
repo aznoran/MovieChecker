@@ -18,7 +18,8 @@ public class TmdbService : ITmdbService
     private readonly string _apiKey;
     private readonly string _baseUrl;
     private readonly string _imageBaseUrl;
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(1);
+    private static readonly TimeSpan SearchCacheDuration = TimeSpan.FromHours(1);
+    private static readonly TimeSpan DetailsCacheDuration = TimeSpan.FromHours(10);
 
     public TmdbService(
         HttpClient httpClient,
@@ -80,7 +81,7 @@ public class TmdbService : ITmdbService
             var serialized = JsonSerializer.Serialize(result);
             await _cache.SetStringAsync(cacheKey, serialized, new DistributedCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = CacheDuration
+                AbsoluteExpirationRelativeToNow = SearchCacheDuration
             }, cancellationToken);
 
             return result;
@@ -124,7 +125,7 @@ public class TmdbService : ITmdbService
                 var serialized = JsonSerializer.Serialize(result);
                 await _cache.SetStringAsync(cacheKey, serialized, new DistributedCacheEntryOptions
                 {
-                    AbsoluteExpirationRelativeToNow = CacheDuration
+                    AbsoluteExpirationRelativeToNow = DetailsCacheDuration
                 }, cancellationToken);
             }
 
@@ -169,7 +170,7 @@ public class TmdbService : ITmdbService
                 var serialized = JsonSerializer.Serialize(result);
                 await _cache.SetStringAsync(cacheKey, serialized, new DistributedCacheEntryOptions
                 {
-                    AbsoluteExpirationRelativeToNow = CacheDuration
+                    AbsoluteExpirationRelativeToNow = DetailsCacheDuration
                 }, cancellationToken);
             }
 

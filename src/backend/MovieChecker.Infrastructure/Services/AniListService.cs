@@ -17,7 +17,8 @@ public class AniListService : IAniListService
     private readonly IDistributedCache _cache;
     private readonly ILogger<AniListService> _logger;
     private readonly string _baseUrl;
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(1);
+    private static readonly TimeSpan SearchCacheDuration = TimeSpan.FromHours(1);
+    private static readonly TimeSpan DetailsCacheDuration = TimeSpan.FromHours(10);
 
     public AniListService(
         HttpClient httpClient,
@@ -112,7 +113,7 @@ public class AniListService : IAniListService
             var serialized = JsonSerializer.Serialize(result);
             await _cache.SetStringAsync(cacheKey, serialized, new DistributedCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = CacheDuration
+                AbsoluteExpirationRelativeToNow = SearchCacheDuration
             }, cancellationToken);
 
             return result;
@@ -197,7 +198,7 @@ public class AniListService : IAniListService
                 var serialized = JsonSerializer.Serialize(result);
                 await _cache.SetStringAsync(cacheKey, serialized, new DistributedCacheEntryOptions
                 {
-                    AbsoluteExpirationRelativeToNow = CacheDuration
+                    AbsoluteExpirationRelativeToNow = DetailsCacheDuration
                 }, cancellationToken);
             }
 
