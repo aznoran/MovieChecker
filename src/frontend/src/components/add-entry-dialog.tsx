@@ -425,7 +425,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setError("");
 
         // Auto-apply crop if still in cropping mode
-        let croppedFile: File | null | undefined;
+        let croppedFile: File | null = null;
         if (isCropping && editorImageSrc && croppedAreaPixelsRef.current) {
             try {
                 croppedFile = await applyCropAndGetFile();
