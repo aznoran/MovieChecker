@@ -1,7 +1,12 @@
 "use client";
 
-import {useState, useCallback} from "react";
-import Cropper, {Area} from "react-easy-crop";
+import {useState, useCallback, useRef} from "react";
+import {
+    Cropper,
+    CropperImage,
+    CropperArea,
+    type CropperAreaData,
+} from "@/components/ui/cropper";
 import {useLocale} from "@/context/locale-context";
 import {toast} from "sonner";
 import {
@@ -24,7 +29,7 @@ interface ImageEditorProps {
 
 async function getCroppedImage(
     imageSrc: string,
-    cropArea: Area,
+    cropArea: CropperAreaData,
     rotation: number
 ): Promise<Blob> {
     const image = await createImage(imageSrc);
@@ -86,16 +91,16 @@ export function ImageEditor({
     const [crop, setCrop] = useState({x: 0, y: 0});
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+    const croppedAreaPixelsRef = useRef<CropperAreaData | null>(null);
 
-    const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
-        setCroppedAreaPixels(croppedPixels);
+    const onCropComplete = useCallback((_: CropperAreaData, croppedPixels: CropperAreaData) => {
+        croppedAreaPixelsRef.current = croppedPixels;
     }, []);
 
     const handleConfirm = async () => {
-        if (!croppedAreaPixels) return;
+        if (!croppedAreaPixelsRef.current) return;
         try {
-            const blob = await getCroppedImage(imageSrc, croppedAreaPixels, rotation);
+            const blob = await getCroppedImage(imageSrc, croppedAreaPixelsRef.current, rotation);
             const file = new File([blob], "cropped-poster.jpg", {type: "image/jpeg"});
             onConfirm(file);
             onOpenChange(false);
@@ -120,16 +125,22 @@ export function ImageEditor({
 
                 <div className="relative w-full h-72 bg-muted rounded-lg overflow-hidden">
                     <Cropper
-                        image={imageSrc}
                         crop={crop}
                         zoom={zoom}
                         rotation={rotation}
-                        aspect={aspectRatio}
+                        aspectRatio={aspectRatio}
                         onCropChange={setCrop}
                         onZoomChange={setZoom}
                         onRotationChange={setRotation}
                         onCropComplete={onCropComplete}
-                    />
+                    >
+                        <CropperImage
+                            src={imageSrc}
+                            alt="Image to crop"
+                            crossOrigin="anonymous"
+                        />
+                        <CropperArea />
+                    </Cropper>
                 </div>
 
                 <div className="space-y-3">
