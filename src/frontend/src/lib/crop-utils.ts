@@ -17,7 +17,8 @@ async function getCroppedImage(
 ): Promise<Blob> {
     const image = await createImage(imageSrc);
     const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Failed to get canvas context");
 
     const rotRad = (rotation * Math.PI) / 180;
     const {width: imgW, height: imgH} = image;

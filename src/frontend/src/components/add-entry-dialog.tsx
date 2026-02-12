@@ -329,7 +329,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             reader.readAsDataURL(file);
             setIsCropping(false);
         } catch {
-            toast.error(t("clipboardFailed"), {position: "top-center"});
+            toast.error(t("cropFailed"), {position: "top-center"});
         }
     };
 

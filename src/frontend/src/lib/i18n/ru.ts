@@ -89,6 +89,7 @@ const ru: Record<TranslationKeys, string> = {
     titleRequired: "Название обязательно",
     clipboardNoImage: "В буфере нет изображения",
     clipboardFailed: "Не удалось прочитать буфер обмена",
+    cropFailed: "Не удалось обрезать изображение",
     imageEditorTitle: "Редактирование изображения",
     zoom: "Масштаб",
     rotate: "Поворот",

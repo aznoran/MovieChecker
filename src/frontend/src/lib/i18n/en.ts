@@ -87,6 +87,7 @@ const en = {
     titleRequired: "Title is required",
     clipboardNoImage: "No image found in clipboard",
     clipboardFailed: "Failed to read clipboard",
+    cropFailed: "Failed to crop image",
     imageEditorTitle: "Edit Image",
     zoom: "Zoom",
     rotate: "Rotate",
