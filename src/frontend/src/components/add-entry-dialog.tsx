@@ -266,6 +266,12 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         },
     });
 
+    const onCropReset = useCallback(() => {
+        setCrop({x: 0, y: 0});
+        setZoom(1);
+        setRotation(0);
+    }, []);
+
     const resetForm = () => {
         setTitle("");
         setDescription("");
@@ -303,12 +309,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         if (!file) return;
         startCropping(file);
     };
-
-    const onCropReset = useCallback(() => {
-        setCrop({x: 0, y: 0});
-        setZoom(1);
-        setRotation(0);
-    }, []);
 
     const startCropping = (file: File) => {
         const reader = new FileReader();
