@@ -104,7 +104,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
     const [withGrid, setWithGrid] = useState(false);
-    const [allowOverflow, setAllowOverflow] = useState(false);
     const croppedAreaPixelsRef = useRef<CropperAreaData | null>(null);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -207,10 +206,11 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
-        mutationFn: async () => {
+        mutationFn: async (overridePosterFile?: File | null) => {
+            const fileToUpload = overridePosterFile ?? posterFile;
             let posterUrl: string | undefined;
-            if (posterFile) {
-                posterUrl = await uploadPoster(posterFile);
+            if (fileToUpload) {
+                posterUrl = await uploadPoster(fileToUpload);
             }
 
             const movie = await createMovie({
@@ -325,16 +325,21 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         croppedAreaPixelsRef.current = croppedPixels;
     }, []);
 
+    const applyCropAndGetFile = async (): Promise<File | null> => {
+        if (!croppedAreaPixelsRef.current || !editorImageSrc) return null;
+        const blob = await getCroppedImage(editorImageSrc, croppedAreaPixelsRef.current, rotation);
+        const file = new File([blob], "cropped-poster.jpg", {type: "image/jpeg"});
+        setPosterFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setPosterPreview(reader.result as string);
+        reader.readAsDataURL(file);
+        setIsCropping(false);
+        return file;
+    };
+
     const handleApplyCrop = async () => {
-        if (!croppedAreaPixelsRef.current || !editorImageSrc) return;
         try {
-            const blob = await getCroppedImage(editorImageSrc, croppedAreaPixelsRef.current, rotation);
-            const file = new File([blob], "cropped-poster.jpg", {type: "image/jpeg"});
-            setPosterFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setPosterPreview(reader.result as string);
-            reader.readAsDataURL(file);
-            setIsCropping(false);
+            await applyCropAndGetFile();
         } catch {
             toast.error(t("cropFailed"), {position: "top-center"});
         }
@@ -376,7 +381,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         const errors: Record<string, string> = {};
@@ -418,7 +423,19 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         }
 
         setError("");
-        mutation.mutate();
+
+        // Auto-apply crop if still in cropping mode
+        let croppedFile: File | null | undefined;
+        if (isCropping && editorImageSrc && croppedAreaPixelsRef.current) {
+            try {
+                croppedFile = await applyCropAndGetFile();
+            } catch {
+                toast.error(t("cropFailed"), {position: "top-center"});
+                return;
+            }
+        }
+
+        mutation.mutate(croppedFile);
     };
 
     return (
@@ -453,7 +470,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                         rotation={rotation}
                                         aspectRatio={4 / 3}
                                         withGrid={withGrid}
-                                        allowOverflow={allowOverflow}
                                         onCropChange={setCrop}
                                         onZoomChange={setZoom}
                                         onRotationChange={setRotation}
@@ -507,10 +523,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                         <div className="flex items-center gap-2">
                                             <Switch id="add-crop-grid" checked={withGrid} onCheckedChange={setWithGrid} size="sm"/>
                                             <Label htmlFor="add-crop-grid" className="text-sm text-muted-foreground">{t("showGrid")}</Label>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Switch id="add-crop-overflow" checked={allowOverflow} onCheckedChange={setAllowOverflow} size="sm"/>
-                                            <Label htmlFor="add-crop-overflow" className="text-sm text-muted-foreground">{t("allowOverflow")}</Label>
                                         </div>
                                     </div>
                                 </div>

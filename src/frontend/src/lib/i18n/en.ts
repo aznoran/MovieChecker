@@ -94,7 +94,6 @@ const en = {
     applyCrop: "Apply",
     resetCrop: "Reset",
     showGrid: "Show Grid",
-    allowOverflow: "Allow Overflow",
     groupCreateSuccess: "Group created successfully",
     groupCreateError: "Failed to create group",
     joinSuccess: "Joined group successfully",

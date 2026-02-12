@@ -96,7 +96,6 @@ const ru: Record<TranslationKeys, string> = {
     applyCrop: "Применить",
     resetCrop: "Сбросить",
     showGrid: "Показать сетку",
-    allowOverflow: "Разрешить выход за границы",
     groupCreateSuccess: "Группа успешно создана",
     groupCreateError: "Не удалось создать группу",
     joinSuccess: "Вы успешно присоединились к группе",
