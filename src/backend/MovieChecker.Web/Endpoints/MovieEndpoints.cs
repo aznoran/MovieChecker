@@ -65,6 +65,8 @@ public static class MovieEndpoints
                 m.Year,
                 m.Genre,
                 m.PosterUrl,
+                m.TmdbId,
+                m.AnilistId,
                 m.CreatedAt
             ))
             .ToListAsync();
@@ -88,6 +90,8 @@ public static class MovieEndpoints
             movie.Year,
             movie.Genre,
             movie.PosterUrl,
+            movie.TmdbId,
+            movie.AnilistId,
             movie.CreatedAt
         ));
     }
@@ -109,7 +113,9 @@ public static class MovieEndpoints
             Type = request.Type,
             Year = request.Year,
             Genre = request.Genre,
-            PosterUrl = request.PosterUrl
+            PosterUrl = request.PosterUrl,
+            TmdbId = request.TmdbId,
+            AnilistId = request.AnilistId
         };
 
         db.Movies.Add(movie);
@@ -123,6 +129,8 @@ public static class MovieEndpoints
             movie.Year,
             movie.Genre,
             movie.PosterUrl,
+            movie.TmdbId,
+            movie.AnilistId,
             movie.CreatedAt
         ));
     }
@@ -141,6 +149,8 @@ public static class MovieEndpoints
         if (request.Year.HasValue) movie.Year = request.Year.Value;
         if (request.Genre != null) movie.Genre = request.Genre;
         if (request.PosterUrl != null) movie.PosterUrl = request.PosterUrl;
+        if (request.TmdbId != null) movie.TmdbId = request.TmdbId;
+        if (request.AnilistId != null) movie.AnilistId = request.AnilistId;
 
         await db.SaveChangesAsync();
 
@@ -152,6 +162,8 @@ public static class MovieEndpoints
             movie.Year,
             movie.Genre,
             movie.PosterUrl,
+            movie.TmdbId,
+            movie.AnilistId,
             movie.CreatedAt
         ));
     }
@@ -183,6 +195,8 @@ public static class MovieEndpoints
                 m.Year,
                 m.Genre,
                 m.PosterUrl,
+                m.TmdbId,
+                m.AnilistId,
                 m.CreatedAt
             ))
             .ToListAsync();

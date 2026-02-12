@@ -98,6 +98,10 @@ public static class DependencyInjection
         services.AddAuthorization();
         services.AddScoped<ILocalizationService, LocalizationService>();
 
+        // External API services
+        services.AddHttpClient<ITmdbService, TmdbService>();
+        services.AddHttpClient<IAniListService, AniListService>();
+
         return services;
     }
 }

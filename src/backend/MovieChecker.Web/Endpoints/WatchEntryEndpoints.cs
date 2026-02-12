@@ -78,6 +78,8 @@ public static class WatchEntryEndpoints
             w.Movie.Year,
             w.Movie.Genre,
             w.Movie.PosterUrl,
+            w.Movie.TmdbId,
+            w.Movie.AnilistId,
             w.Movie.CreatedAt
         ),
         w.Status,

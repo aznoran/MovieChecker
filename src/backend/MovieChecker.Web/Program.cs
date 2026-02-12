@@ -79,6 +79,7 @@ app.MapWatchEntryEndpoints();
 app.MapUploadEndpoints();
 app.MapGroupEndpoints();
 app.MapUserSettingsEndpoints();
+app.MapExternalContentEndpoints();
 
 // Health check
 app.MapGet("/api/health", () => Results.Ok(new MovieChecker.Domain.Models.Dtos.HealthResponse("healthy")))

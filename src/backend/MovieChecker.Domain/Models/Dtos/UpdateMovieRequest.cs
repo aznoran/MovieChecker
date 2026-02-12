@@ -8,5 +8,7 @@ public record UpdateMovieRequest(
     ContentType? Type,
     int? Year,
     string? Genre,
-    string? PosterUrl
+    string? PosterUrl,
+    string? TmdbId,
+    string? AnilistId
 );
