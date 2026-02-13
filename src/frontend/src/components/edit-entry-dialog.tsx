@@ -299,6 +299,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         return false;
     };
 
+    // Compute whether any changes exist for submit button state
+    const hasChanges = isRateOnlyMode
+        ? hasRatingsChanged()
+        : (hasEntryFieldsChanged() || hasPosterChanged() || hasRatingsChanged());
+
     const mutation = useMutation({
         mutationFn: async (overridePosterFile?: File | null) => {
             const ratingsChanged = hasRatingsChanged();
@@ -472,6 +477,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Don't submit if nothing changed
+        if (!hasChanges) return;
 
         // Validate all fields
         const errors: Record<string, string> = {};
@@ -694,7 +702,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={mutation.isPending}
+                                disabled={mutation.isPending || !hasChanges}
                                 className="flex-1"
                             >
                                 {mutation.isPending ? (
@@ -1221,7 +1229,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                         </Button>
                         <Button
                             type="submit"
-                            disabled={mutation.isPending}
+                            disabled={mutation.isPending || !hasChanges}
                             className="flex-1"
                         >
                             {mutation.isPending ? (
