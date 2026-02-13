@@ -142,7 +142,8 @@ public static class WatchEntryEndpoints
         return Results.Ok(entries.Select(ToDto).ToList());
     }
 
-    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
+    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, AppDbContext db,
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -187,7 +188,8 @@ public static class WatchEntryEndpoints
             return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
 
         // Validate emotion - cannot set emotion for Planned or Watching status
-        if (request.Emotion.HasValue && (request.Status == WatchStatus.Planned || request.Status == WatchStatus.Watching))
+        if (request.Emotion.HasValue &&
+            (request.Status == WatchStatus.Planned || request.Status == WatchStatus.Watching))
             return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
 
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
@@ -202,8 +204,9 @@ public static class WatchEntryEndpoints
 
             // Check duplicate within group (via junction table or legacy GroupId)
             if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId
-                    && (w.GroupId == request.GroupId.Value
-                        || w.WatchEntryGroups.Any(weg => weg.GroupId == request.GroupId.Value))))
+                                                    && (w.GroupId == request.GroupId.Value
+                                                        || w.WatchEntryGroups.Any(weg =>
+                                                            weg.GroupId == request.GroupId.Value))))
                 return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExistsGroup"]));
         }
         else
@@ -372,7 +375,8 @@ public static class WatchEntryEndpoints
 
         // Validate emotion - cannot set emotion for Planned or Watching status
         var effectiveStatus = request.Status ?? entry.Status;
-        if (request.Emotion.HasValue && (effectiveStatus == WatchStatus.Planned || effectiveStatus == WatchStatus.Watching))
+        if (request.Emotion.HasValue &&
+            (effectiveStatus == WatchStatus.Planned || effectiveStatus == WatchStatus.Watching))
             return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
@@ -387,7 +391,8 @@ public static class WatchEntryEndpoints
         if (request.WatchingTime.HasValue) entry.WatchingTime = request.WatchingTime.Value;
 
         // Clear ratings when status changes to Planned or Watching
-        if (request.Status.HasValue && (request.Status.Value == WatchStatus.Planned || request.Status.Value == WatchStatus.Watching))
+        if (request.Status.HasValue &&
+            (request.Status.Value == WatchStatus.Planned || request.Status.Value == WatchStatus.Watching))
         {
             if (entry.Ratings.Count > 0)
                 db.EntryRatings.RemoveRange(entry.Ratings);
@@ -439,12 +444,18 @@ public static class WatchEntryEndpoints
                 if (isRatingSelf)
                 {
                     if (await PermissionService.CanRateSelf(db, userId, gid))
-                    { hasPermission = true; break; }
+                    {
+                        hasPermission = true;
+                        break;
+                    }
                 }
                 else
                 {
                     if (await PermissionService.CanRateOthers(db, userId, gid))
-                    { hasPermission = true; break; }
+                    {
+                        hasPermission = true;
+                        break;
+                    }
                 }
             }
 

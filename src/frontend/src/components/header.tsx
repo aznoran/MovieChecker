@@ -42,6 +42,7 @@ import {
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {cn} from "@/lib/utils";
 import {
+    Film,
     Clapperboard,
     BarChart3,
     LogOut,
@@ -374,7 +375,7 @@ export function Header() {
                 <div className="container mx-auto flex h-14 items-center justify-between px-4">
                     <div className="flex items-center gap-4">
                         <Link href="/" className="flex items-center gap-2 text-lg font-bold shrink-0">
-                            <Clapperboard className="h-5 w-5"/>
+                            <Film className="h-5 w-5"/>
                             <span className="hidden sm:inline">{t("appName")}</span>
                         </Link>
                         <nav className="flex items-center gap-1">

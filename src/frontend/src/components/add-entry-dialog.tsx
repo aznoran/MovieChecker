@@ -92,7 +92,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const [genre, setGenre] = useState("");
     const [status, setStatus] = useState<WatchStatus>(WatchStatus.Planned);
     const [myRating, setMyRating] = useState(0);
-    console.log(myRating);
+
     // Group mode: selected member IDs and per-member ratings
     const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
     const [memberRatings, setMemberRatings] = useState<Record<number, number>>({});
