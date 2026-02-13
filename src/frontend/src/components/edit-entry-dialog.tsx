@@ -56,6 +56,7 @@ import {
     RotateCw,
     RotateCcw,
 } from "lucide-react";
+import {Rating, RatingItem} from "@/components/ui/rating";
 import {
     Field,
     FieldLabel,
@@ -85,16 +86,16 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [status, setStatus] = useState<WatchStatus>(entry.status);
     // Personal mode: single rating
     const myExistingRating = entry.ratings?.find((r) => r.userId === user?.id);
-    const [myRating, setMyRating] = useState(myExistingRating?.rating?.toString() || "");
+    const [myRating, setMyRating] = useState(myExistingRating?.rating || 0);
     // Group mode: selected members and per-member ratings
     const [selectedMembers, setSelectedMembers] = useState<number[]>(
         () => entry.ratings?.map((r) => r.userId) ?? []
     );
-    const [memberRatings, setMemberRatings] = useState<Record<number, string>>(
+    const [memberRatings, setMemberRatings] = useState<Record<number, number>>(
         () => {
-            const map: Record<number, string> = {};
+            const map: Record<number, number> = {};
             entry.ratings?.forEach((r) => {
-                map[r.userId] = r.rating.toString();
+                map[r.userId] = r.rating;
             });
             return map;
         }
@@ -136,11 +137,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         if (open) {
             const myRat = entry.ratings?.find((r) => r.userId === user?.id);
             setStatus(entry.status);
-            setMyRating(myRat?.rating?.toString() || "");
+            setMyRating(myRat?.rating || 0);
             setSelectedMembers(entry.ratings?.map((r) => r.userId) ?? []);
-            const map: Record<number, string> = {};
+            const map: Record<number, number> = {};
             entry.ratings?.forEach((r) => {
-                map[r.userId] = r.rating.toString();
+                map[r.userId] = r.rating;
             });
             setMemberRatings(map);
             setEmotion(entry.emotion ?? null);
@@ -195,11 +196,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             case "seconds":
                 if (value && (!/^\d+$/.test(value) || parseInt(value) < 0 || parseInt(value) > 59)) {
                     return t("invalidTimeComponent");
-                }
-                return null;
-            case "myRating":
-                if (value && (!/^\d+$/.test(value) || parseInt(value) < 1 || parseInt(value) > 10)) {
-                    return t("invalidRating");
                 }
                 return null;
             default:
@@ -260,12 +256,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             const ratingsArray = isGroupMode
                 ? selectedMembers
                     .filter((uid) => memberRatings[uid])
-                    .map((uid) => ({userId: uid, rating: parseInt(memberRatings[uid])}))
+                    .map((uid) => ({userId: uid, rating: memberRatings[uid]}))
                 : undefined;
 
             await updateWatchEntry(entry.id, {
                 status,
-                rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
+                rating: !isGroupMode && myRating ? myRating : undefined,
                 ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
                 emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
@@ -396,7 +392,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             { name: "hours", value: hours },
             { name: "minutes", value: minutes },
             { name: "seconds", value: seconds },
-            { name: "myRating", value: myRating },
         ];
 
         fieldsToValidate.forEach(({ name, value }) => {
@@ -409,8 +404,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         // Validate member ratings
         if (isGroupMode && (status === WatchStatus.Completed || status === WatchStatus.Dropped)) {
             selectedMembers.forEach(uid => {
-                const rating = memberRatings[uid] || "";
-                if (rating && (!/^\d+$/.test(rating) || parseInt(rating) < 1 || parseInt(rating) > 10)) {
+                const rating = memberRatings[uid] || 0;
+                if (rating && (rating < 1 || rating > 10)) {
                     errors[`memberRating_${uid}`] = t("invalidRating");
                 }
             });
@@ -718,50 +713,25 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                         <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
                                                             {member.displayName}
                                                         </FieldLabel>
-                                                        <div>
-                                                            <Input
-                                                                value={memberRatings[uid] || ""}
-                                                                onChange={(e) => {
-                                                                    const v = e.target.value;
-                                                                    setMemberRatings((prev) => ({...prev, [uid]: v}));
-
-                                                                    // Clear previous timeout
-                                                                    const key = `memberRating_${uid}`;
-                                                                    if (validationTimeouts.current[key]) {
-                                                                        clearTimeout(validationTimeouts.current[key]);
-                                                                    }
-
-                                                                    // Clear error immediately
-                                                                    setValidationErrors(prev => {
-                                                                        const next = {...prev};
-                                                                        delete next[key];
-                                                                        return next;
-                                                                    });
-
-                                                                    // Set timeout for validation
-                                                                    if (v) {
-                                                                        validationTimeouts.current[key] = setTimeout(() => {
-                                                                            const error = validateField("myRating", v);
-                                                                            setValidationErrors(prev => {
-                                                                                const next = {...prev};
-                                                                                if (error) {
-                                                                                    next[key] = error;
-                                                                                } else {
-                                                                                    delete next[key];
-                                                                                }
-                                                                                return next;
-                                                                            });
-                                                                        }, 500);
-                                                                    }
-                                                                }}
-                                                                placeholder="1-10"
-                                                                className="w-32 h-8"
-                                                                aria-invalid={!!validationErrors[`memberRating_${uid}`]}
-                                                            />
-                                                            {validationErrors[`memberRating_${uid}`] && (
-                                                                <FieldError className="text-xs">{validationErrors[`memberRating_${uid}`]}</FieldError>
-                                                            )}
-                                                        </div>
+                                                        <Rating
+                                                            value={memberRatings[uid] || 0}
+                                                            onValueChange={(v) => {
+                                                                setMemberRatings((prev) => ({...prev, [uid]: v}));
+                                                                const key = `memberRating_${uid}`;
+                                                                setValidationErrors(prev => {
+                                                                    const next = {...prev};
+                                                                    delete next[key];
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                            max={10}
+                                                            size="sm"
+                                                            clearable
+                                                        >
+                                                            {Array.from({length: 10}, (_, i) => (
+                                                                <RatingItem key={i}/>
+                                                            ))}
+                                                        </Rating>
                                                     </Field>
                                                 );
                                             })}
@@ -891,21 +861,20 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             {/* Personal mode: single rating */}
                             {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
                                 <Field>
-                                    <FieldLabel htmlFor="myRating" className="flex items-center gap-1.5">
+                                    <FieldLabel className="flex items-center gap-1.5">
                                         <Star className="h-3.5 w-3.5"/>
                                         {t("myRatingLabel")}
                                     </FieldLabel>
-                                    <Input
-                                        id="myRating"
+                                    <Rating
                                         value={myRating}
-                                        onChange={(e) => {
-                                            setMyRating(e.target.value);
-                                            handleFieldChange("myRating", e.target.value);
-                                        }}
-                                        placeholder="1-10"
-                                        aria-invalid={!!validationErrors.myRating}
-                                    />
-                                    {validationErrors.myRating && <FieldError>{validationErrors.myRating}</FieldError>}
+                                        onValueChange={setMyRating}
+                                        max={10}
+                                        clearable
+                                    >
+                                        {Array.from({length: 10}, (_, i) => (
+                                            <RatingItem key={i}/>
+                                        ))}
+                                    </Rating>
                                 </Field>
                             )}
                         </>
