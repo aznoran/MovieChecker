@@ -240,6 +240,12 @@ const en = {
     totalEpisodes: "Total Episodes",
     watchingTime: "Last Watching Time",
 
+    // Rate-only mode
+    rateOnlyTitle: "Rate Entry",
+    rateOnlyDescription: "You can rate this entry but cannot edit other fields",
+    ratingUpdated: "Rating updated successfully!",
+    failedToRate: "Failed to update rating",
+
     // Field Descriptions
     posterDescription: "Upload a poster or paste from clipboard",
     genreDescription: "Select one or more genres",

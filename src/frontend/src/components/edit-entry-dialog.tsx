@@ -13,7 +13,7 @@ import {
     type CropperAreaData,
 } from "@/components/ui/cropper";
 import {getCroppedImage} from "@/lib/crop-utils";
-import {ContentType, WatchEntry, GroupType} from "@/types";
+import {ContentType, WatchEntry, GroupType, GroupRole} from "@/types";
 import {
     WatchStatus,
     Emotion,
@@ -83,6 +83,17 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const {user} = useAuth();
     const {activeGroup} = useGroup();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
+
+    // Determine permissions
+    const currentMember = activeGroup?.members.find(m => m.userId === user?.id);
+    const canEdit = !isGroupMode || (
+        currentMember !== undefined && currentMember.role >= GroupRole.Member
+    );
+    const canRateSelf = !isGroupMode || (currentMember !== undefined && currentMember.role >= GroupRole.Viewer);
+    const canRateOthers = !isGroupMode || (currentMember !== undefined && currentMember.role >= GroupRole.Admin);
+
+    // If user can't edit and can't rate, don't show dialog (shouldn't happen)
+    const isRateOnlyMode = !canEdit && canRateSelf;
 
     const [status, setStatus] = useState<WatchStatus>(entry.status);
     // Personal mode: single rating
@@ -246,6 +257,25 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
     const mutation = useMutation({
         mutationFn: async (overridePosterFile?: File | null) => {
+            if (isRateOnlyMode) {
+                // Rate-only mode: only submit ratings via the rate endpoint
+                if (user?.id) {
+                    if (isGroupMode && canRateOthers) {
+                        // Admin/Owner can rate for all selected members
+                        for (const uid of selectedMembers) {
+                            const rating = memberRatings[uid] ?? 0;
+                            await rateEntry(entry.id, Math.round(rating * 2), uid);
+                        }
+                    } else {
+                        // Viewer/Member can only rate self
+                        const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
+                        await rateEntry(entry.id, Math.round(currentRating * 2));
+                    }
+                }
+                return;
+            }
+
+            // Full edit mode
             const fileToUpload = overridePosterFile ?? posterFile;
             if (fileToUpload) {
                 const posterUrl = await uploadPoster(fileToUpload);
@@ -276,19 +306,27 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
             // Rate separately via the rate endpoint
             if ((status === WatchStatus.Completed || status === WatchStatus.Dropped) && user?.id) {
-                const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
-                await rateEntry(entry.id, Math.round(currentRating * 2));
+                if (isGroupMode && canRateOthers) {
+                    // Admin/Owner can rate for all selected members
+                    for (const uid of selectedMembers) {
+                        const rating = memberRatings[uid] ?? 0;
+                        await rateEntry(entry.id, Math.round(rating * 2), uid);
+                    }
+                } else {
+                    const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
+                    await rateEntry(entry.id, Math.round(currentRating * 2));
+                }
             }
         },
         onSuccess: () => {
-            toast.success(t("postUpdated"), { position: "top-center" })
+            toast.success(isRateOnlyMode ? t("ratingUpdated") : t("postUpdated"), { position: "top-center" })
             queryClient.invalidateQueries({queryKey: ["watchEntries"]});
             onOpenChange(false);
         },
         onError: (error: any) => {
-            const errorMessage = error?.response?.data?.message || t("failedToUpdate");
+            const errorMessage = error?.response?.data?.message || (isRateOnlyMode ? t("failedToRate") : t("failedToUpdate"));
             toast.error(errorMessage, { position: "top-center" })
-            setError(t("failedToUpdate"));
+            setError(isRateOnlyMode ? t("failedToRate") : t("failedToUpdate"));
         },
     });
 
@@ -438,8 +476,17 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Pencil className="h-5 w-5"/>
-                        {t("editEntry")}
+                        {isRateOnlyMode ? (
+                            <>
+                                <Star className="h-5 w-5"/>
+                                {t("rateOnlyTitle")}
+                            </>
+                        ) : (
+                            <>
+                                <Pencil className="h-5 w-5"/>
+                                {t("editEntry")}
+                            </>
+                        )}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -459,6 +506,118 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     </div>
                 </div>
 
+                {isRateOnlyMode ? (
+                    /* Rate-only form */
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <p className="text-sm text-muted-foreground">{t("rateOnlyDescription")}</p>
+
+                        {isGroupMode && canRateOthers ? (
+                            /* Admin/Owner in group: can rate all members */
+                            <FieldSet>
+                                <FieldLegend variant="label" className="flex items-center gap-1.5">
+                                    <Star className="h-3.5 w-3.5"/>
+                                    {t("ratings")}
+                                </FieldLegend>
+                                <FieldGroup className="gap-4">
+                                    {(activeGroup?.members ?? []).map((m) => {
+                                        const existingRating = entry.ratings?.find(r => r.userId === m.userId);
+                                        return (
+                                            <Field key={m.userId} orientation="horizontal">
+                                                <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
+                                                    {m.displayName}
+                                                </FieldLabel>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="opacity-50">
+                                                        {memberRatings[m.userId] || 0}/10
+                                                    </div>
+                                                    <Rating
+                                                        value={memberRatings[m.userId] || 0}
+                                                        onValueChange={(v) => {
+                                                            setMemberRatings((prev) => ({...prev, [m.userId]: v}));
+                                                            if (!selectedMembers.includes(m.userId)) {
+                                                                setSelectedMembers((prev) => [...prev, m.userId]);
+                                                            }
+                                                        }}
+                                                        max={10}
+                                                        step={0.5}
+                                                        clearable
+                                                    >
+                                                        {Array.from({length: 10}, (_, i) => (
+                                                            <RatingItem key={i}/>
+                                                        ))}
+                                                    </Rating>
+                                                </div>
+                                            </Field>
+                                        );
+                                    })}
+                                </FieldGroup>
+                            </FieldSet>
+                        ) : (
+                            /* Viewer/Member: can only rate self */
+                            <Field>
+                                <FieldLabel className="flex items-center gap-1.5">
+                                    <Star className="h-3.5 w-3.5"/>
+                                    {t("myRatingLabel")}
+                                </FieldLabel>
+                                <div className="flex items-center gap-4">
+                                    <Rating
+                                        value={isGroupMode ? (memberRatings[user?.id ?? 0] || 0) : myRating}
+                                        onValueChange={(v) => {
+                                            if (isGroupMode && user?.id) {
+                                                setMemberRatings((prev) => ({...prev, [user.id]: v}));
+                                                if (!selectedMembers.includes(user.id)) {
+                                                    setSelectedMembers((prev) => [...prev, user.id]);
+                                                }
+                                            } else {
+                                                setMyRating(v);
+                                            }
+                                        }}
+                                        max={10}
+                                        step={0.5}
+                                        clearable
+                                    >
+                                        {Array.from({length: 10}, (_, i) => (
+                                            <RatingItem key={i}/>
+                                        ))}
+                                    </Rating>
+                                    <div className="opacity-50">
+                                        {isGroupMode ? (memberRatings[user?.id ?? 0] || 0) : myRating}/10
+                                    </div>
+                                </div>
+                            </Field>
+                        )}
+
+                        {error && (
+                            <p className="text-sm text-destructive text-center">{error}</p>
+                        )}
+
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                className="flex-1"
+                            >
+                                {t("cancel")}
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={mutation.isPending}
+                                className="flex-1"
+                            >
+                                {mutation.isPending ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-1.5 animate-spin"/>
+                                        {t("saving")}
+                                    </>
+                                ) : (
+                                    t("save")
+                                )}
+                            </Button>
+                        </div>
+                    </form>
+                ) : (
+                /* Full edit form */
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Poster */}
                     <Field>
@@ -981,6 +1140,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                         </Button>
                     </div>
                 </form>
+                )}
             </DialogContent>
         </Dialog>
         </>

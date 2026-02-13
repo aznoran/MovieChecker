@@ -156,8 +156,15 @@ export const updateWatchEntry = async (
   return response.data as unknown as WatchEntry;
 };
 
-export const rateEntry = async (entryId: number, rating: number): Promise<void> => {
-  await apiClient.api.watchEntriesRateCreate(entryId, { rating });
+export const rateEntry = async (entryId: number, rating: number, targetUserId?: number): Promise<void> => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+  await apiClient.instance.post(`/api/watch-entries/${entryId}/rate`, { rating, targetUserId }, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "Accept-Language": locale,
+    },
+  });
 };
 
 export const deleteWatchEntry = async (id: number): Promise<void> => {
@@ -248,6 +255,33 @@ export const updateGroupSettings = async (groupId: number, settings: { name?: st
     },
   });
   return response.data as unknown as Group;
+};
+
+// Permissions
+export interface UserPermissions {
+  permissionFlags: number;
+  canViewEntries: boolean;
+  canCreateEntries: boolean;
+  canEditOwnEntries: boolean;
+  canEditAllEntries: boolean;
+  canDeleteOwnEntries: boolean;
+  canDeleteAllEntries: boolean;
+  canRateSelf: boolean;
+  canRateOthers: boolean;
+  canManageMembers: boolean;
+  canManageGroup: boolean;
+}
+
+export const getMyPermissions = async (groupId: number): Promise<UserPermissions> => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+  const response = await apiClient.instance.get(`/api/groups/${groupId}/my-permissions`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "Accept-Language": locale,
+    },
+  });
+  return response.data as UserPermissions;
 };
 
 // Upload

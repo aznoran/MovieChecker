@@ -242,6 +242,12 @@ const ru: Record<TranslationKeys, string> = {
     totalEpisodes: "Общее кол-во эпизодов",
     watchingTime: "Время последнего просмотра",
 
+    // Rate-only mode
+    rateOnlyTitle: "Оценить запись",
+    rateOnlyDescription: "Вы можете оценить эту запись, но не можете редактировать другие поля",
+    ratingUpdated: "Оценка обновлена!",
+    failedToRate: "Не удалось обновить оценку",
+
     // Field Descriptions
     posterDescription: "Загрузите обложку или вставьте из буфера обмена",
     genreDescription: "Выберите один или несколько жанров",

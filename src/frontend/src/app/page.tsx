@@ -68,6 +68,13 @@ export default function HomePage() {
         return false; // Viewer cannot modify
     };
 
+    // Check if user can interact with an entry (edit or rate)
+    const canInteractWithEntry = (): boolean => {
+        if (!isGroupMode) return true;
+        // Any group member (including Viewer) can at least rate
+        return currentMember !== undefined;
+    };
+
     // Check if user can create entries
     const canCreate = !isGroupMode || (currentMember !== undefined && currentMember.role >= GroupRole.Member);
 
