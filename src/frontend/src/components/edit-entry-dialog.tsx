@@ -105,6 +105,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [posterPreview, setPosterPreview] = useState<string | null>(
         getPosterUrl(entry.movie.posterUrl)
     );
+    const [posterRemoved, setPosterRemoved] = useState(false);
     const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
     const [isCropping, setIsCropping] = useState(false);
     const [crop, setCrop] = useState({x: 0, y: 0});
@@ -146,6 +147,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             setComment(entry.comment || "");
             setPosterFile(null);
             setPosterPreview(getPosterUrl(entry.movie.posterUrl));
+            setPosterRemoved(false);
             setIsCropping(false);
             setEditorImageSrc(null);
             onCropReset();
@@ -251,6 +253,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if (fileToUpload) {
                 const posterUrl = await uploadPoster(fileToUpload);
                 await updateMovie(entry.movieId, {posterUrl});
+            } else if (posterRemoved) {
+                await updateMovie(entry.movieId, {posterUrl: ""});
             }
 
             const ratingsArray = isGroupMode
@@ -371,6 +375,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const removePoster = () => {
         setPosterFile(null);
         setPosterPreview(null);
+        setPosterRemoved(true);
         setEditorImageSrc(null);
         setIsCropping(false);
         onCropReset();
@@ -567,8 +572,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                             if (!editorImageSrc && posterPreview) {
                                                 setEditorImageSrc(posterPreview);
                                             }
-                                            onCropReset();
-                                            croppedAreaPixelsRef.current = null;
                                             setIsCropping(true);
                                         }}
                                     >

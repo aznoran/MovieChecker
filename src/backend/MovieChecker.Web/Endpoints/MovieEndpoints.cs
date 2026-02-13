@@ -140,7 +140,19 @@ public static class MovieEndpoints
         if (request.Type.HasValue) movie.Type = request.Type.Value;
         if (request.Year.HasValue) movie.Year = request.Year.Value;
         if (request.Genre != null) movie.Genre = request.Genre;
-        if (request.PosterUrl != null) movie.PosterUrl = request.PosterUrl;
+        if (request.PosterUrl != null)
+        {
+            var oldPosterUrl = movie.PosterUrl;
+            movie.PosterUrl = string.IsNullOrEmpty(request.PosterUrl) ? null : request.PosterUrl;
+            
+            // Clean up old poster image from database
+            if (!string.IsNullOrEmpty(oldPosterUrl) && oldPosterUrl != movie.PosterUrl 
+                && int.TryParse(oldPosterUrl, out var oldPosterId))
+            {
+                var oldPoster = await db.PosterImages.FindAsync(oldPosterId);
+                if (oldPoster != null) db.PosterImages.Remove(oldPoster);
+            }
+        }
 
         await db.SaveChangesAsync();
 
@@ -162,6 +174,13 @@ public static class MovieEndpoints
         if (movie == null)
         {
             return Results.NotFound();
+        }
+
+        // Clean up poster image from database
+        if (!string.IsNullOrEmpty(movie.PosterUrl) && int.TryParse(movie.PosterUrl, out var posterId))
+        {
+            var poster = await db.PosterImages.FindAsync(posterId);
+            if (poster != null) db.PosterImages.Remove(poster);
         }
 
         db.Movies.Remove(movie);
