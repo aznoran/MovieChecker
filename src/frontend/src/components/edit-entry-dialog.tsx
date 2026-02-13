@@ -484,7 +484,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         onCropChange={setCrop}
                                         onZoomChange={setZoom}
                                         onRotationChange={setRotation}
-                                        onCropComplete={onCropComplete}
+                                        onCropAreaChange={onCropComplete}
                                     >
                                         <CropperImage
                                             src={editorImageSrc}

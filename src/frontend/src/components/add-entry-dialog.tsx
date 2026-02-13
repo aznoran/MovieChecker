@@ -481,7 +481,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                         onCropChange={setCrop}
                                         onZoomChange={setZoom}
                                         onRotationChange={setRotation}
-                                        onCropComplete={onCropComplete}
+                                        onCropAreaChange={onCropComplete}
                                     >
                                         <CropperImage
                                             src={editorImageSrc}
