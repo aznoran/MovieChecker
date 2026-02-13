@@ -58,7 +58,7 @@ function ProgressBar({
 
 function StarRating({rating}: { rating: number }) {
     return (
-        <Rating value={Math.round(rating)} max={10} readOnly size="sm" step={1} className="gap-0.5">
+        <Rating value={Math.floor(rating * 2) / 2} max={10} readOnly size="sm" step={0.5} className="gap-0.5">
             {Array.from({length: 10}, (_, i) => (
                 <RatingItem key={i} className="text-yellow-400"/>
             ))}
