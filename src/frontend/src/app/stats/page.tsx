@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import {toast} from "sonner";
 import {useEffect} from "react";
+import {Rating, RatingItem} from "@/components/ui/rating";
 
 export const dynamic = "force-dynamic";
 
@@ -56,22 +57,12 @@ function ProgressBar({
 }
 
 function StarRating({rating}: { rating: number }) {
-    const full = Math.floor(rating);
-    const partial = rating - full;
     return (
-        <div className="flex items-center gap-0.5">
-            {Array.from({length: 10}, (_, i) => {
-                let fill: string;
-                if (i < full) {
-                    fill = "text-yellow-400";
-                } else if (i === full && partial >= 0.5) {
-                    fill = "text-yellow-400/50";
-                } else {
-                    fill = "text-muted-foreground/20";
-                }
-                return <Star key={i} className={`h-3.5 w-3.5 fill-current ${fill}`}/>;
-            })}
-        </div>
+        <Rating value={Math.round(rating)} max={10} readOnly size="sm" step={1} className="gap-0.5">
+            {Array.from({length: 10}, (_, i) => (
+                <RatingItem key={i} className="text-yellow-400"/>
+            ))}
+        </Rating>
     );
 }
 
