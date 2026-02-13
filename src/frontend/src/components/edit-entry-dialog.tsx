@@ -275,8 +275,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             });
 
             // Rate separately via the rate endpoint
-            if (status === WatchStatus.Completed || status === WatchStatus.Dropped) {
-                const currentRating = isGroupMode ? (memberRatings[user?.id ?? 0] ?? 0) : myRating;
+            if ((status === WatchStatus.Completed || status === WatchStatus.Dropped) && user?.id) {
+                const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
                 await rateEntry(entry.id, Math.round(currentRating * 2));
             }
         },
