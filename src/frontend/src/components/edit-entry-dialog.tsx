@@ -199,7 +199,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 }
                 return null;
             case "myRating":
-                if (value && (!/^\d+$/.test(value) || parseInt(value) < 1 || parseInt(value) > 10)) {
+                if (value && (!/^\d+(\.\d+)?$/.test(value) || parseFloat(value) < 0.5 || parseFloat(value) > 10)) {
                     return t("invalidRating");
                 }
                 return null;
@@ -261,12 +261,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             const ratingsArray = isGroupMode
                 ? selectedMembers
                     .filter((uid) => memberRatings[uid])
-                    .map((uid) => ({userId: uid, rating: parseInt(memberRatings[uid])}))
+                    .map((uid) => ({userId: uid, rating: parseFloat(memberRatings[uid])}))
                 : undefined;
 
             await updateWatchEntry(entry.id, {
                 status,
-                rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
+                rating: !isGroupMode && myRating ? parseFloat(myRating) : undefined,
                 ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
                 emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
@@ -411,7 +411,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         if (isGroupMode && (status === WatchStatus.Completed || status === WatchStatus.Dropped)) {
             selectedMembers.forEach(uid => {
                 const rating = memberRatings[uid] || "";
-                if (rating && (!/^\d+$/.test(rating) || parseInt(rating) < 1 || parseInt(rating) > 10)) {
+                if (rating && (!/^\d+(\.\d+)?$/.test(rating) || parseFloat(rating) < 0.5 || parseFloat(rating) > 10)) {
                     errors[`memberRating_${uid}`] = t("invalidRating");
                 }
             });
@@ -721,7 +721,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                         </FieldLabel>
                                                         <div className="flex-1">
                                                             <Rating
-                                                                value={memberRatings[uid] ? parseInt(memberRatings[uid], 10) : 0}
+                                                                value={memberRatings[uid] ? parseFloat(memberRatings[uid]) : 0}
                                                                 onChange={(value) => {
                                                                     setMemberRatings((prev) => ({...prev, [uid]: value.toString()}));
                                                                     const key = `memberRating_${uid}`;
@@ -878,7 +878,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         {t("myRatingLabel")}
                                     </FieldLabel>
                                     <Rating
-                                        value={myRating ? parseInt(myRating, 10) : 0}
+                                        value={myRating ? parseFloat(myRating) : 0}
                                         onChange={(value) => {
                                             setMyRating(value.toString());
                                             handleFieldChange("myRating", value.toString());
