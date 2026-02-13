@@ -530,6 +530,7 @@ public static class WatchEntryEndpoints
 
         var movieId = entry.MovieId;
         var posterUrl = entry.Movie.PosterUrl;
+        var movie = entry.Movie;
 
         db.WatchEntries.Remove(entry);
         await db.SaveChangesAsync();
@@ -544,9 +545,7 @@ public static class WatchEntryEndpoints
                 if (poster != null) db.PosterImages.Remove(poster);
             }
 
-            var movie = await db.Movies.FindAsync(movieId);
-            if (movie != null) db.Movies.Remove(movie);
-
+            db.Movies.Remove(movie);
             await db.SaveChangesAsync();
         }
 
