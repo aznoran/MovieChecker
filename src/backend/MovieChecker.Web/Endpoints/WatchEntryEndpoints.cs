@@ -517,7 +517,9 @@ public static class WatchEntryEndpoints
         int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var userId = GetUserId(user);
-        var entry = await db.WatchEntries.FirstOrDefaultAsync(w => w.Id == id);
+        var entry = await db.WatchEntries
+            .Include(w => w.Movie)
+            .FirstOrDefaultAsync(w => w.Id == id);
 
         if (entry == null)
             return Results.NotFound();
@@ -526,8 +528,26 @@ public static class WatchEntryEndpoints
         if (!await PermissionService.CanDeleteEntry(db, userId, entry))
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsDelete"]));
 
+        var movieId = entry.MovieId;
+        var posterUrl = entry.Movie.PosterUrl;
+        var movie = entry.Movie;
+
         db.WatchEntries.Remove(entry);
         await db.SaveChangesAsync();
+
+        // Clean up movie and poster if no other entries reference this movie
+        var otherEntries = await db.WatchEntries.AnyAsync(w => w.MovieId == movieId);
+        if (!otherEntries)
+        {
+            if (!string.IsNullOrEmpty(posterUrl) && int.TryParse(posterUrl, out var posterId))
+            {
+                var poster = await db.PosterImages.FindAsync(posterId);
+                if (poster != null) db.PosterImages.Remove(poster);
+            }
+
+            db.Movies.Remove(movie);
+            await db.SaveChangesAsync();
+        }
 
         return Results.NoContent();
     }

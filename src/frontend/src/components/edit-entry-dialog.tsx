@@ -6,7 +6,13 @@ import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl} from "@/lib/a
 import {useLocale} from "@/context/locale-context";
 import {useAuth} from "@/context/auth-context";
 import {useGroup} from "@/context/group-context";
-import {ImageEditor} from "@/components/image-editor";
+import {
+    Cropper,
+    CropperImage,
+    CropperArea,
+    type CropperAreaData,
+} from "@/components/ui/cropper";
+import {getCroppedImage} from "@/lib/crop-utils";
 import {ContentType, WatchEntry, GroupType} from "@/types";
 import {
     WatchStatus,
@@ -46,6 +52,9 @@ import {
     Calendar,
     ClipboardPaste,
     Crop,
+    ZoomIn,
+    RotateCw,
+    RotateCcw,
 } from "lucide-react";
 import {
     Field,
@@ -57,6 +66,8 @@ import {
     FieldSet,
     FieldLegend,
 } from "@/components/ui/field";
+import {Switch} from "@/components/ui/switch";
+import {Label} from "@/components/ui/label";
 import {toast} from "sonner";
 
 interface Props {
@@ -94,8 +105,14 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [posterPreview, setPosterPreview] = useState<string | null>(
         getPosterUrl(entry.movie.posterUrl)
     );
-    const [editorOpen, setEditorOpen] = useState(false);
+    const [posterRemoved, setPosterRemoved] = useState(false);
     const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
+    const [isCropping, setIsCropping] = useState(false);
+    const [crop, setCrop] = useState({x: 0, y: 0});
+    const [zoom, setZoom] = useState(1);
+    const [rotation, setRotation] = useState(0);
+    const [withGrid, setWithGrid] = useState(false);
+    const croppedAreaPixelsRef = useRef<CropperAreaData | null>(null);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -107,6 +124,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [hours, setHours] = useState(Math.floor(existingWatchingTime / 3600).toString());
     const [minutes, setMinutes] = useState(Math.floor((existingWatchingTime % 3600) / 60).toString());
     const [seconds, setSeconds] = useState((existingWatchingTime % 60).toString());
+
+    const onCropReset = useCallback(() => {
+        setCrop({x: 0, y: 0});
+        setZoom(1);
+        setRotation(0);
+    }, []);
 
     // Reset form state when entry changes or dialog opens
     useEffect(() => {
@@ -124,8 +147,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             setComment(entry.comment || "");
             setPosterFile(null);
             setPosterPreview(getPosterUrl(entry.movie.posterUrl));
-            setEditorOpen(false);
+            setPosterRemoved(false);
+            setIsCropping(false);
             setEditorImageSrc(null);
+            onCropReset();
+            croppedAreaPixelsRef.current = null;
             setError("");
             setCurrentEpisode(entry.currentEpisode?.toString() || "");
             setTotalEpisodes(entry.totalEpisodes?.toString() || "");
@@ -222,10 +248,13 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
-        mutationFn: async () => {
-            if (posterFile) {
-                const posterUrl = await uploadPoster(posterFile);
+        mutationFn: async (overridePosterFile?: File | null) => {
+            const fileToUpload = overridePosterFile ?? posterFile;
+            if (fileToUpload) {
+                const posterUrl = await uploadPoster(fileToUpload);
                 await updateMovie(entry.movieId, {posterUrl});
+            } else if (posterRemoved) {
+                await updateMovie(entry.movieId, {posterUrl: ""});
             }
 
             const ratingsArray = isGroupMode
@@ -271,24 +300,58 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        openImageEditor(file);
+        startCropping(file);
     };
 
-    const openImageEditor = (file: File) => {
+    const startCropping = (file: File) => {
         const reader = new FileReader();
         reader.onloadend = () => {
             setEditorImageSrc(reader.result as string);
-            setEditorOpen(true);
+            onCropReset();
+            croppedAreaPixelsRef.current = null;
+            setIsCropping(true);
         };
         reader.readAsDataURL(file);
     };
 
-    const handleEditorConfirm = useCallback((croppedFile: File) => {
-        setPosterFile(croppedFile);
+    const onCropComplete = useCallback((_: CropperAreaData, croppedPixels: CropperAreaData) => {
+        croppedAreaPixelsRef.current = croppedPixels;
+    }, []);
+
+    const applyCropAndGetFile = async (): Promise<File | null> => {
+        if (!editorImageSrc) return null;
+        let file: File;
+        if (croppedAreaPixelsRef.current) {
+            const blob = await getCroppedImage(editorImageSrc, croppedAreaPixelsRef.current, rotation);
+            file = new File([blob], "cropped-poster.jpg", {type: "image/jpeg"});
+        } else {
+            // User never interacted with the cropper — use original image as-is
+            const res = await fetch(editorImageSrc);
+            const blob = await res.blob();
+            file = new File([blob], "poster.jpg", {type: blob.type || "image/jpeg"});
+        }
+        setPosterFile(file);
         const reader = new FileReader();
         reader.onloadend = () => setPosterPreview(reader.result as string);
-        reader.readAsDataURL(croppedFile);
-    }, []);
+        reader.readAsDataURL(file);
+        setIsCropping(false);
+        return file;
+    };
+
+    const handleApplyCrop = async () => {
+        try {
+            await applyCropAndGetFile();
+        } catch {
+            toast.error(t("cropFailed"), {position: "top-center"});
+        }
+    };
+
+    const handleCancelCrop = () => {
+        if (!posterPreview) {
+            setEditorImageSrc(null);
+        }
+        setIsCropping(false);
+    };
 
     const handlePasteFromClipboard = async () => {
         try {
@@ -299,24 +362,28 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     const blob = await item.getType(imageType);
                     const ext = imageType.split("/")[1] || "png";
                     const file = new File([blob], `clipboard.${ext}`, {type: imageType});
-                    openImageEditor(file);
+                    startCropping(file);
                     return;
                 }
             }
-            setError(t("clipboardNoImage"));
+            toast.error(t("clipboardNoImage"), {position: "top-center"});
         } catch {
-            setError(t("clipboardFailed"));
+            toast.error(t("clipboardFailed"), {position: "top-center"});
         }
     };
 
     const removePoster = () => {
         setPosterFile(null);
         setPosterPreview(null);
+        setPosterRemoved(true);
         setEditorImageSrc(null);
+        setIsCropping(false);
+        onCropReset();
+        croppedAreaPixelsRef.current = null;
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Validate all fields
@@ -356,7 +423,19 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         }
 
         setError("");
-        mutation.mutate();
+
+        // Auto-apply crop if still in cropping mode
+        let croppedFile: File | null = null;
+        if (isCropping && editorImageSrc) {
+            try {
+                croppedFile = await applyCropAndGetFile();
+            } catch {
+                toast.error(t("cropFailed"), {position: "top-center"});
+                return;
+            }
+        }
+
+        mutation.mutate(croppedFile);
     };
 
     return (
@@ -398,7 +477,84 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 {t("posterDescription")}
                             </FieldDescription>
                         </FieldContent>
-                        {posterPreview ? (
+                        {isCropping && editorImageSrc ? (
+                            <div className="space-y-3">
+                                <div className="relative w-full aspect-[4/3] bg-muted rounded-lg overflow-hidden border">
+                                    <Cropper
+                                        crop={crop}
+                                        zoom={zoom}
+                                        rotation={rotation}
+                                        aspectRatio={4 / 3}
+                                        withGrid={withGrid}
+                                        onCropChange={setCrop}
+                                        onZoomChange={setZoom}
+                                        onRotationChange={setRotation}
+                                        onCropAreaChange={onCropComplete}
+                                    >
+                                        <CropperImage
+                                            src={editorImageSrc}
+                                            alt="Image to crop"
+                                            crossOrigin="anonymous"
+                                        />
+                                        <CropperArea />
+                                    </Cropper>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0"/>
+                                        <span className="text-sm text-muted-foreground w-12">{t("zoom")}</span>
+                                        <input
+                                            type="range"
+                                            min={1}
+                                            max={3}
+                                            step={0.1}
+                                            value={zoom}
+                                            onChange={(e) => setZoom(Number(e.target.value))}
+                                            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <RotateCw className="h-4 w-4 text-muted-foreground shrink-0"/>
+                                        <span className="text-sm text-muted-foreground w-12">{t("rotate")}</span>
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={360}
+                                            step={1}
+                                            value={rotation}
+                                            onChange={(e) => setRotation(Number(e.target.value))}
+                                            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 shrink-0"
+                                            onClick={() => setRotation((prev) => (prev + 90) % 360)}
+                                        >
+                                            <RotateCw className="h-3.5 w-3.5"/>
+                                        </Button>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Switch id="edit-crop-grid" checked={withGrid} onCheckedChange={setWithGrid} size="sm"/>
+                                            <Label htmlFor="edit-crop-grid" className="text-sm text-muted-foreground">{t("showGrid")}</Label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button type="button" onClick={handleApplyCrop} className="flex-1">
+                                        {t("applyCrop")}
+                                    </Button>
+                                    <Button type="button" variant="outline" size="icon" onClick={onCropReset}>
+                                        <RotateCcw className="h-3.5 w-3.5"/>
+                                    </Button>
+                                    <Button type="button" variant="outline" onClick={handleCancelCrop}>
+                                        {t("cancel")}
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : posterPreview ? (
                             <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border">
                                 <img
                                     src={posterPreview}
@@ -406,18 +562,21 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                     className="w-full h-full object-cover"
                                 />
                                 <div className="absolute top-2 right-2 flex gap-1">
-                                    {editorImageSrc && (
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            aria-label={t("imageEditorTitle")}
-                                            onClick={() => setEditorOpen(true)}
-                                        >
-                                            <Crop className="h-3.5 w-3.5"/>
-                                        </Button>
-                                    )}
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        aria-label={t("imageEditorTitle")}
+                                        onClick={() => {
+                                            if (!editorImageSrc && posterPreview) {
+                                                setEditorImageSrc(posterPreview);
+                                            }
+                                            setIsCropping(true);
+                                        }}
+                                    >
+                                        <Crop className="h-3.5 w-3.5"/>
+                                    </Button>
                                     <Button
                                         type="button"
                                         variant="secondary"
@@ -425,7 +584,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         className="h-7 w-7"
                                         onClick={() => fileInputRef.current?.click()}
                                     >
-                                        <Pencil className="h-3.5 w-3.5"/>
+                                        <ImagePlus className="h-3.5 w-3.5"/>
                                     </Button>
                                     <Button
                                         type="button"
@@ -845,14 +1004,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 </form>
             </DialogContent>
         </Dialog>
-            {editorImageSrc && (
-                <ImageEditor
-                    imageSrc={editorImageSrc}
-                    open={editorOpen}
-                    onOpenChange={setEditorOpen}
-                    onConfirm={handleEditorConfirm}
-                />
-            )}
         </>
     );
 }
