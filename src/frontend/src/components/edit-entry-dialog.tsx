@@ -569,6 +569,40 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <p className="text-sm text-muted-foreground">{t("rateOnlyDescription")}</p>
 
+                        {/* Readonly status */}
+                        <Field>
+                            <FieldLabel className="flex items-center gap-1.5">
+                                <ListChecks className="h-3.5 w-3.5"/>
+                                {t("status")}
+                            </FieldLabel>
+                            <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
+                                {watchStatusLabels[entry.status]}
+                            </div>
+                        </Field>
+
+                        {/* Readonly emotion */}
+                        {entry.emotion !== undefined && entry.emotion !== null && (
+                            <Field>
+                                <FieldLabel>{t("emotion")}</FieldLabel>
+                                <div className="text-xl">
+                                    {EmotionEmojis[entry.emotion]}
+                                </div>
+                            </Field>
+                        )}
+
+                        {/* Readonly comment */}
+                        {entry.comment && (
+                            <Field>
+                                <FieldLabel className="flex items-center gap-1.5">
+                                    <MessageSquare className="h-3.5 w-3.5"/>
+                                    {t("comment")}
+                                </FieldLabel>
+                                <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md whitespace-pre-wrap">
+                                    {entry.comment}
+                                </div>
+                            </Field>
+                        )}
+
                         {isGroupMode && canRateOthers ? (
                             /* Admin/Owner in group: can rate all members */
                             <FieldSet>
