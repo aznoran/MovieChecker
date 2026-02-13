@@ -221,13 +221,13 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             const ratingsArray = isGroupMode
                 ? selectedMembers
                     .filter((uid) => memberRatings[uid])
-                    .map((uid) => ({userId: uid, rating: memberRatings[uid]}))
+                    .map((uid) => ({userId: uid, rating: memberRatings[uid] * 2}))
                 : undefined;
 
             await createWatchEntry({
                 movieId: movie.id,
                 status,
-                rating: !isGroupMode && myRating ? myRating : undefined,
+                rating: !isGroupMode && myRating ? myRating * 2 : undefined,
                 ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
                 emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
@@ -800,6 +800,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                                 });
                                                             }}
                                                             max={10}
+                                                            step={0.5}
                                                             size="sm"
                                                             clearable
                                                         >
@@ -944,6 +945,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                         value={myRating}
                                         onValueChange={setMyRating}
                                         max={10}
+                                        step={0.5}
                                         clearable
                                     >
                                         {Array.from({length: 10}, (_, i) => (

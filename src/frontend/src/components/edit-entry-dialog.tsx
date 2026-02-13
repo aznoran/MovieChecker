@@ -86,7 +86,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [status, setStatus] = useState<WatchStatus>(entry.status);
     // Personal mode: single rating
     const myExistingRating = entry.ratings?.find((r) => r.userId === user?.id);
-    const [myRating, setMyRating] = useState(myExistingRating?.rating || 0);
+    const [myRating, setMyRating] = useState(myExistingRating?.rating ? myExistingRating.rating / 2 : 0);
     // Group mode: selected members and per-member ratings
     const [selectedMembers, setSelectedMembers] = useState<number[]>(
         () => entry.ratings?.map((r) => r.userId) ?? []
@@ -95,7 +95,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         () => {
             const map: Record<number, number> = {};
             entry.ratings?.forEach((r) => {
-                map[r.userId] = r.rating;
+                map[r.userId] = r.rating / 2;
             });
             return map;
         }
@@ -137,11 +137,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         if (open) {
             const myRat = entry.ratings?.find((r) => r.userId === user?.id);
             setStatus(entry.status);
-            setMyRating(myRat?.rating || 0);
+            setMyRating(myRat?.rating ? myRat.rating / 2 : 0);
             setSelectedMembers(entry.ratings?.map((r) => r.userId) ?? []);
             const map: Record<number, number> = {};
             entry.ratings?.forEach((r) => {
-                map[r.userId] = r.rating;
+                map[r.userId] = r.rating / 2;
             });
             setMemberRatings(map);
             setEmotion(entry.emotion ?? null);
@@ -256,12 +256,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             const ratingsArray = isGroupMode
                 ? selectedMembers
                     .filter((uid) => memberRatings[uid])
-                    .map((uid) => ({userId: uid, rating: memberRatings[uid]}))
+                    .map((uid) => ({userId: uid, rating: memberRatings[uid] * 2}))
                 : undefined;
 
             await updateWatchEntry(entry.id, {
                 status,
-                rating: !isGroupMode && myRating ? myRating : undefined,
+                rating: !isGroupMode && myRating ? myRating * 2 : undefined,
                 ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
                 emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
@@ -725,6 +725,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                                 });
                                                             }}
                                                             max={10}
+                                                            step={0.5}
                                                             size="sm"
                                                             clearable
                                                         >
@@ -869,6 +870,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         value={myRating}
                                         onValueChange={setMyRating}
                                         max={10}
+                                        step={0.5}
                                         clearable
                                     >
                                         {Array.from({length: 10}, (_, i) => (
