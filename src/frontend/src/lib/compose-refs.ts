@@ -31,6 +31,10 @@ function composeRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
       return cleanup;
     });
 
+    // React <19 will log an error to the console if a callback ref returns a
+    // value. We don't use ref cleanups internally so this will only happen if a
+    // user's ref callback returns a value, which we only expect if they are
+    // using the cleanup functionality added in React 19.
     if (hasCleanup) {
       return () => {
         for (let i = 0; i < cleanups.length; i++) {
@@ -51,7 +55,7 @@ function composeRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
  * Accepts callback refs and RefObject(s)
  */
 function useComposedRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // biome-ignore lint/correctness/useExhaustiveDependencies: we want to memoize by all values
   return React.useCallback(composeRefs(...refs), refs);
 }
 

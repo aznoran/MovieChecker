@@ -259,7 +259,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             resetForm();
             onOpenChange(false);
         },
-        onError: (error: any) => {
+        onError: (error : any) => {
             // Extract error message from response if available
             const errorMessage = error?.response?.data?.message || t("failedToAdd");
             toast.error(errorMessage, { position: "top-center" })
@@ -813,8 +813,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                                         return next;
                                                                     });
                                                                 }}
-                                                                size="md"
-                                                                showValue
+                                                                step={0.5}
                                                             />
                                                             {validationErrors[`memberRating_${uid}`] && (
                                                                 <FieldError className="text-xs">{validationErrors[`memberRating_${uid}`]}</FieldError>
@@ -959,8 +958,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                             setMyRating(value.toString());
                                             handleFieldChange("myRating", value.toString());
                                         }}
-                                        size="md"
-                                        showValue
+                                        step={0.5}
                                     />
                                     {validationErrors.myRating && <FieldError>{validationErrors.myRating}</FieldError>}
                                 </Field>
