@@ -796,7 +796,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                         </FieldLabel>
                                                         <div className="flex-1">
                                                             <Rating
-                                                                value={memberRatings[uid] ? parseInt(memberRatings[uid]) : 0}
+                                                                value={memberRatings[uid] ? parseInt(memberRatings[uid], 10) : 0}
                                                                 onChange={(value) => {
                                                                     setMemberRatings((prev) => ({...prev, [uid]: value.toString()}));
                                                                     const key = `memberRating_${uid}`;
@@ -954,7 +954,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                         {t("myRatingLabel")}
                                     </FieldLabel>
                                     <Rating
-                                        value={myRating ? parseInt(myRating) : 0}
+                                        value={myRating ? parseInt(myRating, 10) : 0}
                                         onChange={(value) => {
                                             setMyRating(value.toString());
                                             handleFieldChange("myRating", value.toString());
