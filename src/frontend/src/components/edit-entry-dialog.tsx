@@ -70,6 +70,7 @@ import {
 import {Switch} from "@/components/ui/switch";
 import {Label} from "@/components/ui/label";
 import {toast} from "sonner";
+import * as React from "react";
 
 interface Props {
     entry: WatchEntry;
@@ -713,26 +714,30 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                         <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
                                                             {member.displayName}
                                                         </FieldLabel>
-                                                        <Rating
-                                                            value={memberRatings[uid] || 0}
-                                                            onValueChange={(v) => {
-                                                                setMemberRatings((prev) => ({...prev, [uid]: v}));
-                                                                const key = `memberRating_${uid}`;
-                                                                setValidationErrors(prev => {
-                                                                    const next = {...prev};
-                                                                    delete next[key];
-                                                                    return next;
-                                                                });
-                                                            }}
-                                                            max={10}
-                                                            step={0.5}
-                                                            size="sm"
-                                                            clearable
-                                                        >
-                                                            {Array.from({length: 10}, (_, i) => (
-                                                                <RatingItem key={i}/>
-                                                            ))}
-                                                        </Rating>
+                                                        <div className="flex items-cetner gap-4">
+                                                            <div className="opacity-50">
+                                                                {memberRatings[uid] || 0}/10
+                                                            </div>
+                                                            <Rating
+                                                                value={memberRatings[uid] || 0}
+                                                                onValueChange={(v) => {
+                                                                    setMemberRatings((prev) => ({...prev, [uid]: v}));
+                                                                    const key = `memberRating_${uid}`;
+                                                                    setValidationErrors(prev => {
+                                                                        const next = {...prev};
+                                                                        delete next[key];
+                                                                        return next;
+                                                                    });
+                                                                }}
+                                                                max={10}
+                                                                step={0.5}
+                                                                clearable
+                                                            >
+                                                                {Array.from({length: 10}, (_, i) => (
+                                                                    <RatingItem key={i}/>
+                                                                ))}
+                                                            </Rating>
+                                                        </div>
                                                     </Field>
                                                 );
                                             })}
@@ -866,17 +871,22 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         <Star className="h-3.5 w-3.5"/>
                                         {t("myRatingLabel")}
                                     </FieldLabel>
-                                    <Rating
-                                        value={myRating}
-                                        onValueChange={setMyRating}
-                                        max={10}
-                                        step={0.5}
-                                        clearable
-                                    >
-                                        {Array.from({length: 10}, (_, i) => (
-                                            <RatingItem key={i}/>
-                                        ))}
-                                    </Rating>
+                                    <div className="flex items-cetner gap-4">
+                                        <Rating
+                                            value={myRating}
+                                            onValueChange={setMyRating}
+                                            max={10}
+                                            step={0.5}
+                                            clearable
+                                        >
+                                            {Array.from({length: 10}, (_, i) => (
+                                                <RatingItem key={i}/>
+                                            ))}
+                                        </Rating>
+                                        <div className="opacity-50">
+                                            {myRating}/10
+                                        </div>
+                                    </div>
                                 </Field>
                             )}
                         </>

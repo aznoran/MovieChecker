@@ -57,8 +57,10 @@ function ProgressBar({
 }
 
 function StarRating({rating}: { rating: number }) {
+    const newRating = rating/2;
+    console.log(newRating)
     return (
-        <Rating value={Math.floor(rating * 2) / 2} max={10} readOnly size="sm" step={0.5} className="gap-0.5">
+        <Rating size="lg" value={newRating} max={10} readOnly step={1} className="gap-0.5 fill-yellow-400">
             {Array.from({length: 10}, (_, i) => (
                 <RatingItem key={i} className="text-yellow-400"/>
             ))}
@@ -240,13 +242,13 @@ export default function StatsPage() {
                                     </CardHeader>
                                     <CardContent>
                                         {stats.averageMyRating > 0 ? (
-                                            <>
+                                            <div className="flex flex-row justify-between">
                                                 <div className="text-3xl font-bold mb-2">
-                                                    {stats.averageMyRating.toFixed(1)}
+                                                    {(stats.averageMyRating / 2).toFixed(1)}
                                                     <span className="text-lg text-muted-foreground">/10</span>
                                                 </div>
                                                 <StarRating rating={stats.averageMyRating}/>
-                                            </>
+                                            </div>
                                         ) : (
                                             <p className="text-muted-foreground text-sm">{t("noRated")}</p>
                                         )}
@@ -266,7 +268,7 @@ export default function StatsPage() {
                                             {stats.averageMyRating > 0 ? (
                                                 <>
                                                     <div className="text-3xl font-bold mb-2">
-                                                        {stats.averageMyRating.toFixed(1)}
+                                                        {(stats.averageMyRating / 2).toFixed(1)}
                                                         <span className="text-lg text-muted-foreground">/10</span>
                                                     </div>
                                                     <StarRating rating={stats.averageMyRating}/>
@@ -288,7 +290,7 @@ export default function StatsPage() {
                                             {stats.averagePartnerRating > 0 ? (
                                                 <>
                                                     <div className="text-3xl font-bold mb-2">
-                                                        {stats.averagePartnerRating.toFixed(1)}
+                                                        {(stats.averagePartnerRating / 2).toFixed(1)}
                                                         <span className="text-lg text-muted-foreground">/10</span>
                                                     </div>
                                                     <StarRating rating={stats.averagePartnerRating}/>
@@ -321,29 +323,24 @@ export default function StatsPage() {
                                                         ];
                                                         const accentColor = idx < 3 ? memberColors[idx] : "text-muted-foreground";
                                                         return (
-                                                            <div key={mr.userId}
-                                                                 className="flex items-center gap-4">
+                                                            <div key={mr.userId} className="flex items-center gap-4">
                                                                 <div
                                                                     className={`text-lg font-bold w-6 text-center ${accentColor}`}>
                                                                     {idx + 1}
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <div
-                                                                        className="flex items-center justify-between mb-1">
-                                                                            <span
-                                                                                className="font-medium text-sm truncate"
-                                                                            >
-                                                                                {mr.displayName}
-                                                                            </span>
-                                                                        <div
-                                                                            className="flex items-center gap-2 shrink-0 ml-2">
+                                                                    <div className="flex items-center justify-between mb-1">
+                                                                        <span className="font-medium text-sm truncate">
+                                                                            {mr.displayName}
+                                                                        </span>
+                                                                        <div className="flex items-center gap-2 shrink-0 ml-2">
                                                                             <span
                                                                                 className="text-xs text-muted-foreground">
                                                                               {mr.totalRated} {t("rated")}
                                                                             </span>
                                                                             {mr.averageRating > 0 ? (
                                                                                 <span className="font-bold">
-                                                                                    {mr.averageRating.toFixed(1)}
+                                                                                    {(mr.averageRating / 2).toFixed(1)}
                                                                                     <span
                                                                                         className="text-muted-foreground text-xs">/10</span>
                                                                                     </span>
@@ -378,13 +375,13 @@ export default function StatsPage() {
                                 </CardHeader>
                                 <CardContent>
                                     {stats.averageMyRating > 0 ? (
-                                        <>
+                                        <div className="flex flex-row justify-between">
                                             <div className="text-4xl font-bold mb-2">
-                                                {stats.averageMyRating.toFixed(1)}
+                                                {(stats.averageMyRating / 2).toFixed(1)}
                                                 <span className="text-xl text-muted-foreground">/10</span>
                                             </div>
                                             <StarRating rating={stats.averageMyRating}/>
-                                        </>
+                                        </div>
                                     ) : (
                                         <p className="text-muted-foreground text-sm">{t("noRated")}</p>
                                     )}

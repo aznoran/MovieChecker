@@ -306,7 +306,7 @@ export default function HomePage() {
                                                               <Star className="h-3.5 w-3.5 text-yellow-400 shrink-0"/>
                                                               <span
                                                                   className="text-muted-foreground truncate max-w-[80px]">{r.displayName}:</span>
-                                                              <strong className="shrink-0">{r.rating}/10</strong>
+                                                              <strong className="shrink-0">{r.rating/2}/10</strong>
                                                             </span>
                                                         ))}
                                                         {sorted.length > 3 && (
