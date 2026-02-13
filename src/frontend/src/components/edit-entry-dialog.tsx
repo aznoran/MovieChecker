@@ -2,7 +2,7 @@
 
 import {useState, useRef, useEffect, useCallback} from "react";
 import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl} from "@/lib/api";
+import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useAuth} from "@/context/auth-context";
 import {useGroup} from "@/context/group-context";
@@ -254,16 +254,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 await updateMovie(entry.movieId, {posterUrl: ""});
             }
 
-            const ratingsArray = isGroupMode
-                ? selectedMembers
-                    .filter((uid) => memberRatings[uid])
-                    .map((uid) => ({userId: uid, rating: memberRatings[uid] * 2}))
-                : undefined;
-
             await updateWatchEntry(entry.id, {
                 status,
-                rating: !isGroupMode && myRating ? myRating * 2 : undefined,
-                ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
                 emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
                 comment: comment || undefined,
@@ -281,6 +273,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                         : undefined,
                 } : {}),
             });
+
+            // Rate separately via the rate endpoint
+            if (status === WatchStatus.Completed || status === WatchStatus.Dropped) {
+                const currentRating = isGroupMode ? (memberRatings[user?.id ?? 0] ?? 0) : myRating;
+                await rateEntry(entry.id, Math.round(currentRating * 2));
+            }
         },
         onSuccess: () => {
             toast.success(t("postUpdated"), { position: "top-center" })

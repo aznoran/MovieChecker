@@ -145,9 +145,11 @@ export const updateWatchEntry = async (
     status?: number;
     emotion?: number;
     comment?: string;
-    rating?: number;
-    ratings?: { userId: number; rating: number }[];
     viewers?: number[];
+    currentSeason?: number;
+    currentEpisode?: number;
+    totalEpisodes?: number;
+    watchingTime?: number;
   }
 ): Promise<WatchEntry> => {
   const response = await apiClient.api.watchEntriesUpdate(id, entry);
