@@ -431,20 +431,24 @@ public static class WatchEntryEndpoints
         if (entryGroupIds.Count > 0)
         {
             // Check permissions using dedicated PermissionService methods
-            bool canRateSelf = false;
-            bool canRateOthers = false;
+            bool hasPermission = false;
+            bool isRatingSelf = targetUserId == userId;
+
             foreach (var gid in entryGroupIds)
             {
-                if (!canRateSelf && await PermissionService.CanRateSelf(db, userId, gid))
-                    canRateSelf = true;
-                if (!canRateOthers && await PermissionService.CanRateOthers(db, userId, gid))
-                    canRateOthers = true;
-                if (canRateSelf && canRateOthers) break;
+                if (isRatingSelf)
+                {
+                    if (await PermissionService.CanRateSelf(db, userId, gid))
+                    { hasPermission = true; break; }
+                }
+                else
+                {
+                    if (await PermissionService.CanRateOthers(db, userId, gid))
+                    { hasPermission = true; break; }
+                }
             }
 
-            if (targetUserId == userId && !canRateSelf)
-                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
-            if (targetUserId != userId && !canRateOthers)
+            if (!hasPermission)
                 return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
 
             // Validate that targetUserId is a member of at least one of the entry's groups
