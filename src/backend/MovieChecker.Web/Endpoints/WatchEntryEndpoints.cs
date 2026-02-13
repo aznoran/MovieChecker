@@ -376,8 +376,6 @@ public static class WatchEntryEndpoints
             return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
-        if (request.MyRating.HasValue) entry.MyRating = request.MyRating.Value;
-        if (request.PartnerRating.HasValue) entry.PartnerRating = Math.Clamp(request.PartnerRating.Value, 1, 10);
         if (request.Emotion.HasValue) entry.Emotion = request.Emotion.Value;
         if (request.Comment != null) entry.Comment = request.Comment;
         if (request.PrivateComment != null) entry.PrivateComment = request.PrivateComment;
@@ -388,67 +386,11 @@ public static class WatchEntryEndpoints
         if (request.TotalEpisodes.HasValue) entry.TotalEpisodes = request.TotalEpisodes.Value;
         if (request.WatchingTime.HasValue) entry.WatchingTime = request.WatchingTime.Value;
 
-        // Handle bulk ratings if provided (group mode)
-        if (request.Ratings is { Count: > 0 })
+        // Clear ratings when status changes to Planned or Watching
+        if (request.Status.HasValue && (request.Status.Value == WatchStatus.Planned || request.Status.Value == WatchStatus.Watching))
         {
-            // Get group IDs from junction table and legacy GroupId
-            var entryGroupIds = await db.WatchEntryGroups
-                .Where(weg => weg.WatchEntryId == entry.Id)
-                .Select(weg => weg.GroupId)
-                .ToListAsync();
-            if (entry.GroupId.HasValue && !entryGroupIds.Contains(entry.GroupId.Value))
-                entryGroupIds.Add(entry.GroupId.Value);
-
-            var validUserIds = entryGroupIds.Count > 0
-                ? await db.GroupMembers
-                    .Where(m => entryGroupIds.Contains(m.GroupId))
-                    .Select(m => m.UserId)
-                    .Distinct()
-                    .ToListAsync()
-                : new List<int> { userId };
-
-            // Remove ratings for users not in the new list
-            var submittedUserIds = request.Ratings.Select(r => r.UserId).ToHashSet();
-            var toRemove = entry.Ratings.Where(r => !submittedUserIds.Contains(r.UserId)).ToList();
-            db.EntryRatings.RemoveRange(toRemove);
-
-            foreach (var ri in request.Ratings)
-            {
-                if (!validUserIds.Contains(ri.UserId)) continue;
-                
-                var existing = entry.Ratings.FirstOrDefault(r => r.UserId == ri.UserId);
-                if (existing != null)
-                {
-                    existing.Rating = ri.Rating;
-                }
-                else
-                {
-                    db.EntryRatings.Add(new EntryRating
-                    {
-                        WatchEntryId = entry.Id,
-                        UserId = ri.UserId,
-                        Rating = ri.Rating
-                    });
-                }
-            }
-        }
-        else if (request.Rating.HasValue)
-        {
-            // Single own rating (backward compat)
-            var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
-            if (existing != null)
-            {
-                existing.Rating = request.Rating.Value;
-            }
-            else
-            {
-                db.EntryRatings.Add(new EntryRating
-                {
-                    WatchEntryId = entry.Id,
-                    UserId = userId,
-                    Rating = request.Rating.Value
-                });
-            }
+            if (entry.Ratings.Count > 0)
+                db.EntryRatings.RemoveRange(entry.Ratings);
         }
 
         entry.UpdatedAt = DateTime.UtcNow;
@@ -485,7 +427,7 @@ public static class WatchEntryEndpoints
 
         if (entryGroupIds.Count > 0)
         {
-            if (!await db.GroupMembers.AnyAsync(m => entryGroupIds.Contains(m.GroupId) && m.UserId == userId))
+            if (!await db.GroupMembers.AnyAsync(m => entryGroupIds.Contains(m.GroupId) && m.UserId == userId && m.Role >= GroupRole.Member))
                 return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
         }
         else if (entry.UserId != userId)
@@ -495,7 +437,14 @@ public static class WatchEntryEndpoints
 
         var rating = request.Rating;
         var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
-        if (existing != null)
+
+        if (rating == 0)
+        {
+            // Rating 0 means remove the rating
+            if (existing != null)
+                db.EntryRatings.Remove(existing);
+        }
+        else if (existing != null)
         {
             existing.Rating = rating;
         }
