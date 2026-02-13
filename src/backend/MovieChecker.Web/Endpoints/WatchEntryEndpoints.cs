@@ -66,6 +66,18 @@ public static class WatchEntryEndpoints
     private static int GetUserId(ClaimsPrincipal user) =>
         int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
 
+    /// <summary>
+    /// Validates and clamps rating to be between 0.5 and 10, in 0.5 increments
+    /// </summary>
+    private static decimal ClampRating(decimal rating)
+    {
+        // Clamp to min 0.5, max 10
+        rating = Math.Clamp(rating, 0.5m, 10m);
+        
+        // Round to nearest 0.5
+        return Math.Round(rating * 2m, MidpointRounding.AwayFromZero) / 2m;
+    }
+
 
     private static WatchEntryDto ToDto(WatchEntry w) => new(
         w.Id,
@@ -220,8 +232,8 @@ public static class WatchEntryEndpoints
             UserId = userId,
             GroupId = request.GroupId,
             Status = request.Status,
-            MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
-            PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
+            MyRating = request.MyRating.HasValue ? ClampRating(request.MyRating.Value) : null,
+            PartnerRating = request.PartnerRating.HasValue ? ClampRating(request.PartnerRating.Value) : null,
             Emotion = request.Emotion,
             Comment = request.Comment,
             PrivateComment = request.PrivateComment,
@@ -317,7 +329,7 @@ public static class WatchEntryEndpoints
                     {
                         WatchEntryId = entry.Id,
                         UserId = ri.UserId,
-                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                        Rating = ClampRating(ri.Rating)
                     });
                 }
             }
@@ -331,7 +343,7 @@ public static class WatchEntryEndpoints
             {
                 WatchEntryId = entry.Id,
                 UserId = userId,
-                Rating = Math.Clamp(request.Rating.Value, 1, 10)
+                Rating = ClampRating(request.Rating.Value)
             });
 
             await db.SaveChangesAsync();
@@ -376,8 +388,8 @@ public static class WatchEntryEndpoints
             return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
-        if (request.MyRating.HasValue) entry.MyRating = Math.Clamp(request.MyRating.Value, 1, 10);
-        if (request.PartnerRating.HasValue) entry.PartnerRating = Math.Clamp(request.PartnerRating.Value, 1, 10);
+        if (request.MyRating.HasValue) entry.MyRating = ClampRating(request.MyRating.Value);
+        if (request.PartnerRating.HasValue) entry.PartnerRating = ClampRating(request.PartnerRating.Value);
         if (request.Emotion.HasValue) entry.Emotion = request.Emotion.Value;
         if (request.Comment != null) entry.Comment = request.Comment;
         if (request.PrivateComment != null) entry.PrivateComment = request.PrivateComment;
@@ -419,7 +431,7 @@ public static class WatchEntryEndpoints
                 var existing = entry.Ratings.FirstOrDefault(r => r.UserId == ri.UserId);
                 if (existing != null)
                 {
-                    existing.Rating = Math.Clamp(ri.Rating, 1, 10);
+                    existing.Rating = ClampRating(ri.Rating);
                 }
                 else
                 {
@@ -427,7 +439,7 @@ public static class WatchEntryEndpoints
                     {
                         WatchEntryId = entry.Id,
                         UserId = ri.UserId,
-                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                        Rating = ClampRating(ri.Rating)
                     });
                 }
             }
@@ -438,7 +450,7 @@ public static class WatchEntryEndpoints
             var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
             if (existing != null)
             {
-                existing.Rating = Math.Clamp(request.Rating.Value, 1, 10);
+                existing.Rating = ClampRating(request.Rating.Value);
             }
             else
             {
@@ -446,7 +458,7 @@ public static class WatchEntryEndpoints
                 {
                     WatchEntryId = entry.Id,
                     UserId = userId,
-                    Rating = Math.Clamp(request.Rating.Value, 1, 10)
+                    Rating = ClampRating(request.Rating.Value)
                 });
             }
         }
@@ -493,7 +505,7 @@ public static class WatchEntryEndpoints
             return Results.NotFound();
         }
 
-        var rating = Math.Clamp(request.Rating, 1, 10);
+        var rating = ClampRating(request.Rating);
         var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
         if (existing != null)
         {
@@ -602,8 +614,8 @@ public static class WatchEntryEndpoints
             TotalPlanned: entries.Count(e => e.Status == WatchStatus.Planned),
             TotalWatching: entries.Count(e => e.Status == WatchStatus.Watching),
             TotalDropped: entries.Count(e => e.Status == WatchStatus.Dropped),
-            AverageMyRating: myRatings.Count > 0 ? myRatings.Average() : 0,
-            AveragePartnerRating: otherRatings.Count > 0 ? otherRatings.Average() : 0,
+            AverageMyRating: myRatings.Count > 0 ? (double)myRatings.Average() : 0,
+            AveragePartnerRating: otherRatings.Count > 0 ? (double)otherRatings.Average() : 0,
             ByType: entries.GroupBy(e => e.Movie.Type.ToString()).ToDictionary(g => g.Key, g => g.Count()),
             ByEmotion: entries.Where(e => e.Emotion.HasValue).GroupBy(e => e.Emotion!.Value.ToString())
                 .ToDictionary(g => g.Key, g => g.Count()),
@@ -612,7 +624,7 @@ public static class WatchEntryEndpoints
                 .Select(g => new MemberRatingDto(
                     g.Key,
                     g.Select(r => r.User.DisplayName).FirstOrDefault() ?? string.Empty,
-                    (int)Math.Round(g.Average(r => r.Rating)),
+                    g.Average(r => r.Rating),
                     g.Count()
                 ))
                 .ToList()

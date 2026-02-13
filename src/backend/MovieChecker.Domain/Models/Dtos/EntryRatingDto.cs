@@ -4,5 +4,5 @@ public record EntryRatingDto(
     int Id,
     int UserId,
     string DisplayName,
-    int Rating
+    decimal Rating
 );

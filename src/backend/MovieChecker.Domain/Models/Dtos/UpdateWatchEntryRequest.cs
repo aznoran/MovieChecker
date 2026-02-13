@@ -4,14 +4,14 @@ namespace MovieChecker.Domain.Models.Dtos;
 
 public record UpdateWatchEntryRequest(
     WatchStatus? Status,
-    int? MyRating,
-    int? PartnerRating,
+    decimal? MyRating,
+    decimal? PartnerRating,
     Emotion? Emotion,
     string? Comment,
     string? PrivateComment,
     DateTime? StartedAt,
     DateTime? CompletedAt,
-    int? Rating,
+    decimal? Rating,
     int? CurrentSeason,
     int? CurrentEpisode,
     int? TotalEpisodes,

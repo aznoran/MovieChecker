@@ -8,6 +8,13 @@ public class WatchEntryConfiguration : IEntityTypeConfiguration<WatchEntry>
 {
     public void Configure(EntityTypeBuilder<WatchEntry> builder)
     {
+        // Configure MyRating and PartnerRating as decimal with precision 3,1
+        builder.Property(w => w.MyRating)
+            .HasPrecision(3, 1);
+        
+        builder.Property(w => w.PartnerRating)
+            .HasPrecision(3, 1);
+
         builder.HasOne(w => w.Movie)
             .WithMany(m => m.WatchEntries)
             .HasForeignKey(w => w.MovieId)

@@ -11,8 +11,8 @@ public class WatchEntry
 
     public WatchStatus Status { get; set; } = WatchStatus.Planned;
 
-    public int? MyRating { get; set; }
-    public int? PartnerRating { get; set; }
+    public decimal? MyRating { get; set; }
+    public decimal? PartnerRating { get; set; }
 
     public Emotion? Emotion { get; set; }
     public string? Comment { get; set; }

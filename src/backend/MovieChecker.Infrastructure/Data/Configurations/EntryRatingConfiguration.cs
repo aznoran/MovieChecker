@@ -10,6 +10,10 @@ public class EntryRatingConfiguration : IEntityTypeConfiguration<EntryRating>
     {
         builder.HasIndex(er => new { er.WatchEntryId, er.UserId }).IsUnique();
 
+        // Configure Rating as decimal with precision 3,1 (e.g., 10.0, 5.5)
+        builder.Property(er => er.Rating)
+            .HasPrecision(3, 1);
+
         builder.HasOne(er => er.WatchEntry)
             .WithMany(w => w.Ratings)
             .HasForeignKey(er => er.WatchEntryId)
