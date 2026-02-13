@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import {toast} from "sonner";
 import {useEffect} from "react";
+import {Rating} from "@/components/ui/rating";
 
 export const dynamic = "force-dynamic";
 
@@ -55,25 +56,7 @@ function ProgressBar({
     );
 }
 
-function StarRating({rating}: { rating: number }) {
-    const full = Math.floor(rating);
-    const partial = rating - full;
-    return (
-        <div className="flex items-center gap-0.5">
-            {Array.from({length: 10}, (_, i) => {
-                let fill: string;
-                if (i < full) {
-                    fill = "text-yellow-400";
-                } else if (i === full && partial >= 0.5) {
-                    fill = "text-yellow-400/50";
-                } else {
-                    fill = "text-muted-foreground/20";
-                }
-                return <Star key={i} className={`h-3.5 w-3.5 fill-current ${fill}`}/>;
-            })}
-        </div>
-    );
-}
+
 
 export default function StatsPage() {
     const {isAuthenticated, isLoading: authLoading} = useAuth();
@@ -254,7 +237,7 @@ export default function StatsPage() {
                                                     {stats.averageMyRating.toFixed(1)}
                                                     <span className="text-lg text-muted-foreground">/10</span>
                                                 </div>
-                                                <StarRating rating={stats.averageMyRating}/>
+                                                <Rating value={stats.averageMyRating} readOnly size="sm" />
                                             </>
                                         ) : (
                                             <p className="text-muted-foreground text-sm">{t("noRated")}</p>
@@ -278,7 +261,7 @@ export default function StatsPage() {
                                                         {stats.averageMyRating.toFixed(1)}
                                                         <span className="text-lg text-muted-foreground">/10</span>
                                                     </div>
-                                                    <StarRating rating={stats.averageMyRating}/>
+                                                    <Rating value={stats.averageMyRating} readOnly size="sm" />
                                                 </>
                                             ) : (
                                                 <p className="text-muted-foreground text-sm">{t("noRated")}</p>
@@ -300,7 +283,7 @@ export default function StatsPage() {
                                                         {stats.averagePartnerRating.toFixed(1)}
                                                         <span className="text-lg text-muted-foreground">/10</span>
                                                     </div>
-                                                    <StarRating rating={stats.averagePartnerRating}/>
+                                                    <Rating value={stats.averagePartnerRating} readOnly size="sm" />
                                                 </>
                                             ) : (
                                                 <p className="text-muted-foreground text-sm">{t("noRated")}</p>
@@ -363,7 +346,7 @@ export default function StatsPage() {
                                                                         </div>
                                                                     </div>
                                                                     {mr.averageRating > 0 && (
-                                                                        <StarRating rating={mr.averageRating}/>
+                                                                        <Rating value={mr.averageRating} readOnly size="sm" />
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -392,7 +375,7 @@ export default function StatsPage() {
                                                 {stats.averageMyRating.toFixed(1)}
                                                 <span className="text-xl text-muted-foreground">/10</span>
                                             </div>
-                                            <StarRating rating={stats.averageMyRating}/>
+                                            <Rating value={stats.averageMyRating} readOnly size="sm" />
                                         </>
                                     ) : (
                                         <p className="text-muted-foreground text-sm">{t("noRated")}</p>

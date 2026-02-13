@@ -74,6 +74,7 @@ import {
 } from "@/components/ui/field";
 import {Switch} from "@/components/ui/switch";
 import {Label} from "@/components/ui/label";
+import {Rating} from "@/components/ui/rating";
 
 interface Props {
     open: boolean;
@@ -793,15 +794,14 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                         <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
                                                             {member.displayName}
                                                         </FieldLabel>
-                                                        <div>
-                                                            <Input
-                                                                value={memberRatings[uid] || ""}
-                                                                onChange={(e) => {
-                                                                    const v = e.target.value;
-                                                                    setMemberRatings((prev) => ({...prev, [uid]: v}));
-
-                                                                    // Clear previous timeout
+                                                        <div className="flex-1">
+                                                            <Rating
+                                                                value={memberRatings[uid] ? parseInt(memberRatings[uid]) : 0}
+                                                                onChange={(value) => {
+                                                                    setMemberRatings((prev) => ({...prev, [uid]: value.toString()}));
                                                                     const key = `memberRating_${uid}`;
+                                                                    
+                                                                    // Clear previous timeout
                                                                     if (validationTimeouts.current[key]) {
                                                                         clearTimeout(validationTimeouts.current[key]);
                                                                     }
@@ -812,26 +812,9 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                                         delete next[key];
                                                                         return next;
                                                                     });
-
-                                                                    // Set timeout for validation
-                                                                    if (v) {
-                                                                        validationTimeouts.current[key] = setTimeout(() => {
-                                                                            const error = validateField("myRating", v);
-                                                                            setValidationErrors(prev => {
-                                                                                const next = {...prev};
-                                                                                if (error) {
-                                                                                    next[key] = error;
-                                                                                } else {
-                                                                                    delete next[key];
-                                                                                }
-                                                                                return next;
-                                                                            });
-                                                                        }, 500);
-                                                                    }
                                                                 }}
-                                                                placeholder="1-10"
-                                                                className="w-20 h-8"
-                                                                aria-invalid={!!validationErrors[`memberRating_${uid}`]}
+                                                                size="md"
+                                                                showValue
                                                             />
                                                             {validationErrors[`memberRating_${uid}`] && (
                                                                 <FieldError className="text-xs">{validationErrors[`memberRating_${uid}`]}</FieldError>
@@ -966,19 +949,18 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             {/* Personal mode: single rating */}
                             {(status === WatchStatus.Dropped || status === WatchStatus.Completed) && (
                                 <Field>
-                                    <FieldLabel htmlFor="myRating" className="flex items-center gap-1.5">
+                                    <FieldLabel className="flex items-center gap-1.5">
                                         <Star className="h-3.5 w-3.5"/>
                                         {t("myRatingLabel")}
                                     </FieldLabel>
-                                    <Input
-                                        id="myRating"
-                                        value={myRating}
-                                        onChange={(e) => {
-                                            setMyRating(e.target.value);
-                                            handleFieldChange("myRating", e.target.value);
+                                    <Rating
+                                        value={myRating ? parseInt(myRating) : 0}
+                                        onChange={(value) => {
+                                            setMyRating(value.toString());
+                                            handleFieldChange("myRating", value.toString());
                                         }}
-                                        placeholder="1-10"
-                                        aria-invalid={!!validationErrors.myRating}
+                                        size="md"
+                                        showValue
                                     />
                                     {validationErrors.myRating && <FieldError>{validationErrors.myRating}</FieldError>}
                                 </Field>
