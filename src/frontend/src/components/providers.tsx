@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/context/auth-context";
 import { LocaleProvider } from "@/context/locale-context";
 import { GroupProvider } from "@/context/group-context";
+import { PermissionsProvider } from "@/context/permissions-context";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -30,7 +31,9 @@ export function Providers({ children }: { children: ReactNode }) {
       >
         <LocaleProvider>
           <AuthProvider>
-            <GroupProvider>{children}</GroupProvider>
+            <GroupProvider>
+              <PermissionsProvider>{children}</PermissionsProvider>
+            </GroupProvider>
           </AuthProvider>
         </LocaleProvider>
       </ThemeProvider>

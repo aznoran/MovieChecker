@@ -6,9 +6,10 @@ import {useRouter} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
+import {usePermissions} from "@/context/permissions-context";
 import {ConfirmDialog} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
-import {WatchStatus, EmotionEmojis, GroupRole, GroupType} from "@/types";
+import {WatchStatus, EmotionEmojis, GroupType} from "@/types";
 import type {WatchEntry} from "@/types";
 import {
     getContentTypeLabels,
@@ -50,6 +51,7 @@ export default function HomePage() {
     const {isAuthenticated, isLoading: authLoading, user} = useAuth();
     const {locale, t} = useLocale();
     const {activeGroupId, activeGroup} = useGroup();
+    const {permissions} = usePermissions();
     const router = useRouter();
     const queryClient = useQueryClient();
 
@@ -57,26 +59,19 @@ export default function HomePage() {
     const watchStatusLabels = getWatchStatusLabels(locale);
 
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
-    const currentMember = activeGroup?.members.find(m => m.userId === user?.id);
 
-    // Check if user can delete/edit an entry based on their role
-    const canModifyEntry = (entry: WatchEntry): boolean => {
-        if (!isGroupMode) return true; // Personal mode: always can modify own entries
-        if (!currentMember) return false;
-        if (currentMember.role >= GroupRole.Admin) return true; // Owner/Admin can modify all
-        if (currentMember.role === GroupRole.Member) return entry.ratings?.some(r => r.userId === user?.id) || false;
-        return false; // Viewer cannot modify
+    // Check if user can delete an entry based on permissions
+    const canDeleteEntry = (entry: WatchEntry): boolean => {
+        if (permissions.canDeleteAllEntries) return true;
+        if (permissions.canDeleteOwnEntries) return entry.ratings?.some(r => r.userId === user?.id) || false;
+        return false;
     };
 
     // Check if user can interact with an entry (edit or rate)
-    const canInteractWithEntry = (): boolean => {
-        if (!isGroupMode) return true;
-        // Any group member (including Viewer) can at least rate
-        return currentMember !== undefined;
-    };
+    const canInteractWithEntry = permissions.canEditOwnEntries || permissions.canEditAllEntries || permissions.canRateSelf;
 
     // Check if user can create entries
-    const canCreate = !isGroupMode || (currentMember !== undefined && currentMember.role >= GroupRole.Member);
+    const canCreate = permissions.canCreateEntries;
 
     const [addOpen, setAddOpen] = useState(false);
     const [editEntry, setEditEntry] = useState<WatchEntry | null>(null);
@@ -338,7 +333,7 @@ export default function HomePage() {
                                                 </p>
                                             )}
                                         </div>
-                                        {canModifyEntry(entry) && (
+                                        {canDeleteEntry(entry) && (
                                         <div className="flex justify-end pt-3 shrink-0">
                                             <div onClick={(e) => e.stopPropagation()}>
                                                 <ConfirmDialog

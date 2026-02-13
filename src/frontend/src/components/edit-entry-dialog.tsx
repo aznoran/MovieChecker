@@ -1,11 +1,12 @@
 "use client";
 
 import {useState, useRef, useEffect, useCallback} from "react";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry, getMyPermissions} from "@/lib/api";
+import {useMutation, useQueryClient} from "@tanstack/react-query";
+import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useAuth} from "@/context/auth-context";
 import {useGroup} from "@/context/group-context";
+import {usePermissions} from "@/context/permissions-context";
 import {
     Cropper,
     CropperImage,
@@ -82,22 +83,13 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const {locale, t} = useLocale();
     const {user} = useAuth();
     const {activeGroup} = useGroup();
+    const {permissions, isLoading: isPermissionsLoading} = usePermissions();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
-    // Fetch permissions from API in group mode
-    const {data: permissions, isLoading: permissionsLoading} = useQuery({
-        queryKey: ["permissions", activeGroup?.id],
-        queryFn: () => getMyPermissions(activeGroup!.id),
-        enabled: isGroupMode && !!activeGroup?.id && open,
-    });
-
-    // Determine permissions from API response (fallback to personal mode defaults)
-    const canEdit = !isGroupMode || (permissions?.canEditOwnEntries || permissions?.canEditAllEntries || false);
-    const canRateSelf = !isGroupMode || (permissions?.canRateSelf || false);
-    const canRateOthers = !isGroupMode || (permissions?.canRateOthers || false);
-
-    // Loading permissions in group mode
-    const isPermissionsLoading = isGroupMode && permissionsLoading;
+    // Determine permissions from provider
+    const canEdit = permissions.canEditOwnEntries || permissions.canEditAllEntries;
+    const canRateSelf = permissions.canRateSelf;
+    const canRateOthers = permissions.canRateOthers;
 
     // If user can't edit and can't rate, don't show dialog (shouldn't happen)
     const isRateOnlyMode = !canEdit && canRateSelf;
