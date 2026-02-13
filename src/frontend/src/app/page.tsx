@@ -67,9 +67,6 @@ export default function HomePage() {
         return false;
     };
 
-    // Check if user can interact with an entry (edit or rate)
-    const canInteractWithEntry = permissions.canEditOwnEntries || permissions.canEditAllEntries || permissions.canRateSelf;
-
     // Check if user can create entries
     const canCreate = permissions.canCreateEntries;
 
