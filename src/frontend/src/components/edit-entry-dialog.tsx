@@ -315,9 +315,17 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     }, []);
 
     const applyCropAndGetFile = async (): Promise<File | null> => {
-        if (!croppedAreaPixelsRef.current || !editorImageSrc) return null;
-        const blob = await getCroppedImage(editorImageSrc, croppedAreaPixelsRef.current, rotation);
-        const file = new File([blob], "cropped-poster.jpg", {type: "image/jpeg"});
+        if (!editorImageSrc) return null;
+        let file: File;
+        if (croppedAreaPixelsRef.current) {
+            const blob = await getCroppedImage(editorImageSrc, croppedAreaPixelsRef.current, rotation);
+            file = new File([blob], "cropped-poster.jpg", {type: "image/jpeg"});
+        } else {
+            // User never interacted with the cropper — use original image as-is
+            const res = await fetch(editorImageSrc);
+            const blob = await res.blob();
+            file = new File([blob], "poster.jpg", {type: blob.type || "image/jpeg"});
+        }
         setPosterFile(file);
         const reader = new FileReader();
         reader.onloadend = () => setPosterPreview(reader.result as string);
@@ -415,16 +423,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         let croppedFile: File | null = null;
         if (isCropping && editorImageSrc) {
             try {
-                if (croppedAreaPixelsRef.current) {
-                    croppedFile = await applyCropAndGetFile();
-                } else {
-                    // User never interacted with the cropper — use original image as-is
-                    const res = await fetch(editorImageSrc);
-                    const blob = await res.blob();
-                    croppedFile = new File([blob], "poster.jpg", {type: blob.type || "image/jpeg"});
-                    setPosterFile(croppedFile);
-                    setIsCropping(false);
-                }
+                croppedFile = await applyCropAndGetFile();
             } catch {
                 toast.error(t("cropFailed"), {position: "top-center"});
                 return;
