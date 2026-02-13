@@ -77,12 +77,19 @@ export enum GroupRole {
   Owner = 3,
 }
 
+export enum GroupType {
+  Public = 0,
+  Private = 1,
+  Personal = 2,
+}
+
 export interface Group {
   id: number;
   name: string;
-  inviteCode: string;
+  inviteCode?: string;
   createdByUserId: number;
   isPrivate: boolean;
+  groupType: GroupType;
   defaultRole: GroupRole;
   members: GroupMember[];
   createdAt: string;
@@ -109,7 +116,6 @@ export interface Stats {
   totalDropped: number;
   averageMyRating: number;
   averagePartnerRating: number;
-  watchedTogether: number;
   byType: Record<string, number>;
   byEmotion: Record<string, number>;
   memberRatings?: MemberRatingStats[];
@@ -153,4 +159,10 @@ export const GroupRoleLabels: Record<GroupRole, string> = {
   [GroupRole.Member]: "Member",
   [GroupRole.Admin]: "Admin",
   [GroupRole.Owner]: "Owner",
+};
+
+export const GroupTypeLabels: Record<GroupType, string> = {
+  [GroupType.Public]: "Public",
+  [GroupType.Private]: "Private",
+  [GroupType.Personal]: "Personal",
 };

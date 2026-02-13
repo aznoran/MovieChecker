@@ -120,11 +120,12 @@ public static class WatchEntryEndpoints
             query = db.WatchEntries
                 .Include(w => w.Movie)
                 .Include(w => w.Ratings).ThenInclude(r => r.User)
-                .Where(w => w.GroupId == groupId.Value);
+                .Where(w => w.WatchEntryGroups.Any(weg => weg.GroupId == groupId.Value)
+                            || w.GroupId == groupId.Value);
         }
         else
         {
-            // Personal entries only (no group)
+            // Personal entries only (no group) — backward compat for old entries with GroupId == null
             query = db.WatchEntries
                 .Include(w => w.Movie)
                 .Include(w => w.Ratings).ThenInclude(r => r.User)
@@ -147,16 +148,21 @@ public static class WatchEntryEndpoints
         var entry = await db.WatchEntries
             .Include(w => w.Movie)
             .Include(w => w.Ratings).ThenInclude(r => r.User)
+            .Include(w => w.WatchEntryGroups)
             .FirstOrDefaultAsync(w => w.Id == id);
 
         if (entry == null)
             return Results.NotFound();
 
-        // Check access
-        if (entry.GroupId.HasValue)
+        // Check access via junction table or legacy GroupId
+        var entryGroupIds = entry.WatchEntryGroups.Select(weg => weg.GroupId).ToList();
+        if (entry.GroupId.HasValue && !entryGroupIds.Contains(entry.GroupId.Value))
+            entryGroupIds.Add(entry.GroupId.Value);
+
+        if (entryGroupIds.Count > 0)
         {
             var isMember = await db.GroupMembers
-                .AnyAsync(m => m.GroupId == entry.GroupId.Value && m.UserId == userId);
+                .AnyAsync(m => entryGroupIds.Contains(m.GroupId) && m.UserId == userId);
             if (!isMember)
                 return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsViewEntry"]));
         }
@@ -176,6 +182,14 @@ public static class WatchEntryEndpoints
     {
         var userId = GetUserId(user);
 
+        // Validate field lengths
+        if (request.Comment != null && request.Comment.Length > 1000)
+            return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
+
+        // Validate emotion - cannot set emotion for Planned or Watching status
+        if (request.Emotion.HasValue && (request.Status == WatchStatus.Planned || request.Status == WatchStatus.Watching))
+            return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
+
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
             return Results.BadRequest(new ErrorResponse(localizer["MovieNotFound"]));
 
@@ -186,13 +200,15 @@ public static class WatchEntryEndpoints
             if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
                 return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsCreate"]));
 
-            // Check duplicate within group
-            if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId && w.GroupId == request.GroupId.Value))
+            // Check duplicate within group (via junction table or legacy GroupId)
+            if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId
+                    && (w.GroupId == request.GroupId.Value
+                        || w.WatchEntryGroups.Any(weg => weg.GroupId == request.GroupId.Value))))
                 return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExistsGroup"]));
         }
         else
         {
-            // Check duplicate for personal entries
+            // Check duplicate for personal entries (legacy entries with GroupId == null)
             if (await db.WatchEntries.AnyAsync(w =>
                     w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
                 return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExists"]));
@@ -204,8 +220,8 @@ public static class WatchEntryEndpoints
             UserId = userId,
             GroupId = request.GroupId,
             Status = request.Status,
-            MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
-            PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
+            MyRating = request.MyRating.HasValue ? request.MyRating.Value : null,
+            PartnerRating = request.PartnerRating.HasValue ? request.PartnerRating.Value : null,
             Emotion = request.Emotion,
             Comment = request.Comment,
             PrivateComment = request.PrivateComment,
@@ -220,77 +236,67 @@ public static class WatchEntryEndpoints
         db.WatchEntries.Add(entry);
         await db.SaveChangesAsync();
 
-        // If creating in a group, duplicate to personal lists of all viewers
-        Dictionary<int, WatchEntry> personalEntries = new();
+        // Add junction table row for the main group
+        if (request.GroupId.HasValue)
+        {
+            db.WatchEntryGroups.Add(new WatchEntryGroup
+            {
+                WatchEntryId = entry.Id,
+                GroupId = request.GroupId.Value
+            });
+        }
+
+        // Link entry to personal groups of viewers via junction table (instead of duplicating)
         if (request.GroupId.HasValue && request.Viewers is { Count: > 0 })
         {
-            // Get list of user IDs who are chosen as viewers
             var viewerUserIds = request.Viewers.Distinct().ToList();
-            
+
             // Get user settings to check privacy preferences
             var userSettings = await db.UserSettings
                 .Where(s => viewerUserIds.Contains(s.UserId))
                 .ToDictionaryAsync(s => s.UserId);
-            
-            // Get existing personal entries for these users for this movie
-            var existingPersonalEntries = await db.WatchEntries
-                .Where(w => w.MovieId == request.MovieId 
-                    && viewerUserIds.Contains(w.UserId) 
-                    && w.GroupId == null)
-                .Select(w => w.UserId)
-                .ToListAsync();
 
-            // Create personal entries for viewers who don't have one yet and haven't disabled it
+            // Get personal groups for viewers
+            var personalGroups = await db.Groups
+                .Where(g => g.GroupType == GroupType.Personal && viewerUserIds.Contains(g.CreatedByUserId))
+                .ToDictionaryAsync(g => g.CreatedByUserId);
+
+            // Pre-fetch existing WatchEntryGroup links for this entry to avoid N+1 queries
+            var existingLinks = await db.WatchEntryGroups
+                .Where(weg => weg.WatchEntryId == entry.Id)
+                .Select(weg => weg.GroupId)
+                .ToHashSetAsync();
+
             foreach (var viewerUserId in viewerUserIds)
             {
                 // Check if user has disabled auto-add to personal
                 var settings = userSettings.GetValueOrDefault(viewerUserId);
                 bool preventAutoAdd = false;
-                
+
                 if (settings != null)
                 {
-                    // If the viewer is the creator (current user), check PreventMeAddingToMyPersonal
-                    // If the viewer is someone else, check PreventOthersAddingToMyPersonal
                     if (viewerUserId == userId)
-                    {
                         preventAutoAdd = settings.PreventMeAddingToMyPersonal;
-                    }
                     else
-                    {
                         preventAutoAdd = settings.PreventOthersAddingToMyPersonal;
+                }
+
+                if (!preventAutoAdd && personalGroups.TryGetValue(viewerUserId, out var personalGroup))
+                {
+                    if (!existingLinks.Contains(personalGroup.Id))
+                    {
+                        db.WatchEntryGroups.Add(new WatchEntryGroup
+                        {
+                            WatchEntryId = entry.Id,
+                            GroupId = personalGroup.Id
+                        });
+                        existingLinks.Add(personalGroup.Id);
                     }
                 }
-                
-                if (!existingPersonalEntries.Contains(viewerUserId) && !preventAutoAdd)
-                {
-                    var personalEntry = new WatchEntry
-                    {
-                        MovieId = request.MovieId,
-                        UserId = viewerUserId,
-                        GroupId = null, // Personal entry
-                        Status = request.Status,
-                        MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
-                        PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
-                        Emotion = request.Emotion,
-                        Comment = request.Comment,
-                        PrivateComment = request.PrivateComment,
-                        StartedAt = request.StartedAt,
-                        CompletedAt = request.CompletedAt,
-                        CurrentSeason = request.CurrentSeason,
-                        CurrentEpisode = request.CurrentEpisode,
-                        TotalEpisodes = request.TotalEpisodes,
-                        WatchingTime = request.WatchingTime,
-                    };
-                    db.WatchEntries.Add(personalEntry);
-                    personalEntries[viewerUserId] = personalEntry;
-                }
-            }
-            
-            if (personalEntries.Count > 0)
-            {
-                await db.SaveChangesAsync();
             }
         }
+
+        await db.SaveChangesAsync();
 
         // Add bulk ratings if provided (group mode)
         if (request.Ratings is { Count: > 0 })
@@ -311,19 +317,8 @@ public static class WatchEntryEndpoints
                     {
                         WatchEntryId = entry.Id,
                         UserId = ri.UserId,
-                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                        Rating = ri.Rating
                     });
-                    
-                    // Add rating to personal entry if it exists for this user
-                    if (personalEntries.TryGetValue(ri.UserId, out var personalEntry))
-                    {
-                        db.EntryRatings.Add(new EntryRating
-                        {
-                            WatchEntryId = personalEntry.Id,
-                            UserId = ri.UserId,
-                            Rating = Math.Clamp(ri.Rating, 1, 10)
-                        });
-                    }
                 }
             }
 
@@ -336,20 +331,9 @@ public static class WatchEntryEndpoints
             {
                 WatchEntryId = entry.Id,
                 UserId = userId,
-                Rating = Math.Clamp(request.Rating.Value, 1, 10)
+                Rating = request.Rating.Value
             });
-            
-            // Add rating to personal entry if it exists for current user
-            if (personalEntries.TryGetValue(userId, out var personalEntry))
-            {
-                db.EntryRatings.Add(new EntryRating
-                {
-                    WatchEntryId = personalEntry.Id,
-                    UserId = userId,
-                    Rating = Math.Clamp(request.Rating.Value, 1, 10)
-                });
-            }
-            
+
             await db.SaveChangesAsync();
         }
 
@@ -382,8 +366,17 @@ public static class WatchEntryEndpoints
         if (!await PermissionService.CanEditEntry(db, userId, entry))
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
 
+        // Validate field lengths
+        if (request.Comment != null && request.Comment.Length > 1000)
+            return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
+
+        // Validate emotion - cannot set emotion for Planned or Watching status
+        var effectiveStatus = request.Status ?? entry.Status;
+        if (request.Emotion.HasValue && (effectiveStatus == WatchStatus.Planned || effectiveStatus == WatchStatus.Watching))
+            return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
+
         if (request.Status.HasValue) entry.Status = request.Status.Value;
-        if (request.MyRating.HasValue) entry.MyRating = Math.Clamp(request.MyRating.Value, 1, 10);
+        if (request.MyRating.HasValue) entry.MyRating = request.MyRating.Value;
         if (request.PartnerRating.HasValue) entry.PartnerRating = Math.Clamp(request.PartnerRating.Value, 1, 10);
         if (request.Emotion.HasValue) entry.Emotion = request.Emotion.Value;
         if (request.Comment != null) entry.Comment = request.Comment;
@@ -398,10 +391,19 @@ public static class WatchEntryEndpoints
         // Handle bulk ratings if provided (group mode)
         if (request.Ratings is { Count: > 0 })
         {
-            var validUserIds = entry.GroupId.HasValue
+            // Get group IDs from junction table and legacy GroupId
+            var entryGroupIds = await db.WatchEntryGroups
+                .Where(weg => weg.WatchEntryId == entry.Id)
+                .Select(weg => weg.GroupId)
+                .ToListAsync();
+            if (entry.GroupId.HasValue && !entryGroupIds.Contains(entry.GroupId.Value))
+                entryGroupIds.Add(entry.GroupId.Value);
+
+            var validUserIds = entryGroupIds.Count > 0
                 ? await db.GroupMembers
-                    .Where(m => m.GroupId == entry.GroupId.Value)
+                    .Where(m => entryGroupIds.Contains(m.GroupId))
                     .Select(m => m.UserId)
+                    .Distinct()
                     .ToListAsync()
                 : new List<int> { userId };
 
@@ -417,7 +419,7 @@ public static class WatchEntryEndpoints
                 var existing = entry.Ratings.FirstOrDefault(r => r.UserId == ri.UserId);
                 if (existing != null)
                 {
-                    existing.Rating = Math.Clamp(ri.Rating, 1, 10);
+                    existing.Rating = ri.Rating;
                 }
                 else
                 {
@@ -425,7 +427,7 @@ public static class WatchEntryEndpoints
                     {
                         WatchEntryId = entry.Id,
                         UserId = ri.UserId,
-                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                        Rating = ri.Rating
                     });
                 }
             }
@@ -436,7 +438,7 @@ public static class WatchEntryEndpoints
             var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
             if (existing != null)
             {
-                existing.Rating = Math.Clamp(request.Rating.Value, 1, 10);
+                existing.Rating = request.Rating.Value;
             }
             else
             {
@@ -444,7 +446,7 @@ public static class WatchEntryEndpoints
                 {
                     WatchEntryId = entry.Id,
                     UserId = userId,
-                    Rating = Math.Clamp(request.Rating.Value, 1, 10)
+                    Rating = request.Rating.Value
                 });
             }
         }
@@ -470,15 +472,20 @@ public static class WatchEntryEndpoints
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
             .Include(w => w.Ratings)
+            .Include(w => w.WatchEntryGroups)
             .FirstOrDefaultAsync(w => w.Id == id);
 
         if (entry == null)
             return Results.NotFound();
 
-        // Check access - members can rate entries in their group
-        if (entry.GroupId.HasValue)
+        // Check access - members can rate entries in their groups (via junction table or legacy GroupId)
+        var entryGroupIds = entry.WatchEntryGroups.Select(weg => weg.GroupId).ToList();
+        if (entry.GroupId.HasValue && !entryGroupIds.Contains(entry.GroupId.Value))
+            entryGroupIds.Add(entry.GroupId.Value);
+
+        if (entryGroupIds.Count > 0)
         {
-            if (!await PermissionService.CanViewGroup(db, userId, entry.GroupId.Value))
+            if (!await db.GroupMembers.AnyAsync(m => entryGroupIds.Contains(m.GroupId) && m.UserId == userId))
                 return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
         }
         else if (entry.UserId != userId)
@@ -486,7 +493,7 @@ public static class WatchEntryEndpoints
             return Results.NotFound();
         }
 
-        var rating = Math.Clamp(request.Rating, 1, 10);
+        var rating = request.Rating;
         var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
         if (existing != null)
         {
@@ -510,7 +517,9 @@ public static class WatchEntryEndpoints
         int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var userId = GetUserId(user);
-        var entry = await db.WatchEntries.FirstOrDefaultAsync(w => w.Id == id);
+        var entry = await db.WatchEntries
+            .Include(w => w.Movie)
+            .FirstOrDefaultAsync(w => w.Id == id);
 
         if (entry == null)
             return Results.NotFound();
@@ -519,8 +528,26 @@ public static class WatchEntryEndpoints
         if (!await PermissionService.CanDeleteEntry(db, userId, entry))
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsDelete"]));
 
+        var movieId = entry.MovieId;
+        var posterUrl = entry.Movie.PosterUrl;
+        var movie = entry.Movie;
+
         db.WatchEntries.Remove(entry);
         await db.SaveChangesAsync();
+
+        // Clean up movie and poster if no other entries reference this movie
+        var otherEntries = await db.WatchEntries.AnyAsync(w => w.MovieId == movieId);
+        if (!otherEntries)
+        {
+            if (!string.IsNullOrEmpty(posterUrl) && int.TryParse(posterUrl, out var posterId))
+            {
+                var poster = await db.PosterImages.FindAsync(posterId);
+                if (poster != null) db.PosterImages.Remove(poster);
+            }
+
+            db.Movies.Remove(movie);
+            await db.SaveChangesAsync();
+        }
 
         return Results.NoContent();
     }
@@ -544,7 +571,8 @@ public static class WatchEntryEndpoints
                 .Include(w => w.Movie)
                 .Include(w => w.Ratings)
                 .ThenInclude(x => x.User)
-                .Where(w => w.GroupId == groupId.Value);
+                .Where(w => w.WatchEntryGroups.Any(weg => weg.GroupId == groupId.Value)
+                            || w.GroupId == groupId.Value);
         }
         else
         {

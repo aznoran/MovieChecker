@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MovieChecker.Domain.Models.Dtos;
 using MovieChecker.Domain.Models.Entities;
+using MovieChecker.Domain.Models.Enums;
 using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
@@ -66,6 +67,27 @@ public static class AuthEndpoints
         };
 
         db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        // Create personal group for the new user
+        var personalGroup = new Group
+        {
+            Name = "Personal",
+            InviteCode = null,
+            CreatedByUserId = user.Id,
+            IsPrivate = false,
+            GroupType = GroupType.Personal,
+            DefaultRole = GroupRole.Owner
+        };
+        db.Groups.Add(personalGroup);
+        await db.SaveChangesAsync();
+
+        db.GroupMembers.Add(new GroupMember
+        {
+            GroupId = personalGroup.Id,
+            UserId = user.Id,
+            Role = GroupRole.Owner
+        });
         await db.SaveChangesAsync();
 
         var token = jwtService.GenerateToken(user);

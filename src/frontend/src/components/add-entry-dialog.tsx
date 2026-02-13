@@ -1,17 +1,25 @@
 "use client";
 
 import { toast } from "sonner"
-import {useState, useRef, useEffect} from "react";
+import {useState, useRef, useEffect, useCallback} from "react";
 import {useMutation, useQueryClient} from "@tanstack/react-query";
 import {createMovie, createWatchEntry, uploadPoster} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {useAuth} from "@/context/auth-context";
 import {
+    Cropper,
+    CropperImage,
+    CropperArea,
+    type CropperAreaData,
+} from "@/components/ui/cropper";
+import {getCroppedImage} from "@/lib/crop-utils";
+import {
     ContentType,
     WatchStatus,
     Emotion,
     EmotionEmojis,
+    GroupType,
 } from "@/types";
 import {
     getContentTypeLabels,
@@ -48,7 +56,12 @@ import {
     MessageSquare,
     Loader2,
     ClipboardPaste,
+    Crop,
+    ZoomIn,
+    RotateCw,
+    RotateCcw,
 } from "lucide-react";
+import {Rating, RatingItem} from "@/components/ui/rating";
 import * as React from "react";
 import {
     Field,
@@ -60,6 +73,8 @@ import {
     FieldSet,
     FieldLegend,
 } from "@/components/ui/field";
+import {Switch} from "@/components/ui/switch";
+import {Label} from "@/components/ui/label";
 
 interface Props {
     open: boolean;
@@ -69,21 +84,29 @@ interface Props {
 export function AddEntryDialog({open, onOpenChange}: Props) {
     const {locale, t} = useLocale();
     const {activeGroupId, activeGroup} = useGroup();
-    const isGroupMode = !!activeGroupId && !!activeGroup;
+    const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [type, setType] = useState<ContentType>(ContentType.Movie);
     const [year, setYear] = useState("");
     const [genre, setGenre] = useState("");
     const [status, setStatus] = useState<WatchStatus>(WatchStatus.Planned);
-    const [myRating, setMyRating] = useState("");
+    const [myRating, setMyRating] = useState(0);
+    console.log(myRating);
     // Group mode: selected member IDs and per-member ratings
     const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
-    const [memberRatings, setMemberRatings] = useState<Record<number, string>>({});
+    const [memberRatings, setMemberRatings] = useState<Record<number, number>>({});
     const [emotion, setEmotion] = useState<Emotion | null>(null);
     const [comment, setComment] = useState("");
     const [posterFile, setPosterFile] = useState<File | null>(null);
     const [posterPreview, setPosterPreview] = useState<string | null>(null);
+    const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
+    const [isCropping, setIsCropping] = useState(false);
+    const [crop, setCrop] = useState({x: 0, y: 0});
+    const [zoom, setZoom] = useState(1);
+    const [rotation, setRotation] = useState(0);
+    const [withGrid, setWithGrid] = useState(false);
+    const croppedAreaPixelsRef = useRef<CropperAreaData | null>(null);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,11 +157,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     return t("invalidTimeComponent");
                 }
                 return null;
-            case "myRating":
-                if (value && (!/^\d+$/.test(value) || parseInt(value) < 1 || parseInt(value) > 10)) {
-                    return t("invalidRating");
-                }
-                return null;
             default:
                 return null;
         }
@@ -185,10 +203,11 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
-        mutationFn: async () => {
+        mutationFn: async (overridePosterFile?: File | null) => {
+            const fileToUpload = overridePosterFile ?? posterFile;
             let posterUrl: string | undefined;
-            if (posterFile) {
-                posterUrl = await uploadPoster(posterFile);
+            if (fileToUpload) {
+                posterUrl = await uploadPoster(fileToUpload);
             }
 
             const movie = await createMovie({
@@ -203,16 +222,16 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             const ratingsArray = isGroupMode
                 ? selectedMembers
                     .filter((uid) => memberRatings[uid])
-                    .map((uid) => ({userId: uid, rating: parseInt(memberRatings[uid])}))
+                    .map((uid) => ({userId: uid, rating: memberRatings[uid] * 2}))
                 : undefined;
 
             await createWatchEntry({
                 movieId: movie.id,
                 status,
-                rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
+                rating: !isGroupMode && myRating ? myRating * 2 : undefined,
                 ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
-                emotion: emotion ?? undefined,
+                emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
                 comment: comment || undefined,
                 groupId: activeGroupId,
                 // Series/Anime tracking
@@ -244,6 +263,12 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         },
     });
 
+    const onCropReset = useCallback(() => {
+        setCrop({x: 0, y: 0});
+        setZoom(1);
+        setRotation(0);
+    }, []);
+
     const resetForm = () => {
         setTitle("");
         setDescription("");
@@ -251,13 +276,17 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setYear("");
         setGenre("");
         setStatus(WatchStatus.Planned);
-        setMyRating("");
+        setMyRating(0);
         setSelectedMembers([]);
         setMemberRatings({});
         setEmotion(null);
         setComment("");
         setPosterFile(null);
         setPosterPreview(null);
+        setEditorImageSrc(null);
+        setIsCropping(false);
+        onCropReset();
+        croppedAreaPixelsRef.current = null;
         setError("");
         setCurrentEpisode("");
         setTotalEpisodes("");
@@ -275,14 +304,57 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setImageFile(file);
+        startCropping(file);
     };
 
-    const setImageFile = (file: File) => {
+    const startCropping = (file: File) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setEditorImageSrc(reader.result as string);
+            onCropReset();
+            croppedAreaPixelsRef.current = null;
+            setIsCropping(true);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const onCropComplete = useCallback((_: CropperAreaData, croppedPixels: CropperAreaData) => {
+        croppedAreaPixelsRef.current = croppedPixels;
+    }, []);
+
+    const applyCropAndGetFile = async (): Promise<File | null> => {
+        if (!editorImageSrc) return null;
+        let file: File;
+        if (croppedAreaPixelsRef.current) {
+            const blob = await getCroppedImage(editorImageSrc, croppedAreaPixelsRef.current, rotation);
+            file = new File([blob], "cropped-poster.jpg", {type: "image/jpeg"});
+        } else {
+            // User never interacted with the cropper — use original image as-is
+            const res = await fetch(editorImageSrc);
+            const blob = await res.blob();
+            file = new File([blob], "poster.jpg", {type: blob.type || "image/jpeg"});
+        }
         setPosterFile(file);
         const reader = new FileReader();
         reader.onloadend = () => setPosterPreview(reader.result as string);
         reader.readAsDataURL(file);
+        setIsCropping(false);
+        return file;
+    };
+
+    const handleApplyCrop = async () => {
+        try {
+            await applyCropAndGetFile();
+        } catch {
+            toast.error(t("cropFailed"), {position: "top-center"});
+        }
+    };
+
+    const handleCancelCrop = () => {
+        if (!posterPreview) {
+            setEditorImageSrc(null);
+        }
+        setIsCropping(false);
     };
 
     const handlePasteFromClipboard = async () => {
@@ -294,26 +366,29 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     const blob = await item.getType(imageType);
                     const ext = imageType.split("/")[1] || "png";
                     const file = new File([blob], `clipboard.${ext}`, {type: imageType});
-                    setImageFile(file);
+                    startCropping(file);
                     return;
                 }
             }
-            setError(t("clipboardNoImage"));
+            toast.error(t("clipboardNoImage"), { position: "top-center"})
         } catch {
-            setError(t("clipboardFailed"));
+            toast.error(t("clipboardNoImage"), { position: "top-center"})
         }
     };
 
     const removePoster = () => {
         setPosterFile(null);
         setPosterPreview(null);
+        setEditorImageSrc(null);
+        setIsCropping(false);
+        onCropReset();
+        croppedAreaPixelsRef.current = null;
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validate all fields
         const errors: Record<string, string> = {};
         const fieldsToValidate = [
             { name: "title", value: title },
@@ -326,7 +401,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             { name: "hours", value: hours },
             { name: "minutes", value: minutes },
             { name: "seconds", value: seconds },
-            { name: "myRating", value: myRating },
         ];
 
         fieldsToValidate.forEach(({ name, value }) => {
@@ -339,8 +413,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         // Validate member ratings
         if (isGroupMode && (status === WatchStatus.Completed || status === WatchStatus.Dropped)) {
             selectedMembers.forEach(uid => {
-                const rating = memberRatings[uid] || "";
-                if (rating && (!/^\d+$/.test(rating) || parseInt(rating) < 1 || parseInt(rating) > 10)) {
+                const rating = memberRatings[uid] || 0;
+                if (rating && (rating < 1 || rating > 10)) {
                     errors[`memberRating_${uid}`] = t("invalidRating");
                 }
             });
@@ -353,10 +427,23 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         }
 
         setError("");
-        mutation.mutate();
+
+        // Auto-apply crop if still in cropping mode
+        let croppedFile: File | null = null;
+        if (isCropping && editorImageSrc) {
+            try {
+                croppedFile = await applyCropAndGetFile();
+            } catch {
+                toast.error(t("cropFailed"), {position: "top-center"});
+                return;
+            }
+        }
+
+        mutation.mutate(croppedFile);
     };
 
     return (
+        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -378,22 +465,122 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                 {t("posterDescription")}
                             </FieldDescription>
                         </FieldContent>
-                        {posterPreview ? (
-                            <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                        {isCropping && editorImageSrc ? (
+                            <div className="space-y-3">
+                                <div className="relative w-full aspect-[4/3] bg-muted rounded-lg overflow-hidden border">
+                                    <Cropper
+                                        crop={crop}
+                                        zoom={zoom}
+                                        rotation={rotation}
+                                        aspectRatio={4 / 3}
+                                        withGrid={withGrid}
+                                        onCropChange={setCrop}
+                                        onZoomChange={setZoom}
+                                        onRotationChange={setRotation}
+                                        onCropAreaChange={onCropComplete}
+                                    >
+                                        <CropperImage
+                                            src={editorImageSrc}
+                                            alt="Image to crop"
+                                            crossOrigin="anonymous"
+                                        />
+                                        <CropperArea />
+                                    </Cropper>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0"/>
+                                        <span className="text-sm text-muted-foreground w-12">{t("zoom")}</span>
+                                        <input
+                                            type="range"
+                                            min={1}
+                                            max={3}
+                                            step={0.1}
+                                            value={zoom}
+                                            onChange={(e) => setZoom(Number(e.target.value))}
+                                            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <RotateCw className="h-4 w-4 text-muted-foreground shrink-0"/>
+                                        <span className="text-sm text-muted-foreground w-12">{t("rotate")}</span>
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={360}
+                                            step={1}
+                                            value={rotation}
+                                            onChange={(e) => setRotation(Number(e.target.value))}
+                                            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 shrink-0"
+                                            onClick={() => setRotation((prev) => (prev + 90) % 360)}
+                                        >
+                                            <RotateCw className="h-3.5 w-3.5"/>
+                                        </Button>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Switch id="add-crop-grid" checked={withGrid} onCheckedChange={setWithGrid} size="sm"/>
+                                            <Label htmlFor="add-crop-grid" className="text-sm text-muted-foreground">{t("showGrid")}</Label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button type="button" onClick={handleApplyCrop} className="flex-1">
+                                        {t("applyCrop")}
+                                    </Button>
+                                    <Button type="button" variant="outline" size="icon" onClick={onCropReset}>
+                                        <RotateCcw className="h-3.5 w-3.5"/>
+                                    </Button>
+                                    <Button type="button" variant="outline" onClick={handleCancelCrop}>
+                                        {t("cancel")}
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : posterPreview ? (
+                            <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border">
                                 <img
                                     src={posterPreview}
                                     alt="Poster preview"
                                     className="w-full h-full object-cover"
                                 />
-                                <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-7 w-7"
-                                    onClick={removePoster}
-                                >
-                                    <X className="h-4 w-4"/>
-                                </Button>
+                                <div className="absolute top-2 right-2 flex gap-1">
+                                    {editorImageSrc && (
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            aria-label={t("imageEditorTitle")}
+                                            onClick={() => setIsCropping(true)}
+                                        >
+                                            <Crop className="h-3.5 w-3.5"/>
+                                        </Button>
+                                    )}
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <ImagePlus className="h-3.5 w-3.5"/>
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={removePoster}
+                                    >
+                                        <X className="h-4 w-4"/>
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
                             <div className="flex gap-2">
@@ -602,49 +789,29 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                         <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
                                                             {member.displayName}
                                                         </FieldLabel>
-                                                        <div>
-                                                            <Input
-                                                                value={memberRatings[uid] || ""}
-                                                                onChange={(e) => {
-                                                                    const v = e.target.value;
+                                                        <div className="flex items-cetner gap-4">
+                                                            <div className="opacity-50">
+                                                                {memberRatings[uid] || 0}/10
+                                                            </div>
+                                                            <Rating
+                                                                value={memberRatings[uid] || 0}
+                                                                onValueChange={(v) => {
                                                                     setMemberRatings((prev) => ({...prev, [uid]: v}));
-
-                                                                    // Clear previous timeout
                                                                     const key = `memberRating_${uid}`;
-                                                                    if (validationTimeouts.current[key]) {
-                                                                        clearTimeout(validationTimeouts.current[key]);
-                                                                    }
-
-                                                                    // Clear error immediately
                                                                     setValidationErrors(prev => {
                                                                         const next = {...prev};
                                                                         delete next[key];
                                                                         return next;
                                                                     });
-
-                                                                    // Set timeout for validation
-                                                                    if (v) {
-                                                                        validationTimeouts.current[key] = setTimeout(() => {
-                                                                            const error = validateField("myRating", v);
-                                                                            setValidationErrors(prev => {
-                                                                                const next = {...prev};
-                                                                                if (error) {
-                                                                                    next[key] = error;
-                                                                                } else {
-                                                                                    delete next[key];
-                                                                                }
-                                                                                return next;
-                                                                            });
-                                                                        }, 500);
-                                                                    }
                                                                 }}
-                                                                placeholder="1-10"
-                                                                className="w-20 h-8"
-                                                                aria-invalid={!!validationErrors[`memberRating_${uid}`]}
-                                                            />
-                                                            {validationErrors[`memberRating_${uid}`] && (
-                                                                <FieldError className="text-xs">{validationErrors[`memberRating_${uid}`]}</FieldError>
-                                                            )}
+                                                                max={10}
+                                                                step={0.5}
+                                                                clearable
+                                                            >
+                                                                {Array.from({length: 10}, (_, i) => (
+                                                                    <RatingItem key={i}/>
+                                                                ))}
+                                                            </Rating>
                                                         </div>
                                                     </Field>
                                                 );
@@ -775,21 +942,26 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             {/* Personal mode: single rating */}
                             {(status === WatchStatus.Dropped || status === WatchStatus.Completed) && (
                                 <Field>
-                                    <FieldLabel htmlFor="myRating" className="flex items-center gap-1.5">
+                                    <FieldLabel className="flex items-center gap-1.5">
                                         <Star className="h-3.5 w-3.5"/>
                                         {t("myRatingLabel")}
                                     </FieldLabel>
-                                    <Input
-                                        id="myRating"
-                                        value={myRating}
-                                        onChange={(e) => {
-                                            setMyRating(e.target.value);
-                                            handleFieldChange("myRating", e.target.value);
-                                        }}
-                                        placeholder="1-10"
-                                        aria-invalid={!!validationErrors.myRating}
-                                    />
-                                    {validationErrors.myRating && <FieldError>{validationErrors.myRating}</FieldError>}
+                                    <div className="flex items-cetner gap-4">
+                                        <Rating
+                                            value={myRating}
+                                            onValueChange={setMyRating}
+                                            max={10}
+                                            step={0.5}
+                                            clearable
+                                        >
+                                            {Array.from({length: 10}, (_, i) => (
+                                                <RatingItem key={i}/>
+                                            ))}
+                                        </Rating>
+                                        <div className="opacity-50">
+                                            {myRating}/10
+                                        </div>
+                                    </div>
                                 </Field>
                             )}
 
@@ -887,6 +1059,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     )}
 
                     <FieldGroup className="gap-4">
+                        {(status === WatchStatus.Completed || status === WatchStatus.Dropped) && (
                         <Field>
                             <FieldContent>
                                 <FieldLabel>{t("emotion")}</FieldLabel>
@@ -920,6 +1093,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             )}
                             </div>
                         </Field>
+                        )}
 
                         <Field>
                             <FieldContent>
@@ -977,5 +1151,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 </form>
             </DialogContent>
         </Dialog>
+        </>
     );
 }

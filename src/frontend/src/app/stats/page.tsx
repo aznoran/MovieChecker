@@ -6,7 +6,11 @@ import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
-import {EmotionEmojis} from "@/types";
+import {EmotionEmojis, GroupType} from "@/types";
+import {
+    getContentTypeLabels,
+    getEmotionLabels,
+} from "@/lib/i18n/labels";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {
@@ -22,13 +26,15 @@ import {
     Smile,
     Loader2,
     Popcorn,
-    TrendingUp,
     Hash,
     RefreshCw,
     AlertCircle,
 } from "lucide-react";
 import {toast} from "sonner";
 import {useEffect} from "react";
+import {Rating, RatingItem} from "@/components/ui/rating";
+
+export const dynamic = "force-dynamic";
 
 function ProgressBar({
                          value,
@@ -51,31 +57,23 @@ function ProgressBar({
 }
 
 function StarRating({rating}: { rating: number }) {
-    const full = Math.floor(rating);
-    const partial = rating - full;
+    const newRating = rating/2;
+    console.log(newRating)
     return (
-        <div className="flex items-center gap-0.5">
-            {Array.from({length: 10}, (_, i) => {
-                let fill: string;
-                if (i < full) {
-                    fill = "text-yellow-400";
-                } else if (i === full && partial >= 0.5) {
-                    fill = "text-yellow-400/50";
-                } else {
-                    fill = "text-muted-foreground/20";
-                }
-                return <Star key={i} className={`h-3.5 w-3.5 fill-current ${fill}`}/>;
-            })}
-        </div>
+        <Rating size="lg" value={newRating} max={10} readOnly step={1} className="gap-0.5 fill-yellow-400">
+            {Array.from({length: 10}, (_, i) => (
+                <RatingItem key={i} className="text-yellow-400"/>
+            ))}
+        </Rating>
     );
 }
 
 export default function StatsPage() {
     const {isAuthenticated, isLoading: authLoading} = useAuth();
-    const {t} = useLocale();
+    const {locale, t} = useLocale();
     const {activeGroupId, activeGroup} = useGroup();
     const router = useRouter();
-    const isGroupMode = !!activeGroupId && !!activeGroup;
+    const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     const {data: stats, isLoading, error, refetch} = useQuery({
         queryKey: ["stats", activeGroupId],
@@ -213,11 +211,14 @@ export default function StatsPage() {
                                         return (
                                             <div key={item.key} className="space-y-2">
                                                 <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                            <Icon className={`h-4 w-4 ${item.textColor}`}/>
-                              {item.label}
-                          </span>
-                                                    <span className="text-xs text-muted-foreground">{pct}%</span>
+                                                    <span
+                                                        className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                      <Icon className={`h-4 w-4 ${item.textColor}`}/>
+                                                        {item.label}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {pct}%
+                                                    </span>
                                                 </div>
                                                 <div className="text-2xl font-bold">{item.value}</div>
                                                 <ProgressBar value={item.value} max={total} color={item.color}/>
@@ -230,21 +231,44 @@ export default function StatsPage() {
 
                         {/* ── Ratings Section ── */}
                         {isGroupMode ? (
-                            activeGroup && activeGroup.members.length <= 2 ? (
-                                /* Group with 2 members: classic My vs Partner layout */
-                                <div className="grid gap-4 sm:grid-cols-3">
-                                    <Card>
-                                        <CardContent className="pt-6">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Star className="h-5 w-5 text-yellow-400"/>
-                                                <span className="text-sm font-medium text-muted-foreground">
-                          {t("myAvgRating")}
-                        </span>
+                            activeGroup && activeGroup.members.length === 1 ? (
+                                /* Group with 1 member: only show my average rating */
+                                <Card>
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-base flex items-center gap-2 mb-3">
+                                            <Star className="h-5 w-5 text-yellow-400"/>
+                                            {t("averageRating")}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {stats.averageMyRating > 0 ? (
+                                            <div className="flex flex-row justify-between">
+                                                <div className="text-3xl font-bold mb-2">
+                                                    {(stats.averageMyRating / 2).toFixed(1)}
+                                                    <span className="text-lg text-muted-foreground">/10</span>
+                                                </div>
+                                                <StarRating rating={stats.averageMyRating}/>
                                             </div>
+                                        ) : (
+                                            <p className="text-muted-foreground text-sm">{t("noRated")}</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            ) : activeGroup && activeGroup.members.length === 2 ? (
+                                /* Group with 2 members: classic My vs Friend layout */
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <Card>
+                                        <CardHeader className="pb-3">
+                                            <CardTitle className="text-base flex items-center gap-2 mb-3">
+                                                <Star className="h-5 w-5 text-yellow-400"/>
+                                                {t("myAvgRating")}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
                                             {stats.averageMyRating > 0 ? (
                                                 <>
                                                     <div className="text-3xl font-bold mb-2">
-                                                        {stats.averageMyRating.toFixed(1)}
+                                                        {(stats.averageMyRating / 2).toFixed(1)}
                                                         <span className="text-lg text-muted-foreground">/10</span>
                                                     </div>
                                                     <StarRating rating={stats.averageMyRating}/>
@@ -256,17 +280,17 @@ export default function StatsPage() {
                                     </Card>
 
                                     <Card>
-                                        <CardContent className="pt-6">
-                                            <div className="flex items-center gap-2 mb-3">
+                                        <CardHeader className="pb-3">
+                                            <CardTitle className="text-base flex items-center gap-2 mb-3">
                                                 <Heart className="h-5 w-5 text-pink-400"/>
-                                                <span className="text-sm font-medium text-muted-foreground">
-                          {t("partnerAvgRating")}
-                        </span>
-                                            </div>
+                                                {t("friendAvgRating")}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
                                             {stats.averagePartnerRating > 0 ? (
                                                 <>
                                                     <div className="text-3xl font-bold mb-2">
-                                                        {stats.averagePartnerRating.toFixed(1)}
+                                                        {(stats.averagePartnerRating / 2).toFixed(1)}
                                                         <span className="text-lg text-muted-foreground">/10</span>
                                                     </div>
                                                     <StarRating rating={stats.averagePartnerRating}/>
@@ -276,135 +300,106 @@ export default function StatsPage() {
                                             )}
                                         </CardContent>
                                     </Card>
-
-                                    <Card>
-                                        <CardContent className="pt-6">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Users className="h-5 w-5 text-purple-400"/>
-                                                <span className="text-sm font-medium text-muted-foreground">
-                          {t("watchedTogether")}
-                        </span>
-                                            </div>
-                                            <div className="text-3xl font-bold text-purple-400">
-                                                {stats.watchedTogether}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
                                 </div>
                             ) : (
-                                /* Group with 3+ members: per-member ratings + watched together */
-                                <div className="space-y-4">
-                                    <Card>
-                                        <CardHeader className="pb-3">
-                                            <CardTitle className="text-base flex items-center gap-2">
-                                                <Users className="h-4 w-4"/>
-                                                {t("memberAvgRatings")}
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            {stats.memberRatings && stats.memberRatings.length > 0 ? (
-                                                <div className="space-y-4">
-                                                    {[...stats.memberRatings]
-                                                        .sort((a, b) => b.averageRating - a.averageRating)
-                                                        .map((mr, idx) => {
-                                                            const memberColors = [
-                                                                "text-yellow-400",
-                                                                "text-zinc-400",
-                                                                "text-amber-600",
-                                                            ];
-                                                            const accentColor = idx < 3 ? memberColors[idx] : "text-muted-foreground";
-                                                            return (
-                                                                <div key={mr.userId}
-                                                                     className="flex items-center gap-4">
-                                                                    <div
-                                                                        className={`text-lg font-bold w-6 text-center ${accentColor}`}>
-                                                                        {idx + 1}
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div
-                                                                            className="flex items-center justify-between mb-1">
-                                      <span className="font-medium text-sm truncate">
-                                        {mr.displayName}
-                                      </span>
-                                                                            <div
-                                                                                className="flex items-center gap-2 shrink-0 ml-2">
-                                        <span className="text-xs text-muted-foreground">
-                                          {mr.totalRated} {t("rated")}
-                                        </span>
-                                                                                {mr.averageRating > 0 ? (
-                                                                                    <span className="font-bold">
-                                            {mr.averageRating.toFixed(1)}
-                                                                                        <span
-                                                                                            className="text-muted-foreground text-xs">/10</span>
-                                          </span>
-                                                                                ) : (
-                                                                                    <span
-                                                                                        className="text-muted-foreground text-sm">{t("noRated")}</span>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                        {mr.averageRating > 0 && (
-                                                                            <StarRating rating={mr.averageRating}/>
-                                                                        )}
-                                                                    </div>
+                                /* Group with 3+ members: per-member ratings only (no watched together for 3+ members) */
+                                <Card>
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <Users className="h-4 w-4"/>
+                                            {t("memberAvgRatings")}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {stats.memberRatings && stats.memberRatings.length > 0 ? (
+                                            <div className="space-y-4">
+                                                {[...stats.memberRatings]
+                                                    .sort((a, b) => b.averageRating - a.averageRating)
+                                                    .map((mr, idx) => {
+                                                        const memberColors = [
+                                                            "text-yellow-400",
+                                                            "text-zinc-400",
+                                                            "text-amber-600",
+                                                        ];
+                                                        const accentColor = idx < 3 ? memberColors[idx] : "text-muted-foreground";
+                                                        return (
+                                                            <div key={mr.userId} className="flex items-center gap-4">
+                                                                <div
+                                                                    className={`text-lg font-bold w-6 text-center ${accentColor}`}>
+                                                                    {idx + 1}
                                                                 </div>
-                                                            );
-                                                        })}
-                                                </div>
-                                            ) : (
-                                                <p className="text-muted-foreground text-sm">{t("noRated")}</p>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                    <Card>
-                                        <CardContent className="pt-6">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Users className="h-5 w-5 text-purple-400"/>
-                                                <span className="text-sm font-medium text-muted-foreground">
-                          {t("watchedTogether")}
-                        </span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center justify-between mb-1">
+                                                                        <span className="font-medium text-sm truncate">
+                                                                            {mr.displayName}
+                                                                        </span>
+                                                                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                                            <span
+                                                                                className="text-xs text-muted-foreground">
+                                                                              {mr.totalRated} {t("rated")}
+                                                                            </span>
+                                                                            {mr.averageRating > 0 ? (
+                                                                                <span className="font-bold">
+                                                                                    {(mr.averageRating / 2).toFixed(1)}
+                                                                                    <span
+                                                                                        className="text-muted-foreground text-xs">/10</span>
+                                                                                    </span>
+                                                                            ) : (
+                                                                                <span
+                                                                                    className="text-muted-foreground text-sm">{t("noRated")}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    {mr.averageRating > 0 && (
+                                                                        <StarRating rating={mr.averageRating}/>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                             </div>
-                                            <div className="text-3xl font-bold text-purple-400">
-                                                {stats.watchedTogether}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
+                                        ) : (
+                                            <p className="text-muted-foreground text-sm">{t("noRated")}</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
                             )
                         ) : (
                             /* Personal mode: single rating card, prominent */
                             <Card>
-                                <CardContent className="pt-6">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Star className="h-5 w-5 text-yellow-400"/>
-                                                <span className="text-sm font-medium text-muted-foreground">
-                          {t("averageRating")}
-                        </span>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Star className="h-5 w-5 text-yellow-400"/>
+                                        {t("averageRating")}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {stats.averageMyRating > 0 ? (
+                                        <div className="flex flex-row justify-between">
+                                            <div className="text-4xl font-bold mb-2">
+                                                {(stats.averageMyRating / 2).toFixed(1)}
+                                                <span className="text-xl text-muted-foreground">/10</span>
                                             </div>
-                                            {stats.averageMyRating > 0 ? (
-                                                <>
-                                                    <div className="text-4xl font-bold mb-2">
-                                                        {stats.averageMyRating.toFixed(1)}
-                                                        <span className="text-xl text-muted-foreground">/10</span>
-                                                    </div>
-                                                    <StarRating rating={stats.averageMyRating}/>
-                                                </>
-                                            ) : (
-                                                <p className="text-muted-foreground text-sm">{t("noRated")}</p>
-                                            )}
+                                            <StarRating rating={stats.averageMyRating}/>
                                         </div>
-                                        <div className="hidden sm:block">
-                                            <TrendingUp className="h-16 w-16 text-muted-foreground/10"/>
-                                        </div>
-                                    </div>
+                                    ) : (
+                                        <p className="text-muted-foreground text-sm">{t("noRated")}</p>
+                                    )}
                                 </CardContent>
                             </Card>
                         )}
 
                         {/* ── By Content Type ── */}
                         {Object.keys(stats.byType).length > 0 && (() => {
+                            const contentTypeLabels = getContentTypeLabels(locale);
+                            // Map enum names to ContentType enum values for translation
+                            const typeNameMap: Record<string, string> = {
+                                "Movie": contentTypeLabels[0],
+                                "Series": contentTypeLabels[1],
+                                "Anime": contentTypeLabels[2],
+                                "Cartoon": contentTypeLabels[3],
+                                "Show": contentTypeLabels[4],
+                            };
                             const typeEntries = Object.entries(stats.byType);
                             const maxTypeCount = Math.max(...typeEntries.map(([, c]) => c));
                             const typeColors = [
@@ -427,7 +422,7 @@ export default function StatsPage() {
                                             {typeEntries.map(([typeName, count], i) => (
                                                 <div key={typeName} className="space-y-1">
                                                     <div className="flex items-center justify-between text-sm">
-                                                        <span>{typeName}</span>
+                                                        <span>{typeNameMap[typeName] || typeName}</span>
                                                         <span className="font-semibold">{count}</span>
                                                     </div>
                                                     <ProgressBar
@@ -447,16 +442,14 @@ export default function StatsPage() {
                         {Object.keys(stats.byEmotion).length > 0 && (() => {
                             const emotionEntries = Object.entries(stats.byEmotion);
                             const maxEmotionCount = Math.max(...emotionEntries.map(([, c]) => c));
-                            // Map emotion names to emojis
+                            const emotionLabels = getEmotionLabels(locale);
+                            // Map emotion enum names to emojis and translated labels
+                            const emotionEnumNames = ["Joy", "Sadness", "Excitement", "Cringe", "Confused", "Neutral"];
                             const emotionNameToEmoji: Record<string, string> = {};
-                            Object.entries(EmotionEmojis).forEach(([key, emoji]) => {
-                                // The backend returns emotion names like "Joy", "Sadness", etc.
-                                // EmotionEmojis is keyed by enum number
-                                const names = ["Joy", "Sadness", "Excitement", "Cringe", "Confused", "Neutral"];
-                                const namesRu = ["Радость", "Грусть", "Восторг", "Кринж", "Что это было?", "Нейтрально"];
-                                const idx = Number(key);
-                                if (names[idx]) emotionNameToEmoji[names[idx]] = emoji;
-                                if (namesRu[idx]) emotionNameToEmoji[namesRu[idx]] = emoji;
+                            const emotionNameToLabel: Record<string, string> = {};
+                            emotionEnumNames.forEach((name, idx) => {
+                                emotionNameToEmoji[name] = EmotionEmojis[idx as keyof typeof EmotionEmojis] || "";
+                                emotionNameToLabel[name] = emotionLabels[idx as keyof typeof emotionLabels] || name;
                             });
                             return (
                                 <Card>
@@ -470,6 +463,7 @@ export default function StatsPage() {
                                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                             {emotionEntries.map(([emotionName, count]) => {
                                                 const emoji = emotionNameToEmoji[emotionName] || "";
+                                                const displayName = emotionNameToLabel[emotionName] || emotionName;
                                                 const pct = maxEmotionCount > 0 ? Math.round((count / maxEmotionCount) * 100) : 0;
                                                 return (
                                                     <div
@@ -480,7 +474,7 @@ export default function StatsPage() {
                                                         <div className="flex-1 min-w-0">
                                                             <div
                                                                 className="flex items-center justify-between text-sm mb-1">
-                                                                <span className="truncate">{emotionName}</span>
+                                                                <span className="truncate">{displayName}</span>
                                                                 <span className="font-semibold ml-2">{count}</span>
                                                             </div>
                                                             <div

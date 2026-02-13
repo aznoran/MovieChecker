@@ -36,4 +36,5 @@ public class WatchEntry
     public User User { get; set; } = null!;
     public Group? Group { get; set; }
     public ICollection<EntryRating> Ratings { get; set; } = [];
+    public ICollection<WatchEntryGroup> WatchEntryGroups { get; set; } = [];
 }

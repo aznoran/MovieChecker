@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Копируем csproj-файлы (и при необходимости solution), чтобы restore кэшировался корректно
@@ -17,10 +17,7 @@ COPY . .
 # Публикуем веб-проект
 RUN dotnet publish MovieChecker.Web/MovieChecker.Web.csproj -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
-
-# Install ICU libraries for globalization/localization support
-RUN apk add --no-cache icu-libs
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 
 WORKDIR /app
 COPY --from=build /app/publish .

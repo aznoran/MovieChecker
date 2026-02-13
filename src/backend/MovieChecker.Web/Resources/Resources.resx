@@ -160,4 +160,46 @@
   <data name="InvalidFileType" xml:space="preserve">
     <value>Invalid file type. Allowed: jpg, png, webp, gif</value>
   </data>
+  <data name="CannotJoinPersonalGroup" xml:space="preserve">
+    <value>Cannot join a personal group</value>
+  </data>
+  <data name="UsernameRequired" xml:space="preserve">
+    <value>Username is required</value>
+  </data>
+  <data name="UsernameTooShort" xml:space="preserve">
+    <value>Username must be at least 3 characters</value>
+  </data>
+  <data name="UsernameTooLong" xml:space="preserve">
+    <value>Username must not exceed 50 characters</value>
+  </data>
+  <data name="UsernameInvalidChars" xml:space="preserve">
+    <value>Username can only contain letters, numbers, underscores, and hyphens</value>
+  </data>
+  <data name="PasswordRequired" xml:space="preserve">
+    <value>Password is required</value>
+  </data>
+  <data name="PasswordHasSpaces" xml:space="preserve">
+    <value>Password cannot have leading or trailing spaces</value>
+  </data>
+  <data name="PasswordTooShort" xml:space="preserve">
+    <value>Password must be at least 8 characters</value>
+  </data>
+  <data name="PasswordTooLong" xml:space="preserve">
+    <value>Password must not exceed 50 characters</value>
+  </data>
+  <data name="PasswordMissingRequirements" xml:space="preserve">
+    <value>Password must contain at least one uppercase letter, one lowercase letter, and one digit</value>
+  </data>
+  <data name="DisplayNameRequired" xml:space="preserve">
+    <value>Display name is required</value>
+  </data>
+  <data name="DisplayNameHasSpaces" xml:space="preserve">
+    <value>Display name cannot have leading or trailing spaces</value>
+  </data>
+  <data name="DisplayNameTooShort" xml:space="preserve">
+    <value>Display name must be at least 2 characters</value>
+  </data>
+  <data name="DisplayNameTooLong" xml:space="preserve">
+    <value>Display name must not exceed 50 characters</value>
+  </data>
 </root>

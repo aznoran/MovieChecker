@@ -1,6 +1,6 @@
 "use client";
 
-import {createContext, useContext, useState, useEffect, useCallback} from "react";
+import {createContext, useContext, useState, useEffect, useCallback, useMemo} from "react";
 import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
 import {useAuth} from "@/context/auth-context";
 import {
@@ -13,13 +13,16 @@ import {
     updateMemberRole as apiUpdateMemberRole,
     generateOtp as apiGenerateOtp,
     updateGroupPassword as apiUpdateGroupPassword,
+    updateGroupSettings as apiUpdateGroupSettings,
 } from "@/lib/api";
 import type {Group, GroupRole} from "@/types";
+import {GroupType} from "@/types";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 
 interface GroupContextValue {
     groups: Group[];
+    personalGroup: Group | undefined;
     activeGroupId: number | undefined;
     activeGroup: Group | undefined;
     setActiveGroupId: (id: number | undefined) => void;
@@ -31,6 +34,7 @@ interface GroupContextValue {
     updateMemberRole: (groupId: number, userId: number, role: number) => Promise<void>;
     generateOtp: (groupId: number) => Promise<{ code: string; expiresAt: string }>;
     updatePassword: (groupId: number, newPassword?: string) => Promise<void>;
+    updateGroupSettings: (groupId: number, settings: { name?: string; isPrivate?: boolean }) => Promise<Group>;
     isLoading: boolean;
 }
 
@@ -79,21 +83,30 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         }
     }, [isAuthenticated, wasAuthenticated, setActiveGroupId, queryClient]);
 
-    // If activeGroupId is set but not in groups list, reset to personal
+    const personalGroup = useMemo(() => groups.find((g) => g.groupType === GroupType.Personal), [groups]);
+
+    // Auto-select personal group as default when groups are loaded and no active group is set
+    useEffect(() => {
+        if (isAuthenticated && !isLoading && activeGroupId === undefined && personalGroup) {
+            setActiveGroupId(personalGroup.id);
+        }
+    }, [isAuthenticated, isLoading, activeGroupId, personalGroup, setActiveGroupId]);
+
+    // If activeGroupId is set but not in groups list, reset to personal group
     useEffect(() => {
         if (isAuthenticated && !isLoading && activeGroupId !== undefined && !groups.find((g) => g.id === activeGroupId)) {
-            setActiveGroupId(undefined);
+            setActiveGroupId(personalGroup?.id);
         }
-    }, [groups, activeGroupId, isLoading, isAuthenticated, setActiveGroupId]);
+    }, [groups, activeGroupId, isLoading, isAuthenticated, setActiveGroupId, personalGroup]);
 
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 
     const createMutation = useMutation({
         mutationFn: ({ name, isPrivate, password, defaultRole }: { name: string, isPrivate?: boolean, password?: string, defaultRole?: number }) =>
             apiCreateGroup(name, isPrivate, password, defaultRole),
-        onSuccess: (group) => {
+        onSuccess: async (group) => {
             toast.success(t("groupCreateSuccess"), { position: "top-center" });
-            queryClient.invalidateQueries({queryKey: ["groups"]});
+            await queryClient.invalidateQueries({queryKey: ["groups"]});
             setActiveGroupId(group.id);
         },
         onError: () => {
@@ -104,9 +117,9 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const joinMutation = useMutation({
         mutationFn: ({ code, password, otp }: { code: string, password?: string, otp?: string }) => 
             apiJoinGroup(code, password, otp),
-        onSuccess: (group) => {
+        onSuccess: async (group) => {
             toast.success(t("joinSuccess"), { position: "top-center" })
-            queryClient.invalidateQueries({queryKey: ["groups"]});
+            await queryClient.invalidateQueries({queryKey: ["groups"]});
             setActiveGroupId(group.id);
         },
         onError: () => {
@@ -181,10 +194,23 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         }
     });
 
+    const updateSettingsMutation = useMutation({
+        mutationFn: ({groupId, settings}: { groupId: number; settings: { name?: string; isPrivate?: boolean } }) =>
+            apiUpdateGroupSettings(groupId, settings),
+        onSuccess: () => {
+            toast.success(t("groupSettingsUpdated"), { position: "top-center" })
+            queryClient.invalidateQueries({queryKey: ["groups"]});
+        },
+        onError: () => {
+            toast.error(t("groupSettingsError"), { position: "top-center" })
+        }
+    });
+
     return (
         <GroupContext.Provider
             value={{
                 groups,
+                personalGroup,
                 activeGroupId,
                 activeGroup,
                 setActiveGroupId,
@@ -196,6 +222,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
                 updateMemberRole: (groupId, userId, role) => updateRoleMutation.mutateAsync({groupId, userId, role}),
                 generateOtp: (groupId) => generateOtpMutation.mutateAsync(groupId),
                 updatePassword: (groupId, newPassword) => updatePasswordMutation.mutateAsync({groupId, newPassword}),
+                updateGroupSettings: (groupId, settings) => updateSettingsMutation.mutateAsync({groupId, settings}),
                 isLoading,
             }}
         >

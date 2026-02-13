@@ -1,12 +1,19 @@
 "use client";
 
-import {useState, useRef, useEffect} from "react";
+import {useState, useRef, useEffect, useCallback} from "react";
 import {useMutation, useQueryClient} from "@tanstack/react-query";
 import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useAuth} from "@/context/auth-context";
 import {useGroup} from "@/context/group-context";
-import {ContentType, WatchEntry} from "@/types";
+import {
+    Cropper,
+    CropperImage,
+    CropperArea,
+    type CropperAreaData,
+} from "@/components/ui/cropper";
+import {getCroppedImage} from "@/lib/crop-utils";
+import {ContentType, WatchEntry, GroupType} from "@/types";
 import {
     WatchStatus,
     Emotion,
@@ -44,7 +51,12 @@ import {
     Film,
     Calendar,
     ClipboardPaste,
+    Crop,
+    ZoomIn,
+    RotateCw,
+    RotateCcw,
 } from "lucide-react";
+import {Rating, RatingItem} from "@/components/ui/rating";
 import {
     Field,
     FieldLabel,
@@ -55,7 +67,10 @@ import {
     FieldSet,
     FieldLegend,
 } from "@/components/ui/field";
+import {Switch} from "@/components/ui/switch";
+import {Label} from "@/components/ui/label";
 import {toast} from "sonner";
+import * as React from "react";
 
 interface Props {
     entry: WatchEntry;
@@ -67,21 +82,21 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const {locale, t} = useLocale();
     const {user} = useAuth();
     const {activeGroup} = useGroup();
-    const isGroupMode = !!entry.groupId && !!activeGroup;
+    const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     const [status, setStatus] = useState<WatchStatus>(entry.status);
     // Personal mode: single rating
     const myExistingRating = entry.ratings?.find((r) => r.userId === user?.id);
-    const [myRating, setMyRating] = useState(myExistingRating?.rating?.toString() || "");
+    const [myRating, setMyRating] = useState((myExistingRating?.rating ?? 0) / 2);
     // Group mode: selected members and per-member ratings
     const [selectedMembers, setSelectedMembers] = useState<number[]>(
         () => entry.ratings?.map((r) => r.userId) ?? []
     );
-    const [memberRatings, setMemberRatings] = useState<Record<number, string>>(
+    const [memberRatings, setMemberRatings] = useState<Record<number, number>>(
         () => {
-            const map: Record<number, string> = {};
+            const map: Record<number, number> = {};
             entry.ratings?.forEach((r) => {
-                map[r.userId] = r.rating.toString();
+                map[r.userId] = r.rating / 2;
             });
             return map;
         }
@@ -92,6 +107,14 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [posterPreview, setPosterPreview] = useState<string | null>(
         getPosterUrl(entry.movie.posterUrl)
     );
+    const [posterRemoved, setPosterRemoved] = useState(false);
+    const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
+    const [isCropping, setIsCropping] = useState(false);
+    const [crop, setCrop] = useState({x: 0, y: 0});
+    const [zoom, setZoom] = useState(1);
+    const [rotation, setRotation] = useState(0);
+    const [withGrid, setWithGrid] = useState(false);
+    const croppedAreaPixelsRef = useRef<CropperAreaData | null>(null);
     const [error, setError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -103,6 +126,46 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [hours, setHours] = useState(Math.floor(existingWatchingTime / 3600).toString());
     const [minutes, setMinutes] = useState(Math.floor((existingWatchingTime % 3600) / 60).toString());
     const [seconds, setSeconds] = useState((existingWatchingTime % 60).toString());
+
+    const onCropReset = useCallback(() => {
+        setCrop({x: 0, y: 0});
+        setZoom(1);
+        setRotation(0);
+    }, []);
+
+    // Reset form state when entry changes or dialog opens
+    useEffect(() => {
+        if (open) {
+            const myRat = entry.ratings?.find((r) => r.userId === user?.id);
+            setStatus(entry.status);
+            setMyRating((myRat?.rating ?? 0) / 2);
+            setSelectedMembers(entry.ratings?.map((r) => r.userId) ?? []);
+            const map: Record<number, number> = {};
+            entry.ratings?.forEach((r) => {
+                map[r.userId] = r.rating / 2;
+            });
+            setMemberRatings(map);
+            setEmotion(entry.emotion ?? null);
+            setComment(entry.comment || "");
+            setPosterFile(null);
+            setPosterPreview(getPosterUrl(entry.movie.posterUrl));
+            setPosterRemoved(false);
+            setIsCropping(false);
+            setEditorImageSrc(null);
+            onCropReset();
+            croppedAreaPixelsRef.current = null;
+            setError("");
+            setCurrentEpisode(entry.currentEpisode?.toString() || "");
+            setTotalEpisodes(entry.totalEpisodes?.toString() || "");
+            setCurrentSeason(entry.currentSeason?.toString() || "");
+            const wt = entry.watchingTime || 0;
+            setHours(Math.floor(wt / 3600).toString());
+            setMinutes(Math.floor((wt % 3600) / 60).toString());
+            setSeconds((wt % 60).toString());
+            setValidationErrors({});
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, entry]);
 
     // Validation errors
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -134,11 +197,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             case "seconds":
                 if (value && (!/^\d+$/.test(value) || parseInt(value) < 0 || parseInt(value) > 59)) {
                     return t("invalidTimeComponent");
-                }
-                return null;
-            case "myRating":
-                if (value && (!/^\d+$/.test(value) || parseInt(value) < 1 || parseInt(value) > 10)) {
-                    return t("invalidRating");
                 }
                 return null;
             default:
@@ -187,24 +245,27 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
-        mutationFn: async () => {
-            if (posterFile) {
-                const posterUrl = await uploadPoster(posterFile);
+        mutationFn: async (overridePosterFile?: File | null) => {
+            const fileToUpload = overridePosterFile ?? posterFile;
+            if (fileToUpload) {
+                const posterUrl = await uploadPoster(fileToUpload);
                 await updateMovie(entry.movieId, {posterUrl});
+            } else if (posterRemoved) {
+                await updateMovie(entry.movieId, {posterUrl: ""});
             }
 
             const ratingsArray = isGroupMode
                 ? selectedMembers
                     .filter((uid) => memberRatings[uid])
-                    .map((uid) => ({userId: uid, rating: parseInt(memberRatings[uid])}))
+                    .map((uid) => ({userId: uid, rating: memberRatings[uid] * 2}))
                 : undefined;
 
             await updateWatchEntry(entry.id, {
                 status,
-                rating: !isGroupMode && myRating ? parseInt(myRating) : undefined,
+                rating: !isGroupMode && myRating ? myRating * 2 : undefined,
                 ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
-                emotion: emotion ?? undefined,
+                emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
                 comment: comment || undefined,
                 // Series/Anime tracking
                 ...(status === WatchStatus.Watching && (
@@ -236,14 +297,57 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setImageFile(file);
+        startCropping(file);
     };
 
-    const setImageFile = (file: File) => {
+    const startCropping = (file: File) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setEditorImageSrc(reader.result as string);
+            onCropReset();
+            croppedAreaPixelsRef.current = null;
+            setIsCropping(true);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const onCropComplete = useCallback((_: CropperAreaData, croppedPixels: CropperAreaData) => {
+        croppedAreaPixelsRef.current = croppedPixels;
+    }, []);
+
+    const applyCropAndGetFile = async (): Promise<File | null> => {
+        if (!editorImageSrc) return null;
+        let file: File;
+        if (croppedAreaPixelsRef.current) {
+            const blob = await getCroppedImage(editorImageSrc, croppedAreaPixelsRef.current, rotation);
+            file = new File([blob], "cropped-poster.jpg", {type: "image/jpeg"});
+        } else {
+            // User never interacted with the cropper — use original image as-is
+            const res = await fetch(editorImageSrc);
+            const blob = await res.blob();
+            file = new File([blob], "poster.jpg", {type: blob.type || "image/jpeg"});
+        }
         setPosterFile(file);
         const reader = new FileReader();
         reader.onloadend = () => setPosterPreview(reader.result as string);
         reader.readAsDataURL(file);
+        setIsCropping(false);
+        return file;
+    };
+
+    const handleApplyCrop = async () => {
+        try {
+            await applyCropAndGetFile();
+        } catch {
+            toast.error(t("cropFailed"), {position: "top-center"});
+        }
+    };
+
+    const handleCancelCrop = () => {
+        if (!posterPreview) {
+            setEditorImageSrc(null);
+        }
+        setIsCropping(false);
     };
 
     const handlePasteFromClipboard = async () => {
@@ -255,23 +359,28 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     const blob = await item.getType(imageType);
                     const ext = imageType.split("/")[1] || "png";
                     const file = new File([blob], `clipboard.${ext}`, {type: imageType});
-                    setImageFile(file);
+                    startCropping(file);
                     return;
                 }
             }
-            setError(t("clipboardNoImage"));
+            toast.error(t("clipboardNoImage"), {position: "top-center"});
         } catch {
-            setError(t("clipboardFailed"));
+            toast.error(t("clipboardFailed"), {position: "top-center"});
         }
     };
 
     const removePoster = () => {
         setPosterFile(null);
         setPosterPreview(null);
+        setPosterRemoved(true);
+        setEditorImageSrc(null);
+        setIsCropping(false);
+        onCropReset();
+        croppedAreaPixelsRef.current = null;
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Validate all fields
@@ -284,7 +393,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             { name: "hours", value: hours },
             { name: "minutes", value: minutes },
             { name: "seconds", value: seconds },
-            { name: "myRating", value: myRating },
         ];
 
         fieldsToValidate.forEach(({ name, value }) => {
@@ -297,8 +405,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         // Validate member ratings
         if (isGroupMode && (status === WatchStatus.Completed || status === WatchStatus.Dropped)) {
             selectedMembers.forEach(uid => {
-                const rating = memberRatings[uid] || "";
-                if (rating && (!/^\d+$/.test(rating) || parseInt(rating) < 1 || parseInt(rating) > 10)) {
+                const rating = memberRatings[uid] || 0;
+                if (rating && (rating < 1 || rating > 10)) {
                     errors[`memberRating_${uid}`] = t("invalidRating");
                 }
             });
@@ -311,10 +419,23 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         }
 
         setError("");
-        mutation.mutate();
+
+        // Auto-apply crop if still in cropping mode
+        let croppedFile: File | null = null;
+        if (isCropping && editorImageSrc) {
+            try {
+                croppedFile = await applyCropAndGetFile();
+            } catch {
+                toast.error(t("cropFailed"), {position: "top-center"});
+                return;
+            }
+        }
+
+        mutation.mutate(croppedFile);
     };
 
     return (
+        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -352,8 +473,85 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 {t("posterDescription")}
                             </FieldDescription>
                         </FieldContent>
-                        {posterPreview ? (
-                            <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                        {isCropping && editorImageSrc ? (
+                            <div className="space-y-3">
+                                <div className="relative w-full aspect-[4/3] bg-muted rounded-lg overflow-hidden border">
+                                    <Cropper
+                                        crop={crop}
+                                        zoom={zoom}
+                                        rotation={rotation}
+                                        aspectRatio={4 / 3}
+                                        withGrid={withGrid}
+                                        onCropChange={setCrop}
+                                        onZoomChange={setZoom}
+                                        onRotationChange={setRotation}
+                                        onCropAreaChange={onCropComplete}
+                                    >
+                                        <CropperImage
+                                            src={editorImageSrc}
+                                            alt="Image to crop"
+                                            crossOrigin="anonymous"
+                                        />
+                                        <CropperArea />
+                                    </Cropper>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0"/>
+                                        <span className="text-sm text-muted-foreground w-12">{t("zoom")}</span>
+                                        <input
+                                            type="range"
+                                            min={1}
+                                            max={3}
+                                            step={0.1}
+                                            value={zoom}
+                                            onChange={(e) => setZoom(Number(e.target.value))}
+                                            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <RotateCw className="h-4 w-4 text-muted-foreground shrink-0"/>
+                                        <span className="text-sm text-muted-foreground w-12">{t("rotate")}</span>
+                                        <input
+                                            type="range"
+                                            min={0}
+                                            max={360}
+                                            step={1}
+                                            value={rotation}
+                                            onChange={(e) => setRotation(Number(e.target.value))}
+                                            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 shrink-0"
+                                            onClick={() => setRotation((prev) => (prev + 90) % 360)}
+                                        >
+                                            <RotateCw className="h-3.5 w-3.5"/>
+                                        </Button>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Switch id="edit-crop-grid" checked={withGrid} onCheckedChange={setWithGrid} size="sm"/>
+                                            <Label htmlFor="edit-crop-grid" className="text-sm text-muted-foreground">{t("showGrid")}</Label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button type="button" onClick={handleApplyCrop} className="flex-1">
+                                        {t("applyCrop")}
+                                    </Button>
+                                    <Button type="button" variant="outline" size="icon" onClick={onCropReset}>
+                                        <RotateCcw className="h-3.5 w-3.5"/>
+                                    </Button>
+                                    <Button type="button" variant="outline" onClick={handleCancelCrop}>
+                                        {t("cancel")}
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : posterPreview ? (
+                            <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border">
                                 <img
                                     src={posterPreview}
                                     alt="Poster preview"
@@ -365,9 +563,24 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         variant="secondary"
                                         size="icon"
                                         className="h-7 w-7"
+                                        aria-label={t("imageEditorTitle")}
+                                        onClick={() => {
+                                            if (!editorImageSrc && posterPreview) {
+                                                setEditorImageSrc(posterPreview);
+                                            }
+                                            setIsCropping(true);
+                                        }}
+                                    >
+                                        <Crop className="h-3.5 w-3.5"/>
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="icon"
+                                        className="h-7 w-7"
                                         onClick={() => fileInputRef.current?.click()}
                                     >
-                                        <Pencil className="h-3.5 w-3.5"/>
+                                        <ImagePlus className="h-3.5 w-3.5"/>
                                     </Button>
                                     <Button
                                         type="button"
@@ -501,49 +714,29 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                         <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
                                                             {member.displayName}
                                                         </FieldLabel>
-                                                        <div>
-                                                            <Input
-                                                                value={memberRatings[uid] || ""}
-                                                                onChange={(e) => {
-                                                                    const v = e.target.value;
+                                                        <div className="flex items-cetner gap-4">
+                                                            <div className="opacity-50">
+                                                                {memberRatings[uid] || 0}/10
+                                                            </div>
+                                                            <Rating
+                                                                value={memberRatings[uid] || 0}
+                                                                onValueChange={(v) => {
                                                                     setMemberRatings((prev) => ({...prev, [uid]: v}));
-
-                                                                    // Clear previous timeout
                                                                     const key = `memberRating_${uid}`;
-                                                                    if (validationTimeouts.current[key]) {
-                                                                        clearTimeout(validationTimeouts.current[key]);
-                                                                    }
-
-                                                                    // Clear error immediately
                                                                     setValidationErrors(prev => {
                                                                         const next = {...prev};
                                                                         delete next[key];
                                                                         return next;
                                                                     });
-
-                                                                    // Set timeout for validation
-                                                                    if (v) {
-                                                                        validationTimeouts.current[key] = setTimeout(() => {
-                                                                            const error = validateField("myRating", v);
-                                                                            setValidationErrors(prev => {
-                                                                                const next = {...prev};
-                                                                                if (error) {
-                                                                                    next[key] = error;
-                                                                                } else {
-                                                                                    delete next[key];
-                                                                                }
-                                                                                return next;
-                                                                            });
-                                                                        }, 500);
-                                                                    }
                                                                 }}
-                                                                placeholder="1-10"
-                                                                className="w-32 h-8"
-                                                                aria-invalid={!!validationErrors[`memberRating_${uid}`]}
-                                                            />
-                                                            {validationErrors[`memberRating_${uid}`] && (
-                                                                <FieldError className="text-xs">{validationErrors[`memberRating_${uid}`]}</FieldError>
-                                                            )}
+                                                                max={10}
+                                                                step={0.5}
+                                                                clearable
+                                                            >
+                                                                {Array.from({length: 10}, (_, i) => (
+                                                                    <RatingItem key={i}/>
+                                                                ))}
+                                                            </Rating>
                                                         </div>
                                                     </Field>
                                                 );
@@ -674,27 +867,33 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             {/* Personal mode: single rating */}
                             {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
                                 <Field>
-                                    <FieldLabel htmlFor="myRating" className="flex items-center gap-1.5">
+                                    <FieldLabel className="flex items-center gap-1.5">
                                         <Star className="h-3.5 w-3.5"/>
                                         {t("myRatingLabel")}
                                     </FieldLabel>
-                                    <Input
-                                        id="myRating"
-                                        value={myRating}
-                                        onChange={(e) => {
-                                            setMyRating(e.target.value);
-                                            handleFieldChange("myRating", e.target.value);
-                                        }}
-                                        placeholder="1-10"
-                                        aria-invalid={!!validationErrors.myRating}
-                                    />
-                                    {validationErrors.myRating && <FieldError>{validationErrors.myRating}</FieldError>}
+                                    <div className="flex items-cetner gap-4">
+                                        <Rating
+                                            value={myRating}
+                                            onValueChange={setMyRating}
+                                            max={10}
+                                            step={0.5}
+                                            clearable
+                                        >
+                                            {Array.from({length: 10}, (_, i) => (
+                                                <RatingItem key={i}/>
+                                            ))}
+                                        </Rating>
+                                        <div className="opacity-50">
+                                            {myRating}/10
+                                        </div>
+                                    </div>
                                 </Field>
                             )}
                         </>
                     )}
 
                     <FieldGroup className="gap-4">
+                        {(status === WatchStatus.Completed || status === WatchStatus.Dropped) && (
                         <Field>
                             <FieldContent>
                                 <FieldLabel>{t("emotion")}</FieldLabel>
@@ -728,6 +927,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             )}
                             </div>
                         </Field>
+                        )}
 
                         <Field>
                             <FieldContent>
@@ -785,5 +985,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 </form>
             </DialogContent>
         </Dialog>
+        </>
     );
 }

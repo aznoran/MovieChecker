@@ -8,7 +8,9 @@ public class GroupConfiguration : IEntityTypeConfiguration<Group>
 {
     public void Configure(EntityTypeBuilder<Group> builder)
     {
-        builder.HasIndex(g => g.InviteCode).IsUnique();
+        builder.HasIndex(g => g.InviteCode)
+            .IsUnique()
+            .HasFilter("invite_code IS NOT NULL");
 
         builder.HasOne(g => g.CreatedBy)
             .WithMany()

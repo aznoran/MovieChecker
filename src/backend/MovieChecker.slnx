@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Other/">
     <File Path="..\..\docker-compose.yml" />
+    <File Path="..\..\testing\docker-compose.yaml" />
   </Folder>
   <Project Path="MovieChecker.Domain/MovieChecker.Domain.csproj" />
   <Project Path="MovieChecker.Infrastructure/MovieChecker.Infrastructure.csproj" />

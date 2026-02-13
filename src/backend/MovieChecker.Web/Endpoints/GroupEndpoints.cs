@@ -87,6 +87,13 @@ public static class GroupEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .WithSummary("Update group password")
             .WithDescription("Updates the password for a private group");
+
+        group.MapPut("/{id:int}/settings", UpdateGroupSettings)
+            .Produces<GroupDto>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Update group settings")
+            .WithDescription("Updates group name and/or privacy settings (Owner/Admin only)");
     }
 
     private static int GetUserId(ClaimsPrincipal user) =>
@@ -117,6 +124,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.GroupType,
             g.DefaultRole,
             g.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -147,6 +155,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.GroupType,
             g.DefaultRole,
             g.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -165,6 +174,12 @@ public static class GroupEndpoints
     {
         var userId = GetUserId(user);
 
+        // Validate field lengths
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 50)
+            return Results.BadRequest(new ErrorResponse("Group name is required and must not exceed 50 characters"));
+        if (request.Password != null && request.Password.Length > 50)
+            return Results.BadRequest(new ErrorResponse("Password must not exceed 50 characters"));
+
         // For public groups, default role must be Viewer
         // For private groups, use the requested default role or default to Member
         var defaultRole = request.IsPrivate 
@@ -178,6 +193,7 @@ public static class GroupEndpoints
             InviteCode = GenerateInviteCode(),
             CreatedByUserId = userId,
             IsPrivate = request.IsPrivate,
+            GroupType = request.IsPrivate ? GroupType.Private : GroupType.Public,
             DefaultRole = defaultRole,
             PasswordHash = !string.IsNullOrWhiteSpace(request.Password) 
                 ? BCrypt.Net.BCrypt.HashPassword(request.Password) 
@@ -204,6 +220,7 @@ public static class GroupEndpoints
             g.InviteCode,
             g.CreatedByUserId,
             g.IsPrivate,
+            g.GroupType,
             g.DefaultRole,
             [new GroupMemberDto(userId, displayName, GroupRole.Owner, DateTime.UtcNow)],
             g.CreatedAt
@@ -225,6 +242,10 @@ public static class GroupEndpoints
 
         if (group == null)
             return Results.Ok(new GroupInfoResponse(false, false, false, null));
+
+        // Cannot join personal groups
+        if (group.GroupType == GroupType.Personal)
+            return Results.BadRequest(new ErrorResponse(localizer["CannotJoinPersonalGroup"]));
 
         // Check if already a member
         if (await db.GroupMembers.AnyAsync(m => m.GroupId == group.Id && m.UserId == userId))
@@ -255,6 +276,10 @@ public static class GroupEndpoints
 
         if (group == null)
             return Results.NotFound(new ErrorResponse(localizer["InvalidInviteCode"]));
+
+        // Cannot join personal groups
+        if (group.GroupType == GroupType.Personal)
+            return Results.BadRequest(new ErrorResponse(localizer["CannotJoinPersonalGroup"]));
 
         // 2. Check password or OTP for private groups
         if (group.IsPrivate)
@@ -322,6 +347,7 @@ public static class GroupEndpoints
             updatedGroup.InviteCode,
             updatedGroup.CreatedByUserId,
             updatedGroup.IsPrivate,
+            updatedGroup.GroupType,
             updatedGroup.DefaultRole,
             updatedGroup.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -447,6 +473,7 @@ public static class GroupEndpoints
             group.InviteCode,
             group.CreatedByUserId,
             group.IsPrivate,
+            group.GroupType,
             group.DefaultRole,
             group.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -515,6 +542,7 @@ public static class GroupEndpoints
             group.InviteCode,
             group.CreatedByUserId,
             group.IsPrivate,
+            group.GroupType,
             group.DefaultRole,
             group.Members.Select(m => new GroupMemberDto(
                 m.UserId,
@@ -591,6 +619,12 @@ public static class GroupEndpoints
             return Results.BadRequest(new ErrorResponse(localizer["OnlyPrivateGroupsPassword"]));
         }
 
+        // Validate password length
+        if (request.NewPassword != null && request.NewPassword.Length > 50)
+        {
+            return Results.BadRequest(new ErrorResponse("Password must not exceed 50 characters"));
+        }
+
         // Update password (null removes it, making group OTP-only)
         group.PasswordHash = !string.IsNullOrWhiteSpace(request.NewPassword)
             ? BCrypt.Net.BCrypt.HashPassword(request.NewPassword)
@@ -599,5 +633,75 @@ public static class GroupEndpoints
         await db.SaveChangesAsync();
 
         return Results.Ok(new SuccessResponse(localizer["PasswordUpdatedSuccessfully"]));
+    }
+
+    private static async Task<IResult> UpdateGroupSettings(
+        int id,
+        UpdateGroupSettingsRequest request,
+        ClaimsPrincipal user,
+        AppDbContext db,
+        ILocalizationService localizer)
+    {
+        var userId = GetUserId(user);
+
+        var group = await db.Groups
+            .Include(g => g.Members)
+            .ThenInclude(m => m.User)
+            .FirstOrDefaultAsync(g => g.Id == id);
+
+        if (group == null)
+            return Results.NotFound();
+
+        var member = group.Members.FirstOrDefault(m => m.UserId == userId);
+
+        // Only Owner and Admin can update settings
+        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+        {
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
+        }
+
+        // Cannot modify personal groups
+        if (group.GroupType == GroupType.Personal)
+            return Results.BadRequest(new ErrorResponse("Cannot modify personal groups"));
+
+        // Update name if provided
+        if (request.Name != null)
+        {
+            if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 50)
+                return Results.BadRequest(new ErrorResponse("Group name must be between 1 and 50 characters"));
+            group.Name = request.Name.Trim();
+        }
+
+        // Update privacy if provided
+        if (request.IsPrivate.HasValue)
+        {
+            group.IsPrivate = request.IsPrivate.Value;
+            group.GroupType = request.IsPrivate.Value ? GroupType.Private : GroupType.Public;
+
+            // When switching to public, update default role to Viewer
+            if (!request.IsPrivate.Value)
+            {
+                group.DefaultRole = GroupRole.Viewer;
+            }
+        }
+
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new GroupDto(
+            group.Id,
+            group.Name,
+            group.InviteCode,
+            group.CreatedByUserId,
+            group.IsPrivate,
+            group.GroupType,
+            group.DefaultRole,
+            group.Members.Select(m => new GroupMemberDto(
+                m.UserId,
+                m.User.DisplayName ?? m.User.Username,
+                m.Role,
+                m.JoinedAt
+            )).ToList(),
+            group.CreatedAt
+        ));
     }
 }
