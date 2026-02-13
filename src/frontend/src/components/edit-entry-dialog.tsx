@@ -86,7 +86,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [status, setStatus] = useState<WatchStatus>(entry.status);
     // Personal mode: single rating
     const myExistingRating = entry.ratings?.find((r) => r.userId === user?.id);
-    const [myRating, setMyRating] = useState(myExistingRating?.rating ? myExistingRating.rating / 2 : 0);
+    const [myRating, setMyRating] = useState((myExistingRating?.rating ?? 0) / 2);
     // Group mode: selected members and per-member ratings
     const [selectedMembers, setSelectedMembers] = useState<number[]>(
         () => entry.ratings?.map((r) => r.userId) ?? []
@@ -137,7 +137,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         if (open) {
             const myRat = entry.ratings?.find((r) => r.userId === user?.id);
             setStatus(entry.status);
-            setMyRating(myRat?.rating ? myRat.rating / 2 : 0);
+            setMyRating((myRat?.rating ?? 0) / 2);
             setSelectedMembers(entry.ratings?.map((r) => r.userId) ?? []);
             const map: Record<number, number> = {};
             entry.ratings?.forEach((r) => {
