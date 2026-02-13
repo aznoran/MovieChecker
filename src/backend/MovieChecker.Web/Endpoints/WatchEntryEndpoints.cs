@@ -430,15 +430,16 @@ public static class WatchEntryEndpoints
 
         if (entryGroupIds.Count > 0)
         {
-            // Check that the caller has RateSelf permission at minimum
+            // Check permissions using dedicated PermissionService methods
             bool canRateSelf = false;
             bool canRateOthers = false;
             foreach (var gid in entryGroupIds)
             {
-                var perms = await PermissionService.GetUserPermissions(db, userId, gid);
-                if (perms == null) continue;
-                if (perms.Value.HasFlag(Permission.RateSelf)) canRateSelf = true;
-                if (perms.Value.HasFlag(Permission.RateOthers)) canRateOthers = true;
+                if (!canRateSelf && await PermissionService.CanRateSelf(db, userId, gid))
+                    canRateSelf = true;
+                if (!canRateOthers && await PermissionService.CanRateOthers(db, userId, gid))
+                    canRateOthers = true;
+                if (canRateSelf && canRateOthers) break;
             }
 
             if (targetUserId == userId && !canRateSelf)
