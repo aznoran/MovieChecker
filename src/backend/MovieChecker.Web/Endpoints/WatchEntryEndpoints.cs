@@ -220,8 +220,8 @@ public static class WatchEntryEndpoints
             UserId = userId,
             GroupId = request.GroupId,
             Status = request.Status,
-            MyRating = request.MyRating.HasValue ? Math.Clamp(request.MyRating.Value, 1, 10) : null,
-            PartnerRating = request.PartnerRating.HasValue ? Math.Clamp(request.PartnerRating.Value, 1, 10) : null,
+            MyRating = request.MyRating.HasValue ? request.MyRating.Value : null,
+            PartnerRating = request.PartnerRating.HasValue ? request.PartnerRating.Value : null,
             Emotion = request.Emotion,
             Comment = request.Comment,
             PrivateComment = request.PrivateComment,
@@ -317,7 +317,7 @@ public static class WatchEntryEndpoints
                     {
                         WatchEntryId = entry.Id,
                         UserId = ri.UserId,
-                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                        Rating = ri.Rating
                     });
                 }
             }
@@ -331,7 +331,7 @@ public static class WatchEntryEndpoints
             {
                 WatchEntryId = entry.Id,
                 UserId = userId,
-                Rating = Math.Clamp(request.Rating.Value, 1, 10)
+                Rating = request.Rating.Value
             });
 
             await db.SaveChangesAsync();
@@ -376,7 +376,7 @@ public static class WatchEntryEndpoints
             return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
 
         if (request.Status.HasValue) entry.Status = request.Status.Value;
-        if (request.MyRating.HasValue) entry.MyRating = Math.Clamp(request.MyRating.Value, 1, 10);
+        if (request.MyRating.HasValue) entry.MyRating = request.MyRating.Value;
         if (request.PartnerRating.HasValue) entry.PartnerRating = Math.Clamp(request.PartnerRating.Value, 1, 10);
         if (request.Emotion.HasValue) entry.Emotion = request.Emotion.Value;
         if (request.Comment != null) entry.Comment = request.Comment;
@@ -419,7 +419,7 @@ public static class WatchEntryEndpoints
                 var existing = entry.Ratings.FirstOrDefault(r => r.UserId == ri.UserId);
                 if (existing != null)
                 {
-                    existing.Rating = Math.Clamp(ri.Rating, 1, 10);
+                    existing.Rating = ri.Rating;
                 }
                 else
                 {
@@ -427,7 +427,7 @@ public static class WatchEntryEndpoints
                     {
                         WatchEntryId = entry.Id,
                         UserId = ri.UserId,
-                        Rating = Math.Clamp(ri.Rating, 1, 10)
+                        Rating = ri.Rating
                     });
                 }
             }
@@ -438,7 +438,7 @@ public static class WatchEntryEndpoints
             var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
             if (existing != null)
             {
-                existing.Rating = Math.Clamp(request.Rating.Value, 1, 10);
+                existing.Rating = request.Rating.Value;
             }
             else
             {
@@ -446,7 +446,7 @@ public static class WatchEntryEndpoints
                 {
                     WatchEntryId = entry.Id,
                     UserId = userId,
-                    Rating = Math.Clamp(request.Rating.Value, 1, 10)
+                    Rating = request.Rating.Value
                 });
             }
         }
@@ -493,7 +493,7 @@ public static class WatchEntryEndpoints
             return Results.NotFound();
         }
 
-        var rating = Math.Clamp(request.Rating, 1, 10);
+        var rating = request.Rating;
         var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
         if (existing != null)
         {
