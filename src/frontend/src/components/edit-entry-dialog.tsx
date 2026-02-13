@@ -254,19 +254,64 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
     const queryClient = useQueryClient();
 
+    // --- Change detection helpers ---
+    const hasEntryFieldsChanged = (): boolean => {
+        if (status !== entry.status) return true;
+        if ((comment || "") !== (entry.comment || "")) return true;
+        const origEmotion = entry.emotion ?? null;
+        if (emotion !== origEmotion) return true;
+        if (isGroupMode) {
+            const origViewers = (entry.ratings?.map((r) => r.userId) ?? []).slice().sort((a, b) => a - b);
+            const curViewers = selectedMembers.slice().sort((a, b) => a - b);
+            if (origViewers.length !== curViewers.length || origViewers.some((v, i) => v !== curViewers[i])) return true;
+        }
+        if (status === WatchStatus.Watching &&
+            (entry.movie.type === ContentType.Anime || entry.movie.type === ContentType.Series || entry.movie.type === ContentType.Cartoon)) {
+            if ((currentSeason || "") !== (entry.currentSeason?.toString() || "")) return true;
+            if ((currentEpisode || "") !== (entry.currentEpisode?.toString() || "")) return true;
+            if ((totalEpisodes || "") !== (entry.totalEpisodes?.toString() || "")) return true;
+            const newWt = (parseInt(hours || "0") * 3600 + parseInt(minutes || "0") * 60 + parseInt(seconds || "0"));
+            if (newWt !== (entry.watchingTime || 0)) return true;
+        }
+        return false;
+    };
+
+    const hasPosterChanged = (): boolean => {
+        return !!posterFile || posterRemoved;
+    };
+
+    const hasRatingsChanged = (): boolean => {
+        if (isGroupMode) {
+            const origMap: Record<number, number> = {};
+            entry.ratings?.forEach((r) => { origMap[r.userId] = r.rating; });
+            // Check ratings we can actually change
+            const uidsToCheck = canRateOthers ? selectedMembers : (user?.id ? [user.id] : []);
+            for (const uid of uidsToCheck) {
+                const newRating = Math.round((memberRatings[uid] ?? 0) * 2);
+                const origRating = origMap[uid] ?? 0;
+                if (newRating !== origRating) return true;
+            }
+        } else {
+            const origRating = myExistingRating?.rating ?? 0;
+            const newRating = Math.round(myRating * 2);
+            if (newRating !== origRating) return true;
+        }
+        return false;
+    };
+
     const mutation = useMutation({
         mutationFn: async (overridePosterFile?: File | null) => {
+            const ratingsChanged = hasRatingsChanged();
+
             if (isRateOnlyMode) {
                 // Rate-only mode: only submit ratings via the rate endpoint
-                if (user?.id) {
+                if (ratingsChanged && user?.id) {
                     if (isGroupMode && canRateOthers) {
-                        // Admin/Owner can rate for all selected members
                         for (const uid of selectedMembers) {
                             const rating = memberRatings[uid] ?? 0;
                             await rateEntry(entry.id, Math.round(rating * 2), uid);
                         }
                     } else {
-                        // Viewer/Member can only rate self
                         const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
                         await rateEntry(entry.id, Math.round(currentRating * 2));
                     }
@@ -274,8 +319,17 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 return;
             }
 
-            // Full edit mode
+            // Full edit mode - detect what actually changed
+            const entryChanged = hasEntryFieldsChanged();
+            const posterChanged = hasPosterChanged();
             const fileToUpload = overridePosterFile ?? posterFile;
+
+            // If nothing changed at all, just close
+            if (!entryChanged && !posterChanged && !ratingsChanged) {
+                return;
+            }
+
+            // Upload poster if changed
             if (fileToUpload) {
                 const posterUrl = await uploadPoster(fileToUpload);
                 await updateMovie(entry.movieId, {posterUrl});
@@ -283,30 +337,31 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 await updateMovie(entry.movieId, {posterUrl: ""});
             }
 
-            await updateWatchEntry(entry.id, {
-                status,
-                viewers: isGroupMode ? selectedMembers : undefined,
-                emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
-                comment: comment || undefined,
-                // Series/Anime tracking
-                ...(status === WatchStatus.Watching && (
-                    (entry.movie.type === ContentType.Anime ||
-                        entry.movie.type === ContentType.Series ||
-                        entry.movie.type === ContentType.Cartoon)
-                ) ? {
-                    currentSeason: currentSeason ? parseInt(currentSeason) : undefined,
-                    currentEpisode: currentEpisode ? parseInt(currentEpisode) : undefined,
-                    totalEpisodes: totalEpisodes ? parseInt(totalEpisodes) : undefined,
-                    watchingTime: (hours || minutes || seconds)
-                        ? (parseInt(hours || "0") * 3600 + parseInt(minutes || "0") * 60 + parseInt(seconds || "0"))
-                        : undefined,
-                } : {}),
-            });
+            // Only call updateWatchEntry if editable fields changed
+            if (entryChanged) {
+                await updateWatchEntry(entry.id, {
+                    status,
+                    viewers: isGroupMode ? selectedMembers : undefined,
+                    emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
+                    comment: comment || undefined,
+                    ...(status === WatchStatus.Watching && (
+                        (entry.movie.type === ContentType.Anime ||
+                            entry.movie.type === ContentType.Series ||
+                            entry.movie.type === ContentType.Cartoon)
+                    ) ? {
+                        currentSeason: currentSeason ? parseInt(currentSeason) : undefined,
+                        currentEpisode: currentEpisode ? parseInt(currentEpisode) : undefined,
+                        totalEpisodes: totalEpisodes ? parseInt(totalEpisodes) : undefined,
+                        watchingTime: (hours || minutes || seconds)
+                            ? (parseInt(hours || "0") * 3600 + parseInt(minutes || "0") * 60 + parseInt(seconds || "0"))
+                            : undefined,
+                    } : {}),
+                });
+            }
 
-            // Rate separately via the rate endpoint
-            if ((status === WatchStatus.Completed || status === WatchStatus.Dropped) && user?.id) {
+            // Rate separately via the rate endpoint — only if ratings changed
+            if (ratingsChanged && (status === WatchStatus.Completed || status === WatchStatus.Dropped) && user?.id) {
                 if (isGroupMode && canRateOthers) {
-                    // Admin/Owner can rate for all selected members
                     for (const uid of selectedMembers) {
                         const rating = memberRatings[uid] ?? 0;
                         await rateEntry(entry.id, Math.round(rating * 2), uid);
@@ -869,18 +924,20 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                             {selectedMembers.map((uid) => {
                                                 const member = activeGroup.members.find((m) => m.userId === uid);
                                                 if (!member) return null;
+                                                const isSelf = uid === user?.id;
+                                                const canChangeRating = isSelf ? canRateSelf : canRateOthers;
                                                 return (
                                                     <Field key={uid} orientation="horizontal">
                                                         <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
                                                             {member.displayName}
                                                         </FieldLabel>
-                                                        <div className="flex items-cetner gap-4">
+                                                        <div className="flex items-center gap-4">
                                                             <div className="opacity-50">
                                                                 {memberRatings[uid] || 0}/10
                                                             </div>
                                                             <Rating
                                                                 value={memberRatings[uid] || 0}
-                                                                onValueChange={(v) => {
+                                                                onValueChange={canChangeRating ? (v) => {
                                                                     setMemberRatings((prev) => ({...prev, [uid]: v}));
                                                                     const key = `memberRating_${uid}`;
                                                                     setValidationErrors(prev => {
@@ -888,10 +945,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                                         delete next[key];
                                                                         return next;
                                                                     });
-                                                                }}
+                                                                } : undefined}
                                                                 max={10}
                                                                 step={0.5}
                                                                 clearable
+                                                                disabled={!canChangeRating}
                                                             >
                                                                 {Array.from({length: 10}, (_, i) => (
                                                                     <RatingItem key={i}/>
