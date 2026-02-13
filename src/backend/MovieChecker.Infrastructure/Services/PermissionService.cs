@@ -65,7 +65,7 @@ public class PermissionService
     {
         var perms = await GetUserPermissions(db, userId, groupId);
         if (perms == null) return false;
-        return (perms.Value & permission) == permission;
+        return perms.Value.HasFlag(permission);
     }
 
     /// <summary>

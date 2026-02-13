@@ -1,8 +1,8 @@
 "use client";
 
 import {useState, useRef, useEffect, useCallback} from "react";
-import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry} from "@/lib/api";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry, getMyPermissions} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useAuth} from "@/context/auth-context";
 import {useGroup} from "@/context/group-context";
@@ -13,7 +13,7 @@ import {
     type CropperAreaData,
 } from "@/components/ui/cropper";
 import {getCroppedImage} from "@/lib/crop-utils";
-import {ContentType, WatchEntry, GroupType, GroupRole} from "@/types";
+import {ContentType, WatchEntry, GroupType} from "@/types";
 import {
     WatchStatus,
     Emotion,
@@ -84,13 +84,20 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const {activeGroup} = useGroup();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
-    // Determine permissions
-    const currentMember = activeGroup?.members.find(m => m.userId === user?.id);
-    const canEdit = !isGroupMode || (
-        currentMember !== undefined && currentMember.role >= GroupRole.Member
-    );
-    const canRateSelf = !isGroupMode || (currentMember !== undefined && currentMember.role >= GroupRole.Viewer);
-    const canRateOthers = !isGroupMode || (currentMember !== undefined && currentMember.role >= GroupRole.Admin);
+    // Fetch permissions from API in group mode
+    const {data: permissions, isLoading: permissionsLoading} = useQuery({
+        queryKey: ["permissions", activeGroup?.id],
+        queryFn: () => getMyPermissions(activeGroup!.id),
+        enabled: isGroupMode && !!activeGroup?.id && open,
+    });
+
+    // Determine permissions from API response (fallback to personal mode defaults)
+    const canEdit = !isGroupMode || (permissions?.canEditOwnEntries || permissions?.canEditAllEntries || false);
+    const canRateSelf = !isGroupMode || (permissions?.canRateSelf || false);
+    const canRateOthers = !isGroupMode || (permissions?.canRateOthers || false);
+
+    // Loading permissions in group mode
+    const isPermissionsLoading = isGroupMode && permissionsLoading;
 
     // If user can't edit and can't rate, don't show dialog (shouldn't happen)
     const isRateOnlyMode = !canEdit && canRateSelf;
@@ -506,7 +513,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     </div>
                 </div>
 
-                {isRateOnlyMode ? (
+                {isPermissionsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground"/>
+                    </div>
+                ) : isRateOnlyMode ? (
                     /* Rate-only form */
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <p className="text-sm text-muted-foreground">{t("rateOnlyDescription")}</p>
