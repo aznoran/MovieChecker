@@ -17,7 +17,6 @@ import {getCroppedImage} from "@/lib/crop-utils";
 import {ContentType, WatchEntry, GroupType} from "@/types";
 import {
     WatchStatus,
-    Emotion,
     EmotionEmojis,
 } from "@/types";
 import {
@@ -32,20 +31,11 @@ import {
 } from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Textarea} from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
     Pencil,
     ImagePlus,
     X,
     ListChecks,
-    Users,
     Star,
     MessageSquare,
     Loader2,
@@ -94,14 +84,10 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     // If user can't edit and can't rate, don't show dialog (shouldn't happen)
     const isRateOnlyMode = !canEdit && canRateSelf;
 
-    const [status, setStatus] = useState<WatchStatus>(entry.status);
     // Personal mode: single rating
     const myExistingRating = entry.ratings?.find((r) => r.userId === user?.id);
     const [myRating, setMyRating] = useState((myExistingRating?.rating ?? 0) / 2);
-    // Group mode: selected members and per-member ratings
-    const [selectedMembers, setSelectedMembers] = useState<number[]>(
-        () => entry.ratings?.map((r) => r.userId) ?? []
-    );
+    // Group mode: per-member ratings
     const [memberRatings, setMemberRatings] = useState<Record<number, number>>(
         () => {
             const map: Record<number, number> = {};
@@ -111,8 +97,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             return map;
         }
     );
-    const [emotion, setEmotion] = useState<Emotion | null>(entry.emotion ?? null);
-    const [comment, setComment] = useState(entry.comment || "");
     const [posterFile, setPosterFile] = useState<File | null>(null);
     const [posterPreview, setPosterPreview] = useState<string | null>(
         getPosterUrl(entry.movie.posterUrl)
@@ -147,16 +131,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     useEffect(() => {
         if (open) {
             const myRat = entry.ratings?.find((r) => r.userId === user?.id);
-            setStatus(entry.status);
             setMyRating((myRat?.rating ?? 0) / 2);
-            setSelectedMembers(entry.ratings?.map((r) => r.userId) ?? []);
             const map: Record<number, number> = {};
             entry.ratings?.forEach((r) => {
                 map[r.userId] = r.rating / 2;
             });
             setMemberRatings(map);
-            setEmotion(entry.emotion ?? null);
-            setComment(entry.comment || "");
             setPosterFile(null);
             setPosterPreview(getPosterUrl(entry.movie.posterUrl));
             setPosterRemoved(false);
@@ -256,16 +236,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
     // --- Change detection helpers ---
     const hasEntryFieldsChanged = (): boolean => {
-        if (status !== entry.status) return true;
-        if ((comment || "") !== (entry.comment || "")) return true;
-        const origEmotion = entry.emotion ?? null;
-        if (emotion !== origEmotion) return true;
-        if (isGroupMode) {
-            const origViewers = (entry.ratings?.map((r) => r.userId) ?? []).slice().sort((a, b) => a - b);
-            const curViewers = selectedMembers.slice().sort((a, b) => a - b);
-            if (origViewers.length !== curViewers.length || origViewers.some((v, i) => v !== curViewers[i])) return true;
-        }
-        if (status === WatchStatus.Watching &&
+        if (entry.status === WatchStatus.Watching &&
             (entry.movie.type === ContentType.Anime || entry.movie.type === ContentType.Series || entry.movie.type === ContentType.Cartoon)) {
             if ((currentSeason || "") !== (entry.currentSeason?.toString() || "")) return true;
             if ((currentEpisode || "") !== (entry.currentEpisode?.toString() || "")) return true;
@@ -285,7 +256,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             const origMap: Record<number, number> = {};
             entry.ratings?.forEach((r) => { origMap[r.userId] = r.rating; });
             // Check ratings we can actually change
-            const uidsToCheck = canRateOthers ? selectedMembers : (user?.id ? [user.id] : []);
+            const uidsToCheck = canRateOthers
+                ? (activeGroup?.members.map(m => m.userId) ?? [])
+                : (user?.id ? [user.id] : []);
             for (const uid of uidsToCheck) {
                 const newRating = Math.round((memberRatings[uid] ?? 0) * 2);
                 const origRating = origMap[uid] ?? 0;
@@ -312,9 +285,14 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 // Rate-only mode: only submit ratings via the rate endpoint
                 if (ratingsChanged && user?.id) {
                     if (isGroupMode && canRateOthers) {
-                        for (const uid of selectedMembers) {
-                            const rating = memberRatings[uid] ?? 0;
-                            await rateEntry(entry.id, Math.round(rating * 2), uid);
+                        const origMap: Record<number, number> = {};
+                        entry.ratings?.forEach((r) => { origMap[r.userId] = r.rating; });
+                        for (const m of (activeGroup?.members ?? [])) {
+                            const newRating = Math.round((memberRatings[m.userId] ?? 0) * 2);
+                            const origRating = origMap[m.userId] ?? 0;
+                            if (newRating !== origRating) {
+                                await rateEntry(entry.id, newRating, m.userId);
+                            }
                         }
                     } else {
                         const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
@@ -342,34 +320,29 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 await updateMovie(entry.movieId, {posterUrl: ""});
             }
 
-            // Only call updateWatchEntry if editable fields changed
+            // Only call updateWatchEntry if watching metadata changed
             if (entryChanged) {
                 await updateWatchEntry(entry.id, {
-                    status,
-                    viewers: isGroupMode ? selectedMembers : undefined,
-                    emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
-                    comment: comment || undefined,
-                    ...(status === WatchStatus.Watching && (
-                        (entry.movie.type === ContentType.Anime ||
-                            entry.movie.type === ContentType.Series ||
-                            entry.movie.type === ContentType.Cartoon)
-                    ) ? {
-                        currentSeason: currentSeason ? parseInt(currentSeason) : undefined,
-                        currentEpisode: currentEpisode ? parseInt(currentEpisode) : undefined,
-                        totalEpisodes: totalEpisodes ? parseInt(totalEpisodes) : undefined,
-                        watchingTime: (hours || minutes || seconds)
-                            ? (parseInt(hours || "0") * 3600 + parseInt(minutes || "0") * 60 + parseInt(seconds || "0"))
-                            : undefined,
-                    } : {}),
+                    currentSeason: currentSeason ? parseInt(currentSeason) : undefined,
+                    currentEpisode: currentEpisode ? parseInt(currentEpisode) : undefined,
+                    totalEpisodes: totalEpisodes ? parseInt(totalEpisodes) : undefined,
+                    watchingTime: (hours || minutes || seconds)
+                        ? (parseInt(hours || "0") * 3600 + parseInt(minutes || "0") * 60 + parseInt(seconds || "0"))
+                        : undefined,
                 });
             }
 
             // Rate separately via the rate endpoint — only if ratings changed
-            if (ratingsChanged && (status === WatchStatus.Completed || status === WatchStatus.Dropped) && user?.id) {
+            if (ratingsChanged && (entry.status === WatchStatus.Completed || entry.status === WatchStatus.Dropped) && user?.id) {
                 if (isGroupMode && canRateOthers) {
-                    for (const uid of selectedMembers) {
-                        const rating = memberRatings[uid] ?? 0;
-                        await rateEntry(entry.id, Math.round(rating * 2), uid);
+                    const origMap: Record<number, number> = {};
+                    entry.ratings?.forEach((r) => { origMap[r.userId] = r.rating; });
+                    for (const m of (activeGroup?.members ?? [])) {
+                        const newRating = Math.round((memberRatings[m.userId] ?? 0) * 2);
+                        const origRating = origMap[m.userId] ?? 0;
+                        if (newRating !== origRating) {
+                            await rateEntry(entry.id, newRating, m.userId);
+                        }
                     }
                 } else {
                     const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
@@ -484,7 +457,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         // Validate all fields
         const errors: Record<string, string> = {};
         const fieldsToValidate = [
-            { name: "comment", value: comment },
             { name: "currentSeason", value: currentSeason },
             { name: "currentEpisode", value: currentEpisode },
             { name: "totalEpisodes", value: totalEpisodes },
@@ -501,11 +473,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         });
 
         // Validate member ratings
-        if (isGroupMode && (status === WatchStatus.Completed || status === WatchStatus.Dropped)) {
-            selectedMembers.forEach(uid => {
-                const rating = memberRatings[uid] || 0;
+        if (isGroupMode && (entry.status === WatchStatus.Completed || entry.status === WatchStatus.Dropped)) {
+            (activeGroup?.members ?? []).forEach(m => {
+                const rating = memberRatings[m.userId] || 0;
                 if (rating && (rating < 1 || rating > 10)) {
-                    errors[`memberRating_${uid}`] = t("invalidRating");
+                    errors[`memberRating_${m.userId}`] = t("invalidRating");
                 }
             });
         }
@@ -634,9 +606,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                         value={memberRatings[m.userId] || 0}
                                                         onValueChange={(v) => {
                                                             setMemberRatings((prev) => ({...prev, [m.userId]: v}));
-                                                            if (!selectedMembers.includes(m.userId)) {
-                                                                setSelectedMembers((prev) => [...prev, m.userId]);
-                                                            }
                                                         }}
                                                         max={10}
                                                         step={0.5}
@@ -665,9 +634,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         onValueChange={(v) => {
                                             if (isGroupMode && user?.id) {
                                                 setMemberRatings((prev) => ({...prev, [user.id]: v}));
-                                                if (!selectedMembers.includes(user.id)) {
-                                                    setSelectedMembers((prev) => [...prev, user.id]);
-                                                }
                                             } else {
                                                 setMyRating(v);
                                             }
@@ -894,94 +860,40 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 <ListChecks className="h-3.5 w-3.5"/>
                                 {t("status")}
                             </FieldLabel>
-                            <Select
-                                value={status.toString()}
-                                onValueChange={(v) => setStatus(Number(v))}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue/>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(watchStatusLabels).map(([value, label]) => (
-                                        <SelectItem key={value} value={value}>
-                                            {label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
+                                {watchStatusLabels[entry.status]}
+                            </div>
                         </Field>
                     </FieldGroup>
 
                     {isGroupMode ? (
                         <>
-                            {/* Group mode: member multi-select */}
-                            <Field>
-                                <FieldContent>
-                                    <FieldLabel className="flex items-center gap-1.5">
-                                        <Users className="h-3.5 w-3.5"/>
-                                        {t("viewers")}
-                                    </FieldLabel>
-                                    <FieldDescription>
-                                        {t("membersDescription")}
-                                    </FieldDescription>
-                                </FieldContent>
-                                <div className="flex flex-wrap gap-2">
-                                    {activeGroup.members.map((m) => {
-                                        const selected = selectedMembers.includes(m.userId);
-                                        return (
-                                            <Button
-                                                key={m.userId}
-                                                type="button"
-                                                variant={selected ? "default" : "outline"}
-                                                size="sm"
-                                                onClick={() => {
-                                                    if (selected) {
-                                                        setSelectedMembers((prev) => prev.filter((id) => id !== m.userId));
-                                                        setMemberRatings((prev) => {
-                                                            const next = {...prev};
-                                                            delete next[m.userId];
-                                                            return next;
-                                                        });
-                                                    } else {
-                                                        setSelectedMembers((prev) => [...prev, m.userId]);
-                                                    }
-                                                }}
-                                            >
-                                                {m.displayName}
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
-                            </Field>
-
                             {/* Per-member rating fields */}
-                            {(status === WatchStatus.Completed || status === WatchStatus.Dropped) &&
-                                selectedMembers.length > 0 && (
+                            {(entry.status === WatchStatus.Completed || entry.status === WatchStatus.Dropped) &&
+                                (activeGroup?.members.length ?? 0) > 0 && (
                                     <FieldSet>
                                         <FieldLegend variant="label" className="flex items-center gap-1.5">
                                             <Star className="h-3.5 w-3.5"/>
                                             {t("ratings")}
                                         </FieldLegend>
                                         <FieldGroup className="gap-4">
-                                            {selectedMembers.map((uid) => {
-                                                const member = activeGroup.members.find((m) => m.userId === uid);
-                                                if (!member) return null;
-                                                const isSelf = uid === user?.id;
+                                            {(activeGroup?.members ?? []).map((m) => {
+                                                const isSelf = m.userId === user?.id;
                                                 const canChangeRating = isSelf ? canRateSelf : canRateOthers;
                                                 return (
-                                                    <Field key={uid} orientation="horizontal">
+                                                    <Field key={m.userId} orientation="horizontal">
                                                         <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
-                                                            {member.displayName}
+                                                            {m.displayName}
                                                         </FieldLabel>
                                                         <div className="flex items-center gap-4">
                                                             <div className="opacity-50">
-                                                                {memberRatings[uid] || 0}/10
+                                                                {memberRatings[m.userId] || 0}/10
                                                             </div>
                                                             <Rating
-                                                                value={memberRatings[uid] || 0}
+                                                                value={memberRatings[m.userId] || 0}
                                                                 onValueChange={canChangeRating ? (v) => {
-                                                                    setMemberRatings((prev) => ({...prev, [uid]: v}));
-                                                                    const key = `memberRating_${uid}`;
+                                                                    setMemberRatings((prev) => ({...prev, [m.userId]: v}));
+                                                                    const key = `memberRating_${m.userId}`;
                                                                     setValidationErrors(prev => {
                                                                         const next = {...prev};
                                                                         delete next[key];
@@ -1005,7 +917,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                     </FieldSet>
                                 )}
 
-                            {status === WatchStatus.Watching && (
+                            {entry.status === WatchStatus.Watching && (
                                 entry.movie.type === ContentType.Anime ||
                                 entry.movie.type === ContentType.Series ||
                                 entry.movie.type === ContentType.Cartoon) && (
@@ -1125,7 +1037,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     ) : (
                         <>
                             {/* Personal mode: single rating */}
-                            {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
+                            {entry.status !== WatchStatus.Planned && entry.status !== WatchStatus.Watching && (
                                 <Field>
                                     <FieldLabel className="flex items-center gap-1.5">
                                         <Star className="h-3.5 w-3.5"/>
@@ -1153,65 +1065,28 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     )}
 
                     <FieldGroup className="gap-4">
-                        {(status === WatchStatus.Completed || status === WatchStatus.Dropped) && (
-                        <Field>
-                            <FieldContent>
+                        {/* Readonly emotion */}
+                        {entry.emotion !== undefined && entry.emotion !== null && (
+                            <Field>
                                 <FieldLabel>{t("emotion")}</FieldLabel>
-                                <FieldDescription>
-                                    {t("emotionDescription")}
-                                </FieldDescription>
-                            </FieldContent>
-                            <div className="flex flex-wrap gap-2">
-                            {Object.entries(EmotionEmojis).map(([value, emoji]) => (
-                                <Button
-                                    key={value}
-                                    type="button"
-                                    variant={emotion === Number(value) ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setEmotion(Number(value) as Emotion)}
-                                    className="text-xl px-3"
-                                >
-                                    {emoji}
-                                </Button>
-                            ))}
-                            {emotion !== null && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setEmotion(null)}
-                                >
-                                    <X className="h-4 w-4 mr-1"/>
-                                    {t("clear")}
-                                </Button>
-                            )}
-                            </div>
-                        </Field>
+                                <div className="text-xl">
+                                    {EmotionEmojis[entry.emotion]}
+                                </div>
+                            </Field>
                         )}
 
-                        <Field>
-                            <FieldContent>
-                                <FieldLabel htmlFor="comment" className="flex items-center gap-1.5">
+                        {/* Readonly comment */}
+                        {entry.comment && (
+                            <Field>
+                                <FieldLabel className="flex items-center gap-1.5">
                                     <MessageSquare className="h-3.5 w-3.5"/>
                                     {t("comment")}
                                 </FieldLabel>
-                                <FieldDescription>
-                                    {t("commentDescription")}
-                                </FieldDescription>
-                            </FieldContent>
-                            <Textarea
-                                id="comment"
-                                value={comment}
-                                onChange={(e) => {
-                                    setComment(e.target.value);
-                                    handleFieldChange("comment", e.target.value);
-                                }}
-                                rows={3}
-                                placeholder={t("commentPlaceholder")}
-                                aria-invalid={!!validationErrors.comment}
-                            />
-                            {validationErrors.comment && <FieldError>{validationErrors.comment}</FieldError>}
-                        </Field>
+                                <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md whitespace-pre-wrap">
+                                    {entry.comment}
+                                </div>
+                            </Field>
+                        )}
                     </FieldGroup>
 
                     {error && (
