@@ -557,35 +557,23 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                     className="w-full h-full object-cover"
                                 />
                                 <div className="absolute top-2 right-2 flex gap-1">
-                                    {editorImageSrc && (
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            aria-label={t("imageEditorTitle")}
-                                            onClick={() => setIsCropping(true)}
-                                        >
-                                            <Crop className="h-3.5 w-3.5"/>
-                                        </Button>
-                                    )}
-                                    {posterPreview && (
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            aria-label={t("imageEditorTitle")}
-                                            onClick={() => {
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        aria-label={t("imageEditorTitle")}
+                                        onClick={() => {
+                                            if (!editorImageSrc && posterPreview) {
                                                 setEditorImageSrc(posterPreview);
-                                                onCropReset();
-                                                croppedAreaPixelsRef.current = null;
-                                                setIsCropping(true);
-                                            }}
-                                        >
-                                            <Pencil className="h-3.5 w-3.5"/>
-                                        </Button>
-                                    )}
+                                            }
+                                            onCropReset();
+                                            croppedAreaPixelsRef.current = null;
+                                            setIsCropping(true);
+                                        }}
+                                    >
+                                        <Crop className="h-3.5 w-3.5"/>
+                                    </Button>
                                     <Button
                                         type="button"
                                         variant="secondary"
