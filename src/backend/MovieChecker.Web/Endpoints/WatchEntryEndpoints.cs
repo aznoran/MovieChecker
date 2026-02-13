@@ -445,6 +445,15 @@ public static class WatchEntryEndpoints
                 return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
             if (targetUserId != userId && !canRateOthers)
                 return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+
+            // Validate that targetUserId is a member of at least one of the entry's groups
+            if (targetUserId != userId)
+            {
+                var isTargetMember = await db.GroupMembers
+                    .AnyAsync(m => entryGroupIds.Contains(m.GroupId) && m.UserId == targetUserId);
+                if (!isTargetMember)
+                    return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+            }
         }
         else if (entry.UserId != userId)
         {
