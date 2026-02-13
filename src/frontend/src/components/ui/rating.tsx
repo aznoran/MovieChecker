@@ -31,9 +31,29 @@ export function Rating({
     lg: "h-6 w-6",
   };
 
-  const handleClick = (index: number) => {
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>, index: number) => {
     if (!readOnly && onChange) {
-      onChange(index + 1);
+      const button = event.currentTarget;
+      const rect = button.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const halfWidth = rect.width / 2;
+      
+      // If clicked on left half, add 0.5, otherwise add 1.0
+      const rating = clickX < halfWidth ? index + 0.5 : index + 1;
+      onChange(rating);
+    }
+  };
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLButtonElement>, index: number) => {
+    if (!readOnly) {
+      const button = event.currentTarget;
+      const rect = button.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const halfWidth = rect.width / 2;
+      
+      // Show hover for half or full star
+      const hoverRating = mouseX < halfWidth ? index + 0.5 : index + 1;
+      setHoverValue(hoverRating);
     }
   };
 
@@ -76,14 +96,15 @@ export function Rating({
           <button
             key={i}
             type="button"
-            onClick={() => handleClick(i)}
+            onClick={(e) => handleClick(e, i)}
+            onMouseMove={(e) => handleMouseMove(e, i)}
             onMouseEnter={() => handleMouseEnter(i)}
             disabled={readOnly}
             className={cn(
-              "focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 rounded-sm transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/50 focus-visible:ring-offset-1 rounded-sm transition-colors",
               readOnly && "cursor-default"
             )}
-            aria-label={`Rate ${i + 1} out of ${max}`}
+            aria-label={`Rate ${i + 0.5} to ${i + 1} out of ${max}`}
           >
             <Star
               className={cn(
