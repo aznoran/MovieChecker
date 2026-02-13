@@ -414,20 +414,20 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         // Auto-apply crop if still in cropping mode
         let croppedFile: File | null = null;
         if (isCropping && editorImageSrc) {
-            if (croppedAreaPixelsRef.current) {
-                try {
+            try {
+                if (croppedAreaPixelsRef.current) {
                     croppedFile = await applyCropAndGetFile();
-                } catch {
-                    toast.error(t("cropFailed"), {position: "top-center"});
-                    return;
+                } else {
+                    // User never interacted with the cropper — use original image as-is
+                    const res = await fetch(editorImageSrc);
+                    const blob = await res.blob();
+                    croppedFile = new File([blob], "poster.jpg", {type: blob.type || "image/jpeg"});
+                    setPosterFile(croppedFile);
+                    setIsCropping(false);
                 }
-            } else {
-                // User never interacted with the cropper — use original image as-is
-                const res = await fetch(editorImageSrc);
-                const blob = await res.blob();
-                croppedFile = new File([blob], "poster.jpg", {type: blob.type || "image/jpeg"});
-                setPosterFile(croppedFile);
-                setIsCropping(false);
+            } catch {
+                toast.error(t("cropFailed"), {position: "top-center"});
+                return;
             }
         }
 
