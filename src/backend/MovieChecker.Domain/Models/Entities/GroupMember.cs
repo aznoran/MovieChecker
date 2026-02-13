@@ -12,4 +12,5 @@ public class GroupMember
 
     public Group Group { get; set; } = null!;
     public User User { get; set; } = null!;
+    public MemberPermission? CustomPermission { get; set; }
 }

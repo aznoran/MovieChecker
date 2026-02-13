@@ -420,14 +420,30 @@ public static class WatchEntryEndpoints
         if (entry == null)
             return Results.NotFound();
 
-        // Check access - members can rate entries in their groups (via junction table or legacy GroupId)
+        // Determine target user for rating
+        var targetUserId = request.TargetUserId ?? userId;
+
+        // Check access via junction table or legacy GroupId
         var entryGroupIds = entry.WatchEntryGroups.Select(weg => weg.GroupId).ToList();
         if (entry.GroupId.HasValue && !entryGroupIds.Contains(entry.GroupId.Value))
             entryGroupIds.Add(entry.GroupId.Value);
 
         if (entryGroupIds.Count > 0)
         {
-            if (!await db.GroupMembers.AnyAsync(m => entryGroupIds.Contains(m.GroupId) && m.UserId == userId && m.Role >= GroupRole.Member))
+            // Check that the caller has RateSelf permission at minimum
+            bool canRateSelf = false;
+            bool canRateOthers = false;
+            foreach (var gid in entryGroupIds)
+            {
+                var perms = await PermissionService.GetUserPermissions(db, userId, gid);
+                if (perms == null) continue;
+                if (perms.Value.HasFlag(Permission.RateSelf)) canRateSelf = true;
+                if (perms.Value.HasFlag(Permission.RateOthers)) canRateOthers = true;
+            }
+
+            if (targetUserId == userId && !canRateSelf)
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+            if (targetUserId != userId && !canRateOthers)
                 return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
         }
         else if (entry.UserId != userId)
@@ -436,7 +452,7 @@ public static class WatchEntryEndpoints
         }
 
         var rating = request.Rating;
-        var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
+        var existing = entry.Ratings.FirstOrDefault(r => r.UserId == targetUserId);
 
         if (rating == 0)
         {
@@ -453,7 +469,7 @@ public static class WatchEntryEndpoints
             db.EntryRatings.Add(new EntryRating
             {
                 WatchEntryId = entry.Id,
-                UserId = userId,
+                UserId = targetUserId,
                 Rating = rating
             });
         }
@@ -571,4 +587,4 @@ public static class WatchEntryEndpoints
     }
 }
 
-public record RateRequest(int Rating);
+public record RateRequest(int Rating, int? TargetUserId = null);

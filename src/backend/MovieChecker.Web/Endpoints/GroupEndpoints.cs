@@ -94,6 +94,12 @@ public static class GroupEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .WithSummary("Update group settings")
             .WithDescription("Updates group name and/or privacy settings (Owner/Admin only)");
+
+        group.MapGet("/{id:int}/my-permissions", GetMyPermissions)
+            .Produces<PermissionsResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Get my permissions for a group")
+            .WithDescription("Returns the effective permissions for the current user in a specific group");
     }
 
     private static int GetUserId(ClaimsPrincipal user) =>
@@ -702,6 +708,32 @@ public static class GroupEndpoints
                 m.JoinedAt
             )).ToList(),
             group.CreatedAt
+        ));
+    }
+
+    private static async Task<IResult> GetMyPermissions(
+        int id,
+        ClaimsPrincipal user,
+        AppDbContext db)
+    {
+        var userId = GetUserId(user);
+
+        var perms = await PermissionService.GetUserPermissions(db, userId, id);
+        if (perms == null)
+            return Results.NotFound();
+
+        return Results.Ok(new PermissionsResponse(
+            (int)perms.Value,
+            perms.Value.HasFlag(Permission.ViewEntries),
+            perms.Value.HasFlag(Permission.CreateEntries),
+            perms.Value.HasFlag(Permission.EditOwnEntries),
+            perms.Value.HasFlag(Permission.EditAllEntries),
+            perms.Value.HasFlag(Permission.DeleteOwnEntries),
+            perms.Value.HasFlag(Permission.DeleteAllEntries),
+            perms.Value.HasFlag(Permission.RateSelf),
+            perms.Value.HasFlag(Permission.RateOthers),
+            perms.Value.HasFlag(Permission.ManageMembers),
+            perms.Value.HasFlag(Permission.ManageGroup)
         ));
     }
 }
