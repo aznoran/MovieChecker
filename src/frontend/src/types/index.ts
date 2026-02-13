@@ -116,7 +116,6 @@ export interface Stats {
   totalDropped: number;
   averageMyRating: number;
   averagePartnerRating: number;
-  watchedTogether: number;
   byType: Record<string, number>;
   byEmotion: Record<string, number>;
   memberRatings?: MemberRatingStats[];

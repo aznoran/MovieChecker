@@ -218,11 +218,14 @@ export default function StatsPage() {
                                         return (
                                             <div key={item.key} className="space-y-2">
                                                 <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                            <Icon className={`h-4 w-4 ${item.textColor}`}/>
-                              {item.label}
-                          </span>
-                                                    <span className="text-xs text-muted-foreground">{pct}%</span>
+                                                    <span
+                                                        className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                                      <Icon className={`h-4 w-4 ${item.textColor}`}/>
+                                                        {item.label}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {pct}%
+                                                    </span>
                                                 </div>
                                                 <div className="text-2xl font-bold">{item.value}</div>
                                                 <ProgressBar value={item.value} max={total} color={item.color}/>
@@ -238,13 +241,13 @@ export default function StatsPage() {
                             activeGroup && activeGroup.members.length === 1 ? (
                                 /* Group with 1 member: only show my average rating */
                                 <Card>
-                                    <CardContent className="pt-6">
-                                        <div className="flex items-center gap-2 mb-3">
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-base flex items-center gap-2 mb-3">
                                             <Star className="h-5 w-5 text-yellow-400"/>
-                                            <span className="text-sm font-medium text-muted-foreground">
-                          {t("averageRating")}
-                        </span>
-                                        </div>
+                                            {t("averageRating")}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
                                         {stats.averageMyRating > 0 ? (
                                             <>
                                                 <div className="text-3xl font-bold mb-2">
@@ -260,15 +263,15 @@ export default function StatsPage() {
                                 </Card>
                             ) : activeGroup && activeGroup.members.length === 2 ? (
                                 /* Group with 2 members: classic My vs Friend layout */
-                                <div className="grid gap-4 sm:grid-cols-3">
+                                <div className="grid gap-4 sm:grid-cols-2">
                                     <Card>
-                                        <CardContent className="pt-6">
-                                            <div className="flex items-center gap-2 mb-3">
+                                        <CardHeader className="pb-3">
+                                            <CardTitle className="text-base flex items-center gap-2 mb-3">
                                                 <Star className="h-5 w-5 text-yellow-400"/>
-                                                <span className="text-sm font-medium text-muted-foreground">
-                          {t("myAvgRating")}
-                        </span>
-                                            </div>
+                                                {t("myAvgRating")}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
                                             {stats.averageMyRating > 0 ? (
                                                 <>
                                                     <div className="text-3xl font-bold mb-2">
@@ -284,13 +287,13 @@ export default function StatsPage() {
                                     </Card>
 
                                     <Card>
-                                        <CardContent className="pt-6">
-                                            <div className="flex items-center gap-2 mb-3">
+                                        <CardHeader className="pb-3">
+                                            <CardTitle className="text-base flex items-center gap-2 mb-3">
                                                 <Heart className="h-5 w-5 text-pink-400"/>
-                                                <span className="text-sm font-medium text-muted-foreground">
-                          {t("friendAvgRating")}
-                        </span>
-                                            </div>
+                                                {t("friendAvgRating")}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
                                             {stats.averagePartnerRating > 0 ? (
                                                 <>
                                                     <div className="text-3xl font-bold mb-2">
@@ -302,20 +305,6 @@ export default function StatsPage() {
                                             ) : (
                                                 <p className="text-muted-foreground text-sm">{t("noRated")}</p>
                                             )}
-                                        </CardContent>
-                                    </Card>
-
-                                    <Card>
-                                        <CardContent className="pt-6">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Users className="h-5 w-5 text-purple-400"/>
-                                                <span className="text-sm font-medium text-muted-foreground">
-                          {t("watchedTogether")}
-                        </span>
-                                            </div>
-                                            <div className="text-3xl font-bold text-purple-400">
-                                                {stats.watchedTogether}
-                                            </div>
                                         </CardContent>
                                     </Card>
                                 </div>
@@ -350,20 +339,23 @@ export default function StatsPage() {
                                                                 <div className="flex-1 min-w-0">
                                                                     <div
                                                                         className="flex items-center justify-between mb-1">
-                                      <span className="font-medium text-sm truncate">
-                                        {mr.displayName}
-                                      </span>
+                                                                            <span
+                                                                                className="font-medium text-sm truncate"
+                                                                            >
+                                                                                {mr.displayName}
+                                                                            </span>
                                                                         <div
                                                                             className="flex items-center gap-2 shrink-0 ml-2">
-                                        <span className="text-xs text-muted-foreground">
-                                          {mr.totalRated} {t("rated")}
-                                        </span>
+                                                                            <span
+                                                                                className="text-xs text-muted-foreground">
+                                                                              {mr.totalRated} {t("rated")}
+                                                                            </span>
                                                                             {mr.averageRating > 0 ? (
                                                                                 <span className="font-bold">
-                                            {mr.averageRating.toFixed(1)}
+                                                                                    {mr.averageRating.toFixed(1)}
                                                                                     <span
                                                                                         className="text-muted-foreground text-xs">/10</span>
-                                          </span>
+                                                                                    </span>
                                                                             ) : (
                                                                                 <span
                                                                                     className="text-muted-foreground text-sm">{t("noRated")}</span>
@@ -387,13 +379,13 @@ export default function StatsPage() {
                         ) : (
                             /* Personal mode: single rating card, prominent */
                             <Card>
-                                <CardContent className="pt-6">
-                                    <div className="flex items-center gap-2 mb-3">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-base flex items-center gap-2">
                                         <Star className="h-5 w-5 text-yellow-400"/>
-                                        <span className="text-sm font-medium text-muted-foreground">
-                          {t("averageRating")}
-                        </span>
-                                    </div>
+                                        {t("averageRating")}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
                                     {stats.averageMyRating > 0 ? (
                                         <>
                                             <div className="text-4xl font-bold mb-2">
