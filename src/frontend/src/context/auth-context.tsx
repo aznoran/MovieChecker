@@ -7,7 +7,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import type { User } from "@/types";
+import type { User } from "@/lib/api";
 import { login as apiLogin, register as apiRegister } from "@/lib/api";
 
 interface AuthContextType {
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("user", JSON.stringify(response.user));
       }
       setToken(response.token);
-      setUser(response.user);
+      setUser(response.user as User);
     } else {
       throw new Error("Invalid authentication response");
     }
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("user", JSON.stringify(response.user));
       }
       setToken(response.token);
-      setUser(response.user);
+      setUser(response.user as User);
     } else {
       throw new Error("Invalid authentication response");
     }

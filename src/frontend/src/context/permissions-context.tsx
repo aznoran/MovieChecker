@@ -6,7 +6,7 @@ import {useAuth} from "@/context/auth-context";
 import {useGroup} from "@/context/group-context";
 import {getMyPermissions} from "@/lib/api";
 import type {UserPermissions} from "@/lib/api";
-import {GroupType} from "@/types";
+import {GroupType} from "@/lib/api";
 
 /** All permissions default to true (personal/owner mode) */
 const ALL_PERMISSIONS: UserPermissions = {

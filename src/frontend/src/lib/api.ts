@@ -1,9 +1,154 @@
-import { Api, WatchStatus, GroupRole, ContentType, CreateMovieRequest, UpdateMovieRequest } from "./api.generated";
-import { AuthResponse, Movie, WatchEntry, Stats, Group, GroupMember } from "@/types";
+import {
+  Api,
+  WatchStatus as GeneratedWatchStatus,
+  GroupRole as GeneratedGroupRole,
+  ContentType as GeneratedContentType,
+  CreateMovieRequest,
+  UpdateMovieRequest,
+} from "./api.generated";
+import type { AuthResponse } from "./api.generated";
+export type { AuthResponse };
 
-// Re-export types from types folder (these have proper enum names)
-export type { AuthResponse, Movie, WatchEntry, Stats, Group, GroupMember };
-export { ContentType as ContentTypeEnum, WatchStatus as WatchStatusEnum, Emotion, GroupRole as GroupRoleEnum } from "@/types";
+// API response types with correct required/optional fields
+// These correspond to the generated Dto types from api.generated.ts
+
+export interface User {
+  id: number;
+  username: string;
+  displayName: string;
+}
+
+export interface Movie {
+  id: number;
+  title: string;
+  description?: string;
+  type: ContentType;
+  year?: number;
+  genre?: string;
+  posterUrl?: string;
+  createdAt: string;
+}
+
+export interface EntryRating {
+  id: number;
+  userId: number;
+  displayName: string;
+  rating: number;
+}
+
+export interface WatchEntry {
+  id: number;
+  movieId: number;
+  userId: number;
+  movie: Movie;
+  status: WatchStatus;
+  groupId?: number;
+  emotion?: Emotion;
+  comment?: string;
+  ratings: EntryRating[];
+  startedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  currentSeason: number;
+  currentEpisode: number;
+  totalEpisodes: number;
+  watchingTime: number;
+}
+
+export interface Group {
+  id: number;
+  name: string;
+  inviteCode?: string;
+  createdByUserId: number;
+  isPrivate: boolean;
+  groupType: GroupType;
+  defaultRole: GroupRole;
+  members: GroupMember[];
+  createdAt: string;
+}
+
+export interface GroupMember {
+  userId: number;
+  displayName: string;
+  role: GroupRole;
+  joinedAt: string;
+}
+
+export interface MemberRatingStats {
+  userId: number;
+  displayName: string;
+  averageRating: number;
+  totalRated: number;
+}
+
+export interface Stats {
+  totalWatched: number;
+  totalPlanned: number;
+  totalWatching: number;
+  totalDropped: number;
+  averageMyRating: number;
+  averagePartnerRating: number;
+  byType: Record<string, number>;
+  byEmotion: Record<string, number>;
+  memberRatings?: MemberRatingStats[];
+}
+
+// Domain constants with named members (generated enums use Value0, Value1, etc.)
+export const ContentType = {
+  Movie: 0,
+  Series: 1,
+  Anime: 2,
+  Cartoon: 3,
+  Show: 4,
+} as const;
+export type ContentType = (typeof ContentType)[keyof typeof ContentType];
+
+export const WatchStatus = {
+  Planned: 0,
+  Watching: 1,
+  Completed: 2,
+  Dropped: 3,
+} as const;
+export type WatchStatus = (typeof WatchStatus)[keyof typeof WatchStatus];
+
+export const Emotion = {
+  Joy: 0,
+  Sadness: 1,
+  Excitement: 2,
+  Cringe: 3,
+  Confused: 4,
+  Neutral: 5,
+} as const;
+export type Emotion = (typeof Emotion)[keyof typeof Emotion];
+
+export const GroupRole = {
+  Viewer: 0,
+  Member: 1,
+  Admin: 2,
+  Owner: 3,
+} as const;
+export type GroupRole = (typeof GroupRole)[keyof typeof GroupRole];
+
+export const GroupType = {
+  Public: 0,
+  Private: 1,
+  Personal: 2,
+} as const;
+export type GroupType = (typeof GroupType)[keyof typeof GroupType];
+
+// Aliases for backward compatibility
+export { ContentType as ContentTypeEnum, WatchStatus as WatchStatusEnum, GroupRole as GroupRoleEnum };
+
+// Label constants
+export const EmotionEmojis: Record<Emotion, string> = {
+  [Emotion.Joy]: "😊",
+  [Emotion.Sadness]: "😢",
+  [Emotion.Excitement]: "🤩",
+  [Emotion.Cringe]: "😬",
+  [Emotion.Confused]: "🤔",
+  [Emotion.Neutral]: "😐",
+};
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -50,12 +195,12 @@ apiClient.instance.interceptors.response.use(
 // Auth
 export const login = async (username: string, password: string): Promise<AuthResponse> => {
   const response = await apiClient.api.authLoginCreate({ username, password });
-  return response.data as unknown as AuthResponse;
+  return response.data;
 };
 
 export const register = async (username: string, password: string, displayName: string): Promise<AuthResponse> => {
   const response = await apiClient.api.authRegisterCreate({ username, password, displayName });
-  return response.data as unknown as AuthResponse;
+  return response.data;
 };
 
 export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
@@ -80,7 +225,7 @@ export const createMovie = async (movie: Omit<Movie, "id" | "createdAt">): Promi
   const request: CreateMovieRequest = {
     title: movie.title,
     description: movie.description,
-    type: movie.type as unknown as ContentType,
+    type: movie.type as unknown as GeneratedContentType,
     year: movie.year,
     genre: movie.genre,
     posterUrl: movie.posterUrl,
@@ -93,7 +238,7 @@ export const updateMovie = async (id: number, movie: Partial<Movie>): Promise<Mo
   const request: UpdateMovieRequest = {
     title: movie.title,
     description: movie.description,
-    type: movie.type !== undefined ? movie.type as unknown as ContentType : undefined,
+    type: movie.type !== undefined ? movie.type as unknown as GeneratedContentType : undefined,
     year: movie.year,
     genre: movie.genre,
     posterUrl: movie.posterUrl,
@@ -113,8 +258,8 @@ export const searchMovies = async (query: string): Promise<Movie[]> => {
 
 // Watch Entries
 export const getWatchEntries = async (status?: number, groupId?: number): Promise<WatchEntry[]> => {
-  const query: { status?: WatchStatus; groupId?: number } = {};
-  if (status !== undefined) query.status = status as WatchStatus;
+  const query: { status?: GeneratedWatchStatus; groupId?: number } = {};
+  if (status !== undefined) query.status = status as GeneratedWatchStatus;
   if (groupId !== undefined) query.groupId = groupId;
   const response = await apiClient.api.watchEntriesList(query);
   return response.data as unknown as WatchEntry[];
@@ -192,7 +337,7 @@ export const createGroup = async (name: string, isPrivate: boolean = false, pass
     name, 
     isPrivate, 
     password, 
-    defaultRole: defaultRole as GroupRole 
+    defaultRole: defaultRole as GeneratedGroupRole 
   });
   return response.data as unknown as Group;
 };
@@ -230,7 +375,7 @@ export const transferOwnership = async (groupId: number, newOwnerId: number): Pr
 };
 
 export const updateMemberRole = async (groupId: number, userId: number, role: number): Promise<void> => {
-  await apiClient.api.groupsMembersRoleUpdate(groupId, userId, { role: role as GroupRole });
+  await apiClient.api.groupsMembersRoleUpdate(groupId, userId, { role: role as GeneratedGroupRole });
 };
 
 export const generateOtp = async (groupId: number): Promise<{ code: string; expiresAt: string }> => {
@@ -254,7 +399,7 @@ export const updateGroupSettings = async (groupId: number, settings: { name?: st
       "Accept-Language": locale,
     },
   });
-  return response.data as unknown as Group;
+  return response.data as Group;
 };
 
 // Permissions

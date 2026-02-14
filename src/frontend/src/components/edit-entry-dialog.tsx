@@ -14,12 +14,14 @@ import {
     type CropperAreaData,
 } from "@/components/ui/cropper";
 import {getCroppedImage} from "@/lib/crop-utils";
-import {ContentType, WatchEntry, GroupType} from "@/types";
 import {
+    ContentType,
+    GroupType,
     WatchStatus,
     Emotion,
     EmotionEmojis,
-} from "@/types";
+} from "@/lib/api";
+import type {WatchEntry} from "@/lib/api";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
@@ -913,7 +915,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             </FieldLabel>
                             <Select
                                 value={status.toString()}
-                                onValueChange={(v) => setStatus(Number(v))}
+                                onValueChange={(v) => setStatus(Number(v) as WatchStatus)}
                                 disabled={!canEdit}
                             >
                                 <SelectTrigger>

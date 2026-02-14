@@ -67,7 +67,7 @@ import {
     Settings,
 } from "lucide-react";
 import type {Locale} from "@/lib/i18n";
-import {GroupRole, GroupType} from "@/types";
+import {GroupRole, GroupType} from "@/lib/api";
 import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {checkInviteCode} from "@/lib/api";

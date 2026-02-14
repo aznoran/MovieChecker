@@ -20,7 +20,7 @@ import {
     Emotion,
     EmotionEmojis,
     GroupType,
-} from "@/types";
+} from "@/lib/api";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
@@ -659,7 +659,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             </FieldLabel>
                             <Select
                                 value={type.toString()}
-                                onValueChange={(v) => setType(Number(v))}
+                                onValueChange={(v) => setType(Number(v) as ContentType)}
                             >
                                 <SelectTrigger>
                                     <SelectValue/>
@@ -714,7 +714,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             </FieldLabel>
                             <Select
                                 value={status.toString()}
-                                onValueChange={(v) => setStatus(Number(v))}
+                                onValueChange={(v) => setStatus(Number(v) as WatchStatus)}
                             >
                                 <SelectTrigger>
                                     <SelectValue/>

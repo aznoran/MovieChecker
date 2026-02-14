@@ -9,8 +9,8 @@ import {useGroup} from "@/context/group-context";
 import {usePermissions} from "@/context/permissions-context";
 import {ConfirmDialog} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
-import {WatchStatus, EmotionEmojis, GroupType} from "@/types";
-import type {WatchEntry} from "@/types";
+import {WatchStatus, EmotionEmojis, GroupType} from "@/lib/api";
+import type {WatchEntry} from "@/lib/api";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,

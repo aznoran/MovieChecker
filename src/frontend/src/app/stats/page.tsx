@@ -6,7 +6,7 @@ import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
-import {EmotionEmojis, GroupType} from "@/types";
+import {EmotionEmojis, GroupType} from "@/lib/api";
 import {
     getContentTypeLabels,
     getEmotionLabels,

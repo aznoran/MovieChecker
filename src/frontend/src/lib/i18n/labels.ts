@@ -1,4 +1,4 @@
-import { ContentType, WatchStatus, Emotion, EmotionEmojis } from "@/types";
+import { ContentType, WatchStatus, Emotion, EmotionEmojis } from "@/lib/api";
 import type { Locale } from "./index";
 import { t } from "./index";
 import en from "./en";

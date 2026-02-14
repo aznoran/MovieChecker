@@ -15,8 +15,8 @@ import {
     updateGroupPassword as apiUpdateGroupPassword,
     updateGroupSettings as apiUpdateGroupSettings,
 } from "@/lib/api";
-import type {Group, GroupRole} from "@/types";
-import {GroupType} from "@/types";
+import type {Group} from "@/lib/api";
+import {GroupType} from "@/lib/api";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 
@@ -164,7 +164,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     });
 
     const updateRoleMutation = useMutation({
-        mutationFn: ({groupId, userId, role}: { groupId: number; userId: number; role: GroupRole }) =>
+        mutationFn: ({groupId, userId, role}: { groupId: number; userId: number; role: number }) =>
             apiUpdateMemberRole(groupId, userId, role),
         onSuccess: () => {
             toast.success(t("roleUpdateSuccess"), { position: "top-center" })
