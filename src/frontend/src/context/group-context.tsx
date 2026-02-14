@@ -16,7 +16,7 @@ import {
     updateGroupSettings as apiUpdateGroupSettings,
 } from "@/lib/api";
 import type {Group} from "@/lib/api";
-import {GroupType} from "@/lib/api";
+import {GroupType, GroupRole} from "@/lib/api";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 
@@ -164,7 +164,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     });
 
     const updateRoleMutation = useMutation({
-        mutationFn: ({groupId, userId, role}: { groupId: number; userId: number; role: number }) =>
+        mutationFn: ({groupId, userId, role}: { groupId: number; userId: number; role: GroupRole }) =>
             apiUpdateMemberRole(groupId, userId, role),
         onSuccess: () => {
             toast.success(t("roleUpdateSuccess"), { position: "top-center" })
@@ -219,7 +219,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
                 leaveGroup: (id) => leaveMutation.mutateAsync(id),
                 kickMember: (groupId, userId) => kickMutation.mutateAsync({groupId, userId}),
                 transferOwnership: (groupId, newOwnerId) => transferMutation.mutateAsync({groupId, newOwnerId}),
-                updateMemberRole: (groupId, userId, role) => updateRoleMutation.mutateAsync({groupId, userId, role}),
+                updateMemberRole: (groupId, userId, role) => updateRoleMutation.mutateAsync({groupId, userId, role: role as GroupRole}),
                 generateOtp: (groupId) => generateOtpMutation.mutateAsync(groupId),
                 updatePassword: (groupId, newPassword) => updatePasswordMutation.mutateAsync({groupId, newPassword}),
                 updateGroupSettings: (groupId, settings) => updateSettingsMutation.mutateAsync({groupId, settings}),
