@@ -54,6 +54,7 @@ export interface EntryRating {
 export interface WatchEntry {
   id: number;
   movieId: number;
+  userId: number;
   movie: Movie;
   status: WatchStatus;
   groupId?: number;

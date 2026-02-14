@@ -87,12 +87,19 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     // Determine permissions from provider
-    const canEdit = permissions.canEditOwnEntries || permissions.canEditAllEntries;
+    const canEdit = (permissions.canEditOwnEntries && entry.userId == user?.id) || permissions.canEditAllEntries;
     const canRateSelf = permissions.canRateSelf;
     const canRateOthers = permissions.canRateOthers;
 
     // If user can't edit and can't rate, don't show dialog (shouldn't happen)
     const isRateOnlyMode = !canEdit && canRateSelf;
+
+    console.log(entry)
+    console.log(permissions)
+    console.log("canEdit " + canEdit);
+    console.log("canRateSelf " + canRateSelf);
+    console.log("canRateOthers " + canRateOthers);
+    console.log("isRateOnlyMode " + isRateOnlyMode);
 
     const [status, setStatus] = useState<WatchStatus>(entry.status);
     // Personal mode: single rating
@@ -299,6 +306,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         return false;
     };
 
+    // Compute whether any changes exist for submit button state
+    const hasChanges = isRateOnlyMode
+        ? hasRatingsChanged()
+        : (hasEntryFieldsChanged() || hasPosterChanged() || hasRatingsChanged());
+
     const mutation = useMutation({
         mutationFn: async (overridePosterFile?: File | null) => {
             const ratingsChanged = hasRatingsChanged();
@@ -307,9 +319,14 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 // Rate-only mode: only submit ratings via the rate endpoint
                 if (ratingsChanged && user?.id) {
                     if (isGroupMode && canRateOthers) {
+                        const origMap: Record<number, number> = {};
+                        entry.ratings?.forEach((r) => { origMap[r.userId] = r.rating; });
                         for (const uid of selectedMembers) {
-                            const rating = memberRatings[uid] ?? 0;
-                            await rateEntry(entry.id, Math.round(rating * 2), uid);
+                            const newRating = Math.round((memberRatings[uid] ?? 0) * 2);
+                            const origRating = origMap[uid] ?? 0;
+                            if (newRating !== origRating) {
+                                await rateEntry(entry.id, newRating, uid);
+                            }
                         }
                     } else {
                         const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
@@ -362,9 +379,14 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             // Rate separately via the rate endpoint — only if ratings changed
             if (ratingsChanged && (status === WatchStatus.Completed || status === WatchStatus.Dropped) && user?.id) {
                 if (isGroupMode && canRateOthers) {
+                    const origMap: Record<number, number> = {};
+                    entry.ratings?.forEach((r) => { origMap[r.userId] = r.rating; });
                     for (const uid of selectedMembers) {
-                        const rating = memberRatings[uid] ?? 0;
-                        await rateEntry(entry.id, Math.round(rating * 2), uid);
+                        const newRating = Math.round((memberRatings[uid] ?? 0) * 2);
+                        const origRating = origMap[uid] ?? 0;
+                        if (newRating !== origRating) {
+                            await rateEntry(entry.id, newRating, uid);
+                        }
                     }
                 } else {
                     const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
@@ -472,6 +494,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Don't submit if nothing changed
+        if (!hasChanges) return;
 
         // Validate all fields
         const errors: Record<string, string> = {};
@@ -694,7 +719,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={mutation.isPending}
+                                disabled={mutation.isPending || !hasChanges}
                                 className="flex-1"
                             >
                                 {mutation.isPending ? (
@@ -889,6 +914,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             <Select
                                 value={status.toString()}
                                 onValueChange={(v) => setStatus(Number(v))}
+                                disabled={!canEdit}
                             >
                                 <SelectTrigger>
                                     <SelectValue/>
@@ -926,6 +952,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                 type="button"
                                                 variant={selected ? "default" : "outline"}
                                                 size="sm"
+                                                disabled={!canEdit}
                                                 onClick={() => {
                                                     if (selected) {
                                                         setSelectedMembers((prev) => prev.filter((id) => id !== m.userId));
@@ -1160,6 +1187,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                     type="button"
                                     variant={emotion === Number(value) ? "default" : "outline"}
                                     size="sm"
+                                    disabled={!canEdit}
                                     onClick={() => setEmotion(Number(value) as Emotion)}
                                     className="text-xl px-3"
                                 >
@@ -1171,6 +1199,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                     type="button"
                                     variant="ghost"
                                     size="sm"
+                                    disabled={!canEdit}
                                     onClick={() => setEmotion(null)}
                                 >
                                     <X className="h-4 w-4 mr-1"/>
@@ -1194,6 +1223,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             <Textarea
                                 id="comment"
                                 value={comment}
+                                disabled={!canEdit}
                                 onChange={(e) => {
                                     setComment(e.target.value);
                                     handleFieldChange("comment", e.target.value);
@@ -1221,7 +1251,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                         </Button>
                         <Button
                             type="submit"
-                            disabled={mutation.isPending}
+                            disabled={mutation.isPending || !hasChanges}
                             className="flex-1"
                         >
                             {mutation.isPending ? (
