@@ -203,7 +203,9 @@ export default function HomePage() {
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {entries.map((entry) => {
-                            const posterSrc = getPosterUrl(entry.movie!.posterUrl);
+                            if (!entry.movie) return null;
+                            const movie = entry.movie;
+                            const posterSrc = getPosterUrl(movie.posterUrl);
                             return (
                                 <Card
                                     key={entry.id}
@@ -214,7 +216,7 @@ export default function HomePage() {
                                         <div className="w-full aspect-[4/3] overflow-hidden">
                                             <img
                                                 src={posterSrc}
-                                                alt={entry.movie!.title ?? undefined}
+                                                alt={movie.title ?? undefined}
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
@@ -228,22 +230,22 @@ export default function HomePage() {
                                         <div className="min-w-0">
                                             <div className="flex items-start justify-between gap-2 mb-4">
                                                 <div className="min-w-0 flex-1">
-                                                    <h3 className="font-semibold mb-2 truncate" title={entry.movie!.title ?? undefined}>
-                                                        {entry.movie!.title}
+                                                    <h3 className="font-semibold mb-2 truncate" title={movie.title ?? undefined}>
+                                                        {movie.title}
                                                     </h3>
                                                     <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap min-w-0">
                                                         <Film className="h-3 w-3 shrink-0"/>
-                                                        {contentTypeLabels[entry.movie!.type! as ContentType]}
-                                                        {entry.movie!.year && (
+                                                        {contentTypeLabels[movie.type! as ContentType]}
+                                                        {movie.year && (
                                                             <>
                                                                 <Calendar className="h-3 w-3 ml-1 shrink-0"/>
-                                                                {entry.movie!.year}
+                                                                {movie.year}
                                                             </>
                                                         )}
-                                                        {entry.movie!.genre && (
+                                                        {movie.genre && (
                                                             <>
                                                                 <Tag className="h-3 w-3 ml-1 shrink-0"/>
-                                                                <span className="truncate">{translateGenre(entry.movie!.genre, locale)}</span>
+                                                                <span className="truncate">{translateGenre(movie.genre, locale)}</span>
                                                             </>
                                                         )}
                                                     </p>
@@ -317,9 +319,9 @@ export default function HomePage() {
                                                 );
                                             })()}
 
-                                            {entry.movie!.description && (
-                                                <p className="text-xs text-muted-foreground mb-4 break-words line-clamp-2" title={entry.movie!.description}>
-                                                    {entry.movie!.description.length > 100 ? entry.movie!.description.slice(0, 100) + "..." : entry.movie!.description}
+                                            {movie.description && (
+                                                <p className="text-xs text-muted-foreground mb-4 break-words line-clamp-2" title={movie.description}>
+                                                    {movie.description.length > 100 ? movie.description.slice(0, 100) + "..." : movie.description}
                                                 </p>
                                             )}
 

@@ -89,7 +89,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     // Determine permissions from provider
-    const canEdit = (permissions.canEditOwnEntries && entry.ratings?.some(r => r.userId === user?.id)) || permissions.canEditAllEntries;
+    const canEdit = (permissions.canEditOwnEntries && (entry as Record<string, unknown>).userId == user?.id) || permissions.canEditAllEntries;
     const canRateSelf = permissions.canRateSelf;
     const canRateOthers = permissions.canRateOthers;
 

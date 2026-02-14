@@ -226,7 +226,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 : undefined;
 
             await createWatchEntry({
-                movieId: movie.id ?? 0,
+                movieId: movie.id!,
                 status,
                 rating: !isGroupMode && myRating ? myRating * 2 : undefined,
                 ratings: ratingsArray,
