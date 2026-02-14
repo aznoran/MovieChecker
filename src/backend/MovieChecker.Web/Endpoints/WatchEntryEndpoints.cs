@@ -70,6 +70,7 @@ public static class WatchEntryEndpoints
     private static WatchEntryDto ToDto(WatchEntry w) => new(
         w.Id,
         w.MovieId,
+        w.UserId,
         new MovieDto(
             w.Movie.Id,
             w.Movie.Title,

@@ -87,12 +87,19 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     // Determine permissions from provider
-    const canEdit = permissions.canEditOwnEntries || permissions.canEditAllEntries;
+    const canEdit = (permissions.canEditOwnEntries && entry.userId == user?.id) || permissions.canEditAllEntries;
     const canRateSelf = permissions.canRateSelf;
     const canRateOthers = permissions.canRateOthers;
 
     // If user can't edit and can't rate, don't show dialog (shouldn't happen)
     const isRateOnlyMode = !canEdit && canRateSelf;
+
+    console.log(entry)
+    console.log(permissions)
+    console.log("canEdit " + canEdit);
+    console.log("canRateSelf " + canRateSelf);
+    console.log("canRateOthers " + canRateOthers);
+    console.log("isRateOnlyMode " + isRateOnlyMode);
 
     const [status, setStatus] = useState<WatchStatus>(entry.status);
     // Personal mode: single rating
