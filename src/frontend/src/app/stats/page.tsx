@@ -103,7 +103,7 @@ export default function StatsPage() {
     }
 
     const total = stats
-        ? stats.totalWatched + stats.totalWatching + stats.totalPlanned + stats.totalDropped
+        ? (stats.totalWatched ?? 0) + (stats.totalWatching ?? 0) + (stats.totalPlanned ?? 0) + (stats.totalDropped ?? 0)
         : 0;
 
     const statusItems = stats
@@ -183,7 +183,7 @@ export default function StatsPage() {
                                         {isGroupMode && activeGroup && (
                                             <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
                                                 <Users className="h-3.5 w-3.5"/>
-                                                {activeGroup.name} &middot; {activeGroup.members.length} {t("memberCount")}
+                                                {activeGroup.name} &middot; {activeGroup.members?.length ?? 0} {t("memberCount")}
                                             </p>
                                         )}
                                     </div>
@@ -207,7 +207,7 @@ export default function StatsPage() {
                                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                     {statusItems.map((item) => {
                                         const Icon = item.icon;
-                                        const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
+                                        const pct = total > 0 ? Math.round(((item.value ?? 0) / total) * 100) : 0;
                                         return (
                                             <div key={item.key} className="space-y-2">
                                                 <div className="flex items-center justify-between">
@@ -221,7 +221,7 @@ export default function StatsPage() {
                                                     </span>
                                                 </div>
                                                 <div className="text-2xl font-bold">{item.value}</div>
-                                                <ProgressBar value={item.value} max={total} color={item.color}/>
+                                                <ProgressBar value={item.value ?? 0} max={total} color={item.color}/>
                                             </div>
                                         );
                                     })}
@@ -231,7 +231,7 @@ export default function StatsPage() {
 
                         {/* ── Ratings Section ── */}
                         {isGroupMode ? (
-                            activeGroup && activeGroup.members.length === 1 ? (
+                            activeGroup && (activeGroup.members?.length ?? 0) === 1 ? (
                                 /* Group with 1 member: only show my average rating */
                                 <Card>
                                     <CardHeader className="pb-3">
@@ -241,20 +241,20 @@ export default function StatsPage() {
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        {stats.averageMyRating > 0 ? (
+                                        {(stats.averageMyRating ?? 0) > 0 ? (
                                             <div className="flex flex-row justify-between">
                                                 <div className="text-3xl font-bold mb-2">
-                                                    {(stats.averageMyRating / 2).toFixed(1)}
+                                                    {((stats.averageMyRating ?? 0) / 2).toFixed(1)}
                                                     <span className="text-lg text-muted-foreground">/10</span>
                                                 </div>
-                                                <StarRating rating={stats.averageMyRating}/>
+                                                <StarRating rating={stats.averageMyRating ?? 0}/>
                                             </div>
                                         ) : (
                                             <p className="text-muted-foreground text-sm">{t("noRated")}</p>
                                         )}
                                     </CardContent>
                                 </Card>
-                            ) : activeGroup && activeGroup.members.length === 2 ? (
+                            ) : activeGroup && (activeGroup.members?.length ?? 0) === 2 ? (
                                 /* Group with 2 members: classic My vs Friend layout */
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <Card>
@@ -265,13 +265,13 @@ export default function StatsPage() {
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            {stats.averageMyRating > 0 ? (
+                                            {(stats.averageMyRating ?? 0) > 0 ? (
                                                 <>
                                                     <div className="text-3xl font-bold mb-2">
-                                                        {(stats.averageMyRating / 2).toFixed(1)}
+                                                        {((stats.averageMyRating ?? 0) / 2).toFixed(1)}
                                                         <span className="text-lg text-muted-foreground">/10</span>
                                                     </div>
-                                                    <StarRating rating={stats.averageMyRating}/>
+                                                    <StarRating rating={stats.averageMyRating ?? 0}/>
                                                 </>
                                             ) : (
                                                 <p className="text-muted-foreground text-sm">{t("noRated")}</p>
@@ -287,13 +287,13 @@ export default function StatsPage() {
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            {stats.averagePartnerRating > 0 ? (
+                                            {(stats.averagePartnerRating ?? 0) > 0 ? (
                                                 <>
                                                     <div className="text-3xl font-bold mb-2">
-                                                        {(stats.averagePartnerRating / 2).toFixed(1)}
+                                                        {((stats.averagePartnerRating ?? 0) / 2).toFixed(1)}
                                                         <span className="text-lg text-muted-foreground">/10</span>
                                                     </div>
-                                                    <StarRating rating={stats.averagePartnerRating}/>
+                                                    <StarRating rating={stats.averagePartnerRating ?? 0}/>
                                                 </>
                                             ) : (
                                                 <p className="text-muted-foreground text-sm">{t("noRated")}</p>
@@ -313,8 +313,8 @@ export default function StatsPage() {
                                     <CardContent>
                                         {stats.memberRatings && stats.memberRatings.length > 0 ? (
                                             <div className="space-y-4">
-                                                {[...stats.memberRatings]
-                                                    .sort((a, b) => b.averageRating - a.averageRating)
+                                                {[...(stats.memberRatings || [])]
+                                                    .sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0))
                                                     .map((mr, idx) => {
                                                         const memberColors = [
                                                             "text-yellow-400",
@@ -338,9 +338,9 @@ export default function StatsPage() {
                                                                                 className="text-xs text-muted-foreground">
                                                                               {mr.totalRated} {t("rated")}
                                                                             </span>
-                                                                            {mr.averageRating > 0 ? (
+                                                                            {(mr.averageRating ?? 0) > 0 ? (
                                                                                 <span className="font-bold">
-                                                                                    {(mr.averageRating / 2).toFixed(1)}
+                                                                                    {((mr.averageRating ?? 0) / 2).toFixed(1)}
                                                                                     <span
                                                                                         className="text-muted-foreground text-xs">/10</span>
                                                                                     </span>
@@ -350,8 +350,8 @@ export default function StatsPage() {
                                                                             )}
                                                                         </div>
                                                                     </div>
-                                                                    {mr.averageRating > 0 && (
-                                                                        <StarRating rating={mr.averageRating}/>
+                                                                    {(mr.averageRating ?? 0) > 0 && (
+                                                                        <StarRating rating={mr.averageRating ?? 0}/>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -374,13 +374,13 @@ export default function StatsPage() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    {stats.averageMyRating > 0 ? (
+                                    {(stats.averageMyRating ?? 0) > 0 ? (
                                         <div className="flex flex-row justify-between">
                                             <div className="text-4xl font-bold mb-2">
-                                                {(stats.averageMyRating / 2).toFixed(1)}
+                                                {((stats.averageMyRating ?? 0) / 2).toFixed(1)}
                                                 <span className="text-xl text-muted-foreground">/10</span>
                                             </div>
-                                            <StarRating rating={stats.averageMyRating}/>
+                                            <StarRating rating={stats.averageMyRating ?? 0}/>
                                         </div>
                                     ) : (
                                         <p className="text-muted-foreground text-sm">{t("noRated")}</p>
@@ -390,7 +390,7 @@ export default function StatsPage() {
                         )}
 
                         {/* ── By Content Type ── */}
-                        {Object.keys(stats.byType).length > 0 && (() => {
+                        {Object.keys(stats.byType ?? {}).length > 0 && (() => {
                             const contentTypeLabels = getContentTypeLabels(locale);
                             // Map enum names to ContentType enum values for translation
                             const typeNameMap: Record<string, string> = {
@@ -400,7 +400,7 @@ export default function StatsPage() {
                                 "Cartoon": contentTypeLabels[3],
                                 "Show": contentTypeLabels[4],
                             };
-                            const typeEntries = Object.entries(stats.byType);
+                            const typeEntries = Object.entries(stats.byType ?? {});
                             const maxTypeCount = Math.max(...typeEntries.map(([, c]) => c));
                             const typeColors = [
                                 "bg-violet-500",
@@ -439,8 +439,8 @@ export default function StatsPage() {
                         })()}
 
                         {/* ── Emotions ── */}
-                        {Object.keys(stats.byEmotion).length > 0 && (() => {
-                            const emotionEntries = Object.entries(stats.byEmotion);
+                        {Object.keys(stats.byEmotion ?? {}).length > 0 && (() => {
+                            const emotionEntries = Object.entries(stats.byEmotion ?? {});
                             const maxEmotionCount = Math.max(...emotionEntries.map(([, c]) => c));
                             const emotionLabels = getEmotionLabels(locale);
                             // Map emotion enum names to emojis and translated labels

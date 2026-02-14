@@ -2,97 +2,31 @@ import {
   Api,
   WatchStatus as GeneratedWatchStatus,
   GroupRole as GeneratedGroupRole,
-  ContentType as GeneratedContentType,
   CreateMovieRequest,
   UpdateMovieRequest,
 } from "./api.generated";
-import type { AuthResponse } from "./api.generated";
+import type {
+  AuthResponse,
+  UserDto,
+  MovieDto,
+  WatchEntryDto,
+  GroupDto,
+  GroupMemberDto,
+  EntryRatingDto,
+  MemberRatingDto,
+  StatsDto,
+} from "./api.generated";
+
+// Re-export generated Dto types directly
 export type { AuthResponse };
-
-// API response types with correct required/optional fields
-// These correspond to the generated Dto types from api.generated.ts
-
-export interface User {
-  id: number;
-  username: string;
-  displayName: string;
-}
-
-export interface Movie {
-  id: number;
-  title: string;
-  description?: string;
-  type: ContentType;
-  year?: number;
-  genre?: string;
-  posterUrl?: string;
-  createdAt: string;
-}
-
-export interface EntryRating {
-  id: number;
-  userId: number;
-  displayName: string;
-  rating: number;
-}
-
-export interface WatchEntry {
-  id: number;
-  movieId: number;
-  userId: number;
-  movie: Movie;
-  status: WatchStatus;
-  groupId?: number;
-  emotion?: Emotion;
-  comment?: string;
-  ratings: EntryRating[];
-  startedAt?: string;
-  completedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-  currentSeason: number;
-  currentEpisode: number;
-  totalEpisodes: number;
-  watchingTime: number;
-}
-
-export interface Group {
-  id: number;
-  name: string;
-  inviteCode?: string;
-  createdByUserId: number;
-  isPrivate: boolean;
-  groupType: GroupType;
-  defaultRole: GroupRole;
-  members: GroupMember[];
-  createdAt: string;
-}
-
-export interface GroupMember {
-  userId: number;
-  displayName: string;
-  role: GroupRole;
-  joinedAt: string;
-}
-
-export interface MemberRatingStats {
-  userId: number;
-  displayName: string;
-  averageRating: number;
-  totalRated: number;
-}
-
-export interface Stats {
-  totalWatched: number;
-  totalPlanned: number;
-  totalWatching: number;
-  totalDropped: number;
-  averageMyRating: number;
-  averagePartnerRating: number;
-  byType: Record<string, number>;
-  byEmotion: Record<string, number>;
-  memberRatings?: MemberRatingStats[];
-}
+export type User = UserDto;
+export type Movie = MovieDto;
+export type WatchEntry = WatchEntryDto;
+export type Group = GroupDto;
+export type GroupMember = GroupMemberDto;
+export type EntryRating = EntryRatingDto;
+export type MemberRatingStats = MemberRatingDto;
+export type Stats = StatsDto;
 
 // Domain constants with named members (generated enums use Value0, Value1, etc.)
 export const ContentType = {
@@ -213,38 +147,22 @@ export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
 // Movies
 export const getMovies = async (type?: number): Promise<Movie[]> => {
   const response = await apiClient.api.moviesList(type !== undefined ? { type } : undefined);
-  return response.data as unknown as Movie[];
+  return response.data;
 };
 
 export const getMovie = async (id: number): Promise<Movie> => {
   const response = await apiClient.api.moviesDetail(id);
-  return response.data as unknown as Movie;
+  return response.data;
 };
 
-export const createMovie = async (movie: Omit<Movie, "id" | "createdAt">): Promise<Movie> => {
-  const request: CreateMovieRequest = {
-    title: movie.title,
-    description: movie.description,
-    type: movie.type as unknown as GeneratedContentType,
-    year: movie.year,
-    genre: movie.genre,
-    posterUrl: movie.posterUrl,
-  };
-  const response = await apiClient.api.moviesCreate(request);
-  return response.data as unknown as Movie;
+export const createMovie = async (movie: CreateMovieRequest): Promise<Movie> => {
+  const response = await apiClient.api.moviesCreate(movie);
+  return response.data;
 };
 
-export const updateMovie = async (id: number, movie: Partial<Movie>): Promise<Movie> => {
-  const request: UpdateMovieRequest = {
-    title: movie.title,
-    description: movie.description,
-    type: movie.type !== undefined ? movie.type as unknown as GeneratedContentType : undefined,
-    year: movie.year,
-    genre: movie.genre,
-    posterUrl: movie.posterUrl,
-  };
-  const response = await apiClient.api.moviesUpdate(id, request);
-  return response.data as unknown as Movie;
+export const updateMovie = async (id: number, movie: UpdateMovieRequest): Promise<Movie> => {
+  const response = await apiClient.api.moviesUpdate(id, movie);
+  return response.data;
 };
 
 export const deleteMovie = async (id: number): Promise<void> => {
@@ -253,7 +171,7 @@ export const deleteMovie = async (id: number): Promise<void> => {
 
 export const searchMovies = async (query: string): Promise<Movie[]> => {
   const response = await apiClient.api.moviesSearchList({ q: query });
-  return response.data as unknown as Movie[];
+  return response.data;
 };
 
 // Watch Entries
@@ -262,12 +180,12 @@ export const getWatchEntries = async (status?: number, groupId?: number): Promis
   if (status !== undefined) query.status = status as GeneratedWatchStatus;
   if (groupId !== undefined) query.groupId = groupId;
   const response = await apiClient.api.watchEntriesList(query);
-  return response.data as unknown as WatchEntry[];
+  return response.data;
 };
 
 export const getWatchEntry = async (id: number): Promise<WatchEntry> => {
   const response = await apiClient.api.watchEntriesDetail(id);
-  return response.data as unknown as WatchEntry;
+  return response.data;
 };
 
 export const createWatchEntry = async (entry: {
@@ -281,7 +199,7 @@ export const createWatchEntry = async (entry: {
   viewers?: number[];
 }): Promise<WatchEntry> => {
   const response = await apiClient.api.watchEntriesCreate(entry);
-  return response.data as unknown as WatchEntry;
+  return response.data;
 };
 
 export const updateWatchEntry = async (
@@ -298,7 +216,7 @@ export const updateWatchEntry = async (
   }
 ): Promise<WatchEntry> => {
   const response = await apiClient.api.watchEntriesUpdate(id, entry);
-  return response.data as unknown as WatchEntry;
+  return response.data;
 };
 
 export const rateEntry = async (entryId: number, rating: number, targetUserId?: number): Promise<void> => {
@@ -318,18 +236,18 @@ export const deleteWatchEntry = async (id: number): Promise<void> => {
 
 export const getStats = async (groupId?: number): Promise<Stats> => {
   const response = await apiClient.api.watchEntriesStatsList(groupId !== undefined ? { groupId } : undefined);
-  return response.data as unknown as Stats;
+  return response.data;
 };
 
 // Groups
 export const getMyGroups = async (): Promise<Group[]> => {
   const response = await apiClient.api.groupsList();
-  return response.data as unknown as Group[];
+  return response.data;
 };
 
 export const getGroup = async (id: number): Promise<Group> => {
   const response = await apiClient.api.groupsDetail(id);
-  return response.data as unknown as Group;
+  return response.data;
 };
 
 export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: number): Promise<Group> => {
@@ -339,7 +257,7 @@ export const createGroup = async (name: string, isPrivate: boolean = false, pass
     password, 
     defaultRole: defaultRole as GeneratedGroupRole 
   });
-  return response.data as unknown as Group;
+  return response.data;
 };
 
 export const checkInviteCode = async (inviteCode: string): Promise<{
@@ -359,7 +277,7 @@ export const checkInviteCode = async (inviteCode: string): Promise<{
 
 export const joinGroup = async (inviteCode: string, password?: string, otp?: string): Promise<Group> => {
   const response = await apiClient.api.groupsJoinCreate({ inviteCode, password, otp });
-  return response.data as unknown as Group;
+  return response.data;
 };
 
 export const leaveGroup = async (id: number): Promise<void> => {
@@ -399,7 +317,7 @@ export const updateGroupSettings = async (groupId: number, settings: { name?: st
       "Accept-Language": locale,
     },
   });
-  return response.data as Group;
+  return response.data;
 };
 
 // Permissions
