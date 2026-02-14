@@ -399,7 +399,7 @@ export function Header() {
                             })}
                         </nav>
                         <Select
-                            value={activeGroupId?.toString() ?? personalGroup?.id.toString() ?? ""}
+                            value={activeGroupId?.toString() ?? personalGroup?.id?.toString() ?? ""}
                             onValueChange={(v) => setActiveGroupId(parseInt(v))}
                         >
                             <SelectTrigger className="w-[180px] h-8 text-sm">
@@ -407,13 +407,13 @@ export function Header() {
                             </SelectTrigger>
                             <SelectContent position="popper" sideOffset={4}>
                                 {personalGroup && (
-                                    <SelectItem value={personalGroup.id.toString()}>
+                                    <SelectItem value={personalGroup.id!.toString()}>
                                         <User className="h-3 w-3"/>
                                         {t("personal")}
                                     </SelectItem>
                                 )}
                                 {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => (
-                                    <SelectItem key={g.id} value={g.id.toString()}>
+                                    <SelectItem key={g.id} value={g.id!.toString()}>
                                         <div className="flex items-center gap-1.5">
                                             {g.groupType === GroupType.Private ? (
                                                 <Lock className="h-3 w-3 text-red-500"/>
@@ -454,7 +454,7 @@ export function Header() {
                                     <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full p-0">
                                         <Avatar className="h-8 w-8">
                                             <AvatarFallback className="bg-primary/10 text-primary">
-                                                {user.displayName.substring(0, 2).toUpperCase()}
+                                                {(user.displayName ?? "").substring(0, 2).toUpperCase()}
                                             </AvatarFallback>
                                         </Avatar>
                                     </Button>
@@ -799,7 +799,7 @@ export function Header() {
                                     <FieldGroup>
                                         {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => {
                                             const isOwner = user?.id === g.createdByUserId;
-                                            const currentUserMember = g.members.find(m => m.userId === user?.id);
+                                            const currentUserMember = (g.members ?? []).find(m => m.userId === user?.id);
                                             const isAdmin = currentUserMember?.role === GroupRole.Admin;
                                             const canManage = isOwner || isAdmin;
 
@@ -832,7 +832,7 @@ export function Header() {
                                                             <div className="flex flex-col min-w-0">
                                                                 <div className="flex items-center gap-2 min-w-0">
                                                             <span
-                                                                className="font-semibold text-sm truncate" title={g.name}>{g.name}</span>
+                                                                className="font-semibold text-sm truncate" title={g.name ?? undefined}>{g.name}</span>
                                                                     {isOwner &&
                                                                         <Crown
                                                                             className="h-3.5 w-3.5 text-yellow-500 shrink-0"/>}
@@ -858,7 +858,7 @@ export function Header() {
                                                             }
                                                             onConfirm={async () => {
                                                                 try {
-                                                                    await leaveGroup(g.id);
+                                                                    await leaveGroup(g.id!);
                                                                 } catch {
                                                                     setError(t("failedToAdd"));
                                                                 }
@@ -913,7 +913,7 @@ export function Header() {
                                                                                     setEditGroupName(e.target.value);
                                                                                     setSettingsNameError(e.target.value.length > 50 ? t("groupNameTooLong") : "");
                                                                                 }}
-                                                                                placeholder={g.name}
+                                                                                placeholder={g.name ?? undefined}
                                                                                 className="h-9 bg-background border-border/60"
                                                                                 aria-invalid={!!settingsNameError}
                                                                             />
@@ -935,7 +935,7 @@ export function Header() {
                                                                             <Button
                                                                                 size="sm"
                                                                                 className="h-9 flex-1 bg-primary hover:bg-primary/90"
-                                                                                onClick={() => handleSaveGroupSettings(g.id)}
+                                                                                onClick={() => handleSaveGroupSettings(g.id!)}
                                                                                 disabled={!!settingsNameError}
                                                                             >
                                                                                 <Check className="h-3.5 w-3.5 mr-1.5"/>
@@ -977,7 +977,7 @@ export function Header() {
                                                                             <Button
                                                                                 size="sm"
                                                                                 className="h-9 flex-1 bg-primary hover:bg-primary/90"
-                                                                                onClick={() => handleConfirmSwitchToPrivate(g.id)}
+                                                                                onClick={() => handleConfirmSwitchToPrivate(g.id!)}
                                                                             >
                                                                                 <Check className="h-3.5 w-3.5 mr-1.5"/>
                                                                                 {t("save")}
@@ -991,8 +991,8 @@ export function Header() {
                                                                             size="sm"
                                                                             className="h-9 text-xs w-full border-border/60 hover:bg-primary/5 hover:border-primary/40"
                                                                             onClick={() => {
-                                                                                setSettingsGroupId(g.id);
-                                                                                setEditGroupName(g.name);
+                                                                                setSettingsGroupId(g.id!);
+                                                                                setEditGroupName(g.name ?? "");
                                                                                 setSettingsSwitchingToPrivate(false);
                                                                             }}
                                                                         >
@@ -1003,7 +1003,7 @@ export function Header() {
                                                                             variant="outline"
                                                                             size="sm"
                                                                             className="h-9 text-xs w-full border-border/60 hover:bg-primary/5 hover:border-primary/40"
-                                                                            onClick={() => handleToggleGroupType(g.id, g.isPrivate)}
+                                                                            onClick={() => handleToggleGroupType(g.id!, g.isPrivate!)}
                                                                         >
                                                                             {g.isPrivate ? (
                                                                                 <>
@@ -1033,7 +1033,7 @@ export function Header() {
                                                                         variant="outline"
                                                                         size="sm"
                                                                         className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
-                                                                        onClick={() => handleGenerateOtp(g.id)}
+                                                                        onClick={() => handleGenerateOtp(g.id!)}
                                                                     >
                                                                         <KeyRound className="h-3.5 w-3.5 mr-1.5"/>
                                                                         {t("generateOtp")}
@@ -1042,7 +1042,7 @@ export function Header() {
                                                                         variant="outline"
                                                                         size="sm"
                                                                         className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
-                                                                        onClick={() => setChangePasswordGroupId(g.id)}
+                                                                        onClick={() => setChangePasswordGroupId(g.id!)}
                                                                     >
                                                                         <RefreshCw className="h-3.5 w-3.5 mr-1.5"/>
                                                                         {t("changePassword")}
@@ -1050,7 +1050,7 @@ export function Header() {
                                                                 </div>
 
                                                                 {/* Show generated OTP */}
-                                                                {generatedOtps.get(g.id) && (
+                                                                {generatedOtps.get(g.id!) && (
                                                                     <div
                                                                         className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
                                                                         <div className="flex items-center justify-between">
@@ -1060,14 +1060,14 @@ export function Header() {
                                                                             <div className="flex items-center gap-2">
                                                                                 <div className="h-2 w-2 rounded-full bg-primary animate-pulse"/>
                                                                                 <span className="text-xs font-bold text-primary tabular-nums">
-                                                                            {generatedOtps.get(g.id)!.remainingSeconds}s
+                                                                            {generatedOtps.get(g.id!)!.remainingSeconds}s
                                                                         </span>
                                                                             </div>
                                                                         </div>
 
                                                                         {/* Progress bar */}
                                                                         <Progress
-                                                                            value={(generatedOtps.get(g.id)!.remainingSeconds / 10) * 100}
+                                                                            value={(generatedOtps.get(g.id!)!.remainingSeconds / 10) * 100}
                                                                             className="h-1.5"
                                                                         />
 
@@ -1075,7 +1075,7 @@ export function Header() {
                                                                             className="bg-background/80 backdrop-blur-sm p-3 rounded-lg shadow-sm">
                                                                             <code
                                                                                 className="text-3xl font-mono font-bold text-primary block text-center tracking-[0.4em] drop-shadow-sm">
-                                                                                {generatedOtps.get(g.id)!.code}
+                                                                                {generatedOtps.get(g.id!)!.code}
                                                                             </code>
                                                                         </div>
                                                                         <Button
@@ -1083,7 +1083,7 @@ export function Header() {
                                                                             size="sm"
                                                                             className="h-9 w-full text-xs border-primary/30 hover:bg-primary hover:text-primary-foreground transition-colors"
                                                                             onClick={() => {
-                                                                                navigator.clipboard.writeText(generatedOtps.get(g.id)!.code);
+                                                                                navigator.clipboard.writeText(generatedOtps.get(g.id!)!.code);
                                                                                 setCopied(true);
                                                                                 setTimeout(() => setCopied(false), 2000);
                                                                             }}
@@ -1133,7 +1133,7 @@ export function Header() {
                                                                             <Button
                                                                                 size="sm"
                                                                                 className="h-9 flex-1 bg-primary hover:bg-primary/90"
-                                                                                onClick={() => handleUpdatePassword(g.id)}
+                                                                                onClick={() => handleUpdatePassword(g.id!)}
                                                                             >
                                                                                 <Check className="h-3.5 w-3.5 mr-1.5"/>
                                                                                 {t("save")}
@@ -1152,7 +1152,7 @@ export function Header() {
                                                     <FieldGroup className="space-y-2">
                                                         <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">{t("members")}</p>
                                                         <div className="space-y-1.5">
-                                                            {g.members.map((m) => {
+                                                            {(g.members ?? []).map((m) => {
                                                                 const isMemberOwner = m.userId === g.createdByUserId;
                                                                 const isSelf = m.userId === user?.id;
 
@@ -1224,7 +1224,7 @@ export function Header() {
                                                                                             }
                                                                                             onConfirm={async () => {
                                                                                                 try {
-                                                                                                    await handleChangeRole(g.id, m.userId, m.role);
+                                                                                                    await handleChangeRole(g.id!, m.userId!, m.role!);
                                                                                                 } catch {
                                                                                                     setError(t("errorChangingRole"));
                                                                                                 }
@@ -1249,7 +1249,7 @@ export function Header() {
                                                                                             }
                                                                                             onConfirm={async () => {
                                                                                                 try {
-                                                                                                    await transferOwnership(g.id, m.userId);
+                                                                                                    await transferOwnership(g.id!, m.userId!);
                                                                                                 } catch {
                                                                                                     setError(t("failedToTransfer"));
                                                                                                 }
@@ -1276,7 +1276,7 @@ export function Header() {
                                                                                     }
                                                                                     onConfirm={async () => {
                                                                                         try {
-                                                                                            await kickMember(g.id, m.userId);
+                                                                                            await kickMember(g.id!, m.userId!);
                                                                                         } catch {
                                                                                             setError(t("failedToKick"));
                                                                                         }
