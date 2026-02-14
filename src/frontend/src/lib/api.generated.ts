@@ -199,9 +199,26 @@ export interface MovieDto {
   createdAt?: string;
 }
 
+export interface PermissionsResponse {
+  /** @format int32 */
+  permissionFlags?: number;
+  canViewEntries?: boolean;
+  canCreateEntries?: boolean;
+  canEditOwnEntries?: boolean;
+  canEditAllEntries?: boolean;
+  canDeleteOwnEntries?: boolean;
+  canDeleteAllEntries?: boolean;
+  canRateSelf?: boolean;
+  canRateOthers?: boolean;
+  canManageMembers?: boolean;
+  canManageGroup?: boolean;
+}
+
 export interface RateRequest {
   /** @format int32 */
   rating?: number;
+  /** @format int32 */
+  targetUserId?: number | null;
 }
 
 export interface RatingResponse {
@@ -250,6 +267,11 @@ export interface UpdateGroupPasswordRequest {
   newPassword?: string | null;
 }
 
+export interface UpdateGroupSettingsRequest {
+  name?: string | null;
+  isPrivate?: boolean | null;
+}
+
 export interface UpdateMemberRoleRequest {
   role?: GroupRole;
 }
@@ -271,10 +293,6 @@ export interface UpdateUserSettingsRequest {
 
 export interface UpdateWatchEntryRequest {
   status?: WatchStatus;
-  /** @format int32 */
-  myRating?: number | null;
-  /** @format int32 */
-  partnerRating?: number | null;
   emotion?: Emotion;
   comment?: string | null;
   privateComment?: string | null;
@@ -283,8 +301,6 @@ export interface UpdateWatchEntryRequest {
   /** @format date-time */
   completedAt?: string | null;
   /** @format int32 */
-  rating?: number | null;
-  /** @format int32 */
   currentSeason?: number | null;
   /** @format int32 */
   currentEpisode?: number | null;
@@ -292,7 +308,6 @@ export interface UpdateWatchEntryRequest {
   totalEpisodes?: number | null;
   /** @format int32 */
   watchingTime?: number | null;
-  ratings?: UserRatingInput[] | null;
   viewers?: number[] | null;
 }
 
@@ -335,6 +350,8 @@ export interface WatchEntryDto {
   id?: number;
   /** @format int32 */
   movieId?: number;
+  /** @format int32 */
+  userId?: number;
   movie?: MovieDto;
   status?: WatchStatus;
   /** @format int32 */
@@ -802,6 +819,44 @@ export class Api<
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Updates group name and/or privacy settings (Owner/Admin only)
+     *
+     * @tags GroupEndpoints
+     * @name GroupsSettingsUpdate
+     * @summary Update group settings
+     * @request PUT:/api/groups/{id}/settings
+     */
+    groupsSettingsUpdate: (
+      id: number,
+      data: UpdateGroupSettingsRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<GroupDto, ErrorResponse | void>({
+        path: `/api/groups/${id}/settings`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Returns the effective permissions for the current user in a specific group
+     *
+     * @tags GroupEndpoints
+     * @name GroupsMyPermissionsList
+     * @summary Get my permissions for a group
+     * @request GET:/api/groups/{id}/my-permissions
+     */
+    groupsMyPermissionsList: (id: number, params: RequestParams = {}) =>
+      this.request<PermissionsResponse, void>({
+        path: `/api/groups/${id}/my-permissions`,
+        method: "GET",
         format: "json",
         ...params,
       }),
