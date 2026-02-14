@@ -55,7 +55,7 @@ export function PermissionsProvider({children}: { children: React.ReactNode }) {
 
     const {data, isLoading} = useQuery({
         queryKey: ["permissions", activeGroup?.id],
-        queryFn: () => getMyPermissions(activeGroup!.id),
+        queryFn: () => getMyPermissions(activeGroup!.id!),
         enabled: isAuthenticated && isGroupMode && !!activeGroup?.id,
     });
 

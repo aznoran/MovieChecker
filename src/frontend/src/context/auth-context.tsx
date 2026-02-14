@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("user", JSON.stringify(response.user));
       }
       setToken(response.token);
-      setUser(response.user as User);
+      setUser(response.user);
     } else {
       throw new Error("Invalid authentication response");
     }
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("user", JSON.stringify(response.user));
       }
       setToken(response.token);
-      setUser(response.user as User);
+      setUser(response.user);
     } else {
       throw new Error("Invalid authentication response");
     }
