@@ -226,7 +226,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 : undefined;
 
             await createWatchEntry({
-                movieId: movie.id,
+                movieId: movie.id ?? 0,
                 status,
                 rating: !isGroupMode && myRating ? myRating * 2 : undefined,
                 ratings: ratingsArray,
@@ -744,8 +744,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                     </FieldDescription>
                                 </FieldContent>
                                 <div className="flex flex-wrap gap-2">
-                                    {activeGroup.members.map((m) => {
-                                        const selected = selectedMembers.includes(m.userId);
+                                    {activeGroup.members?.map((m) => {
+                                        const selected = selectedMembers.includes(m.userId!);
                                         return (
                                             <Button
                                                 key={m.userId}
@@ -757,11 +757,11 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                         setSelectedMembers((prev) => prev.filter((id) => id !== m.userId));
                                                         setMemberRatings((prev) => {
                                                             const next = {...prev};
-                                                            delete next[m.userId];
+                                                            delete next[m.userId!];
                                                             return next;
                                                         });
                                                     } else {
-                                                        setSelectedMembers((prev) => [...prev, m.userId]);
+                                                        setSelectedMembers((prev) => [...prev, m.userId!]);
                                                     }
                                                 }}
                                             >
@@ -782,7 +782,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                         </FieldLegend>
                                         <FieldGroup className="gap-4">
                                             {selectedMembers.map((uid) => {
-                                                const member = activeGroup.members.find((m) => m.userId === uid);
+                                                const member = activeGroup.members?.find((m) => m.userId === uid);
                                                 if (!member) return null;
                                                 return (
                                                     <Field key={uid} orientation="horizontal" className="gap-4">
