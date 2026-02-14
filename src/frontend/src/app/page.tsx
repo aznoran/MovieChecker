@@ -9,7 +9,7 @@ import {useGroup} from "@/context/group-context";
 import {usePermissions} from "@/context/permissions-context";
 import {ConfirmDialog} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
-import {WatchStatus, EmotionEmojis, GroupType} from "@/lib/api";
+import {WatchStatus, EmotionEmojis, GroupType, ContentType} from "@/lib/api";
 import type {WatchEntry} from "@/lib/api";
 import {
     getContentTypeLabels,
@@ -203,7 +203,7 @@ export default function HomePage() {
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {entries.map((entry) => {
-                            const posterSrc = getPosterUrl(entry.movie.posterUrl);
+                            const posterSrc = getPosterUrl(entry.movie!.posterUrl);
                             return (
                                 <Card
                                     key={entry.id}
@@ -214,7 +214,7 @@ export default function HomePage() {
                                         <div className="w-full aspect-[4/3] overflow-hidden">
                                             <img
                                                 src={posterSrc}
-                                                alt={entry.movie.title}
+                                                alt={entry.movie!.title ?? undefined}
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
@@ -228,22 +228,22 @@ export default function HomePage() {
                                         <div className="min-w-0">
                                             <div className="flex items-start justify-between gap-2 mb-4">
                                                 <div className="min-w-0 flex-1">
-                                                    <h3 className="font-semibold mb-2 truncate" title={entry.movie.title}>
-                                                        {entry.movie.title}
+                                                    <h3 className="font-semibold mb-2 truncate" title={entry.movie!.title ?? undefined}>
+                                                        {entry.movie!.title}
                                                     </h3>
                                                     <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap min-w-0">
                                                         <Film className="h-3 w-3 shrink-0"/>
-                                                        {contentTypeLabels[entry.movie.type]}
-                                                        {entry.movie.year && (
+                                                        {contentTypeLabels[entry.movie!.type! as ContentType]}
+                                                        {entry.movie!.year && (
                                                             <>
                                                                 <Calendar className="h-3 w-3 ml-1 shrink-0"/>
-                                                                {entry.movie.year}
+                                                                {entry.movie!.year}
                                                             </>
                                                         )}
-                                                        {entry.movie.genre && (
+                                                        {entry.movie!.genre && (
                                                             <>
                                                                 <Tag className="h-3 w-3 ml-1 shrink-0"/>
-                                                                <span className="truncate">{translateGenre(entry.movie.genre, locale)}</span>
+                                                                <span className="truncate">{translateGenre(entry.movie!.genre, locale)}</span>
                                                             </>
                                                         )}
                                                     </p>
@@ -258,9 +258,9 @@ export default function HomePage() {
                                             <div className="flex flex-wrap items-center gap-1.5 mb-4">
                                                 <Badge
                                                     variant="outline"
-                                                    className={statusColors[entry.status]}
+                                                    className={statusColors[entry.status!]}
                                                 >
-                                                    {watchStatusLabels[entry.status]}
+                                                    {watchStatusLabels[entry.status!]}
                                                 </Badge>
                                             </div>
                                             {entry.status === WatchStatus.Watching && (
@@ -296,7 +296,7 @@ export default function HomePage() {
 
                                             {entry.ratings && entry.ratings.length > 0 && (() => {
                                                 const sorted = [...entry.ratings].sort((a, b) =>
-                                                    a.displayName.localeCompare(b.displayName)
+                                                    (a.displayName ?? "").localeCompare(b.displayName ?? "")
                                                 );
                                                 return (
                                                     <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm mb-4">
@@ -305,7 +305,7 @@ export default function HomePage() {
                                                               <Star className="h-3.5 w-3.5 text-yellow-400 shrink-0"/>
                                                               <span
                                                                   className="text-muted-foreground truncate max-w-[80px]">{r.displayName}:</span>
-                                                              <strong className="shrink-0">{r.rating/2}/10</strong>
+                                                              <strong className="shrink-0">{(r.rating ?? 0)/2}/10</strong>
                                                             </span>
                                                         ))}
                                                         {sorted.length > 3 && (
@@ -317,9 +317,9 @@ export default function HomePage() {
                                                 );
                                             })()}
 
-                                            {entry.movie.description && (
-                                                <p className="text-xs text-muted-foreground mb-4 break-words line-clamp-2" title={entry.movie.description}>
-                                                    {entry.movie.description.length > 100 ? entry.movie.description.slice(0, 100) + "..." : entry.movie.description}
+                                            {entry.movie!.description && (
+                                                <p className="text-xs text-muted-foreground mb-4 break-words line-clamp-2" title={entry.movie!.description}>
+                                                    {entry.movie!.description.length > 100 ? entry.movie!.description.slice(0, 100) + "..." : entry.movie!.description}
                                                 </p>
                                             )}
 
@@ -344,7 +344,7 @@ export default function HomePage() {
                                                             {t("delete")}
                                                         </Button>
                                                     }
-                                                    onConfirm={() => deleteMutation.mutate(entry.id)}
+                                                    onConfirm={() => deleteMutation.mutate(entry.id!)}
                                                     title={t("delete")}
                                                     description={t("deleteConfirm")}
                                                     confirmText={t("delete")}
