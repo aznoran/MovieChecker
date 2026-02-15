@@ -1,12 +1,11 @@
 "use client";
 
 import { toast } from "sonner"
-import {useState, useRef, useEffect, useCallback} from "react";
-import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {createMovie, createWatchEntry, uploadPoster} from "@/lib/api";
-import {useLocale} from "@/context/locale-context";
-import {useGroup} from "@/context/group-context";
-import {useAuth} from "@/context/auth-context";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createMovie, createWatchEntry, uploadPoster } from "@/lib/api";
+import { useLocale } from "@/context/locale-context";
+import { useGroup } from "@/context/group-context";
 import {
     Cropper,
     CropperImage,
@@ -20,7 +19,7 @@ import {
     Emotion,
     EmotionEmojis,
     GroupType,
-} from "@/lib/api";
+} from "@/lib/api.generated";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,

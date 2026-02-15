@@ -4,33 +4,14 @@ import {
   WatchStatus,
   Emotion,
   GroupRole,
-  GroupType,
   CreateMovieRequest,
   UpdateMovieRequest,
-} from "./api.generated";
-import type {
   AuthResponse,
-  UserDto,
   MovieDto,
   WatchEntryDto,
   GroupDto,
-  GroupMemberDto,
-  EntryRatingDto,
-  MemberRatingDto,
   StatsDto,
 } from "./api.generated";
-
-// Re-export generated enums and Dto types directly
-export { ContentType, WatchStatus, Emotion, GroupRole, GroupType };
-export type { AuthResponse };
-export type User = UserDto;
-export type Movie = MovieDto;
-export type WatchEntry = WatchEntryDto;
-export type Group = GroupDto;
-export type GroupMember = GroupMemberDto;
-export type EntryRating = EntryRatingDto;
-export type MemberRatingStats = MemberRatingDto;
-export type Stats = StatsDto;
 
 // Label constants
 export const EmotionEmojis: Record<Emotion, string> = {
@@ -103,22 +84,22 @@ export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
 };
 
 // Movies
-export const getMovies = async (type?: ContentType): Promise<Movie[]> => {
+export const getMovies = async (type?: ContentType): Promise<MovieDto[]> => {
   const response = await apiClient.api.moviesList(type !== undefined ? { type } : undefined);
   return response.data;
 };
 
-export const getMovie = async (id: number): Promise<Movie> => {
+export const getMovie = async (id: number): Promise<MovieDto> => {
   const response = await apiClient.api.moviesDetail(id);
   return response.data;
 };
 
-export const createMovie = async (movie: CreateMovieRequest): Promise<Movie> => {
+export const createMovie = async (movie: CreateMovieRequest): Promise<MovieDto> => {
   const response = await apiClient.api.moviesCreate(movie);
   return response.data;
 };
 
-export const updateMovie = async (id: number, movie: UpdateMovieRequest): Promise<Movie> => {
+export const updateMovie = async (id: number, movie: UpdateMovieRequest): Promise<MovieDto> => {
   const response = await apiClient.api.moviesUpdate(id, movie);
   return response.data;
 };
@@ -127,13 +108,13 @@ export const deleteMovie = async (id: number): Promise<void> => {
   await apiClient.api.moviesDelete(id);
 };
 
-export const searchMovies = async (query: string): Promise<Movie[]> => {
+export const searchMovies = async (query: string): Promise<MovieDto[]> => {
   const response = await apiClient.api.moviesSearchList({ q: query });
   return response.data;
 };
 
 // Watch Entries
-export const getWatchEntries = async (status?: WatchStatus, groupId?: number): Promise<WatchEntry[]> => {
+export const getWatchEntries = async (status?: WatchStatus, groupId?: number): Promise<WatchEntryDto[]> => {
   const query: { status?: WatchStatus; groupId?: number } = {};
   if (status !== undefined) query.status = status;
   if (groupId !== undefined) query.groupId = groupId;
@@ -141,7 +122,7 @@ export const getWatchEntries = async (status?: WatchStatus, groupId?: number): P
   return response.data;
 };
 
-export const getWatchEntry = async (id: number): Promise<WatchEntry> => {
+export const getWatchEntry = async (id: number): Promise<WatchEntryDto> => {
   const response = await apiClient.api.watchEntriesDetail(id);
   return response.data;
 };
@@ -155,7 +136,7 @@ export const createWatchEntry = async (entry: {
   rating?: number;
   ratings?: { userId: number; rating: number }[];
   viewers?: number[];
-}): Promise<WatchEntry> => {
+}): Promise<WatchEntryDto> => {
   const response = await apiClient.api.watchEntriesCreate(entry);
   return response.data;
 };
@@ -172,7 +153,7 @@ export const updateWatchEntry = async (
     totalEpisodes?: number;
     watchingTime?: number;
   }
-): Promise<WatchEntry> => {
+): Promise<WatchEntryDto> => {
   const response = await apiClient.api.watchEntriesUpdate(id, entry);
   return response.data;
 };
@@ -192,23 +173,23 @@ export const deleteWatchEntry = async (id: number): Promise<void> => {
   await apiClient.api.watchEntriesDelete(id);
 };
 
-export const getStats = async (groupId?: number): Promise<Stats> => {
+export const getStats = async (groupId?: number): Promise<StatsDto> => {
   const response = await apiClient.api.watchEntriesStatsList(groupId !== undefined ? { groupId } : undefined);
   return response.data;
 };
 
 // Groups
-export const getMyGroups = async (): Promise<Group[]> => {
+export const getMyGroups = async (): Promise<GroupDto[]> => {
   const response = await apiClient.api.groupsList();
   return response.data;
 };
 
-export const getGroup = async (id: number): Promise<Group> => {
+export const getGroup = async (id: number): Promise<GroupDto> => {
   const response = await apiClient.api.groupsDetail(id);
   return response.data;
 };
 
-export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: GroupRole): Promise<Group> => {
+export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: GroupRole): Promise<GroupDto> => {
   const response = await apiClient.api.groupsCreate({ 
     name, 
     isPrivate, 
@@ -233,7 +214,7 @@ export const checkInviteCode = async (inviteCode: string): Promise<{
   };
 };
 
-export const joinGroup = async (inviteCode: string, password?: string, otp?: string): Promise<Group> => {
+export const joinGroup = async (inviteCode: string, password?: string, otp?: string): Promise<GroupDto> => {
   const response = await apiClient.api.groupsJoinCreate({ inviteCode, password, otp });
   return response.data;
 };
@@ -266,7 +247,7 @@ export const updateGroupPassword = async (groupId: number, newPassword?: string)
   await apiClient.api.groupsPasswordUpdate(groupId, { newPassword });
 };
 
-export const updateGroupSettings = async (groupId: number, settings: { name?: string; isPrivate?: boolean }): Promise<Group> => {
+export const updateGroupSettings = async (groupId: number, settings: { name?: string; isPrivate?: boolean }): Promise<GroupDto> => {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
   const response = await apiClient.instance.put(`/api/groups/${groupId}/settings`, settings, {

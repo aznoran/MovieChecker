@@ -6,7 +6,7 @@ import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
-import {EmotionEmojis, GroupType, ContentType, Emotion} from "@/lib/api";
+import {EmotionEmojis, GroupType, ContentType, Emotion} from "@/lib/api.generated";
 import {
     getContentTypeLabels,
     getEmotionLabels,
@@ -37,10 +37,10 @@ import {Rating, RatingItem} from "@/components/ui/rating";
 export const dynamic = "force-dynamic";
 
 function ProgressBar({
-                         value,
-                         max,
-                         color,
-                     }: {
+     value,
+     max,
+     color,
+ }: {
     value: number;
     max: number;
     color: string;

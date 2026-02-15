@@ -26,15 +26,15 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({
-                                  trigger,
-                                  onConfirm,
-                                  title,
-                                  description,
-                                  confirmText,
-                                  cancelText,
-                                  variant = "default",
-                                  icon,
-                              }: ConfirmDialogProps) {
+  trigger,
+  onConfirm,
+  title,
+  description,
+  confirmText,
+  cancelText,
+  variant = "default",
+  icon,
+}: ConfirmDialogProps) {
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>

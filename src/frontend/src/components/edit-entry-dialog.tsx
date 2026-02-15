@@ -20,8 +20,8 @@ import {
     WatchStatus,
     Emotion,
     EmotionEmojis,
-} from "@/lib/api";
-import type {WatchEntry} from "@/lib/api";
+} from "@/lib/api.generated";
+import type {WatchEntry} from "@/lib/api.generated";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,

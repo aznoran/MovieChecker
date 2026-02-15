@@ -9,8 +9,8 @@ import {useGroup} from "@/context/group-context";
 import {usePermissions} from "@/context/permissions-context";
 import {ConfirmDialog} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
-import {WatchStatus, EmotionEmojis, GroupType, ContentType} from "@/lib/api";
-import type {WatchEntry} from "@/lib/api";
+import {WatchStatus, EmotionEmojis, GroupType, ContentType} from "@/lib/api.generated";
+import type {WatchEntryDto} from "@/lib/api.generated";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
@@ -61,7 +61,7 @@ export default function HomePage() {
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     // Check if user can delete an entry based on permissions
-    const canDeleteEntry = (entry: WatchEntry): boolean => {
+    const canDeleteEntry = (entry: WatchEntryDto): boolean => {
         if (permissions.canDeleteAllEntries) return true;
         if (permissions.canDeleteOwnEntries) return entry.ratings?.some(r => r.userId === user?.id) || false;
         return false;
@@ -71,7 +71,7 @@ export default function HomePage() {
     const canCreate = permissions.canCreateEntries;
 
     const [addOpen, setAddOpen] = useState(false);
-    const [editEntry, setEditEntry] = useState<WatchEntry | null>(null);
+    const [editEntry, setEditEntry] = useState<WatchEntryDto | null>(null);
     const [statusFilter, setStatusFilter] = useState<WatchStatus | null>(null);
 
     const {data: entries = [], isLoading, error, refetch} = useQuery({

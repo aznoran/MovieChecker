@@ -15,26 +15,26 @@ import {
     updateGroupPassword as apiUpdateGroupPassword,
     updateGroupSettings as apiUpdateGroupSettings,
 } from "@/lib/api";
-import type {Group} from "@/lib/api";
-import {GroupType, GroupRole} from "@/lib/api";
+import type {GroupDto} from "@/lib/api.generated";
+import {GroupType, GroupRole} from "@/lib/api.generated";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 
 interface GroupContextValue {
-    groups: Group[];
-    personalGroup: Group | undefined;
+    groups: GroupDto[];
+    personalGroup: GroupDto | undefined;
     activeGroupId: number | undefined;
-    activeGroup: Group | undefined;
+    activeGroup: GroupDto | undefined;
     setActiveGroupId: (id: number | undefined) => void;
-    createGroup: (name: string, isPrivate?: boolean, password?: string, defaultRole?: GroupRole) => Promise<Group>;
-    joinGroup: (code: string, password?: string, otp?: string) => Promise<Group>;
+    createGroup: (name: string, isPrivate?: boolean, password?: string, defaultRole?: GroupRole) => Promise<GroupDto>;
+    joinGroup: (code: string, password?: string, otp?: string) => Promise<GroupDto>;
     leaveGroup: (id: number) => Promise<void>;
     kickMember: (groupId: number, userId: number) => Promise<void>;
     transferOwnership: (groupId: number, newOwnerId: number) => Promise<void>;
     updateMemberRole: (groupId: number, userId: number, role: GroupRole) => Promise<void>;
     generateOtp: (groupId: number) => Promise<{ code: string; expiresAt: string }>;
     updatePassword: (groupId: number, newPassword?: string) => Promise<void>;
-    updateGroupSettings: (groupId: number, settings: { name?: string; isPrivate?: boolean }) => Promise<Group>;
+    updateGroupSettings: (groupId: number, settings: { name?: string; isPrivate?: boolean }) => Promise<GroupDto>;
     isLoading: boolean;
 }
 

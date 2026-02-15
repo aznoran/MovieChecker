@@ -9,7 +9,6 @@ import {useGroup} from "@/context/group-context";
 import {ConfirmDialog} from "@/components/confirm-dialog";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {Checkbox} from "@/components/ui/checkbox";
 import {
   Field,
   FieldLabel,
@@ -67,7 +66,7 @@ import {
     Settings,
 } from "lucide-react";
 import type {Locale} from "@/lib/i18n";
-import {GroupRole, GroupType} from "@/lib/api";
+import {GroupRole, GroupType} from "@/lib/api.generated";
 import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {checkInviteCode} from "@/lib/api";

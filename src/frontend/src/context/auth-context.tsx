@@ -7,11 +7,11 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import type { User } from "@/lib/api";
+import type { UserDto } from "@/lib/api.generated";
 import { login as apiLogin, register as apiRegister } from "@/lib/api";
 
 interface AuthContextType {
-  user: User | null;
+  user: UserDto | null;
   token: string | null;
   login: (username: string, password: string) => Promise<void>;
   register: (
@@ -27,7 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
+  const [user, setUser] = useState<UserDto | null>(() => {
     if (typeof window === "undefined") return null;
     const storedUser = localStorage.getItem("user");
     if (!storedUser) return null;
