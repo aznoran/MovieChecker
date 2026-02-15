@@ -14,7 +14,6 @@ public class WatchEntry
     public int? MyRating { get; set; }
     public int? PartnerRating { get; set; }
 
-    public Emotion? Emotion { get; set; }
     public string? Comment { get; set; }
     public string? PrivateComment { get; set; }
 

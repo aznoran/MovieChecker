@@ -83,7 +83,6 @@ public static class WatchEntryEndpoints
         ),
         w.Status,
         w.GroupId,
-        w.Emotion,
         w.Comment,
         w.Ratings.Select(r => new EntryRatingDto(
             r.Id,
@@ -188,11 +187,6 @@ public static class WatchEntryEndpoints
         if (request.Comment != null && request.Comment.Length > 1000)
             return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
 
-        // Validate emotion - cannot set emotion for Planned or Watching status
-        if (request.Emotion.HasValue &&
-            (request.Status == WatchStatus.Planned || request.Status == WatchStatus.Watching))
-            return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
-
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
             return Results.BadRequest(new ErrorResponse(localizer["MovieNotFound"]));
 
@@ -226,7 +220,6 @@ public static class WatchEntryEndpoints
             Status = request.Status,
             MyRating = request.MyRating.HasValue ? request.MyRating.Value : null,
             PartnerRating = request.PartnerRating.HasValue ? request.PartnerRating.Value : null,
-            Emotion = request.Emotion,
             Comment = request.Comment,
             PrivateComment = request.PrivateComment,
             StartedAt = request.StartedAt,
@@ -374,14 +367,7 @@ public static class WatchEntryEndpoints
         if (request.Comment != null && request.Comment.Length > 1000)
             return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
 
-        // Validate emotion - cannot set emotion for Planned or Watching status
-        var effectiveStatus = request.Status ?? entry.Status;
-        if (request.Emotion.HasValue &&
-            (effectiveStatus == WatchStatus.Planned || effectiveStatus == WatchStatus.Watching))
-            return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
-
         if (request.Status.HasValue) entry.Status = request.Status.Value;
-        if (request.Emotion.HasValue) entry.Emotion = request.Emotion.Value;
         if (request.Comment != null) entry.Comment = request.Comment;
         if (request.PrivateComment != null) entry.PrivateComment = request.PrivateComment;
         if (request.StartedAt.HasValue) entry.StartedAt = request.StartedAt.Value;
@@ -596,8 +582,6 @@ public static class WatchEntryEndpoints
             AverageMyRating: myRatings.Count > 0 ? myRatings.Average() : 0,
             AveragePartnerRating: otherRatings.Count > 0 ? otherRatings.Average() : 0,
             ByType: entries.GroupBy(e => e.Movie.Type.ToString()).ToDictionary(g => g.Key, g => g.Count()),
-            ByEmotion: entries.Where(e => e.Emotion.HasValue).GroupBy(e => e.Emotion!.Value.ToString())
-                .ToDictionary(g => g.Key, g => g.Count()),
             MemberRatings: allRatings
                 .GroupBy(r => r.UserId)
                 .Select(g => new MemberRatingDto(

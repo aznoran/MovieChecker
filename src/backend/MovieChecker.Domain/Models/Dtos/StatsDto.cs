@@ -8,6 +8,5 @@ public record StatsDto(
     double AverageMyRating,
     double AveragePartnerRating,
     Dictionary<string, int> ByType,
-    Dictionary<string, int> ByEmotion,
     List<MemberRatingDto> MemberRatings
 );

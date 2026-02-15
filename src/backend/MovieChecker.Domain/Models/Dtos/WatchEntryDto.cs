@@ -9,7 +9,6 @@ public record WatchEntryDto(
     MovieDto Movie,
     WatchStatus Status,
     int? GroupId,
-    Emotion? Emotion,
     string? Comment,
     List<EntryRatingDto> Ratings,
     DateTime? StartedAt,

@@ -7,7 +7,6 @@ public record CreateWatchEntryRequest(
     WatchStatus Status,
     int? MyRating,
     int? PartnerRating,
-    Emotion? Emotion,
     string? Comment,
     string? PrivateComment,
     DateTime? StartedAt,

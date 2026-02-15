@@ -4,7 +4,6 @@ namespace MovieChecker.Domain.Models.Dtos;
 
 public record UpdateWatchEntryRequest(
     WatchStatus? Status,
-    Emotion? Emotion,
     string? Comment,
     string? PrivateComment,
     DateTime? StartedAt,
