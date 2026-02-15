@@ -26,12 +26,12 @@ interface GroupContextValue {
     activeGroupId: number | undefined;
     activeGroup: Group | undefined;
     setActiveGroupId: (id: number | undefined) => void;
-    createGroup: (name: string, isPrivate?: boolean, password?: string, defaultRole?: number) => Promise<Group>;
+    createGroup: (name: string, isPrivate?: boolean, password?: string, defaultRole?: GroupRole) => Promise<Group>;
     joinGroup: (code: string, password?: string, otp?: string) => Promise<Group>;
     leaveGroup: (id: number) => Promise<void>;
     kickMember: (groupId: number, userId: number) => Promise<void>;
     transferOwnership: (groupId: number, newOwnerId: number) => Promise<void>;
-    updateMemberRole: (groupId: number, userId: number, role: number) => Promise<void>;
+    updateMemberRole: (groupId: number, userId: number, role: GroupRole) => Promise<void>;
     generateOtp: (groupId: number) => Promise<{ code: string; expiresAt: string }>;
     updatePassword: (groupId: number, newPassword?: string) => Promise<void>;
     updateGroupSettings: (groupId: number, settings: { name?: string; isPrivate?: boolean }) => Promise<Group>;
@@ -102,7 +102,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 
     const createMutation = useMutation({
-        mutationFn: ({ name, isPrivate, password, defaultRole }: { name: string, isPrivate?: boolean, password?: string, defaultRole?: number }) =>
+        mutationFn: ({ name, isPrivate, password, defaultRole }: { name: string, isPrivate?: boolean, password?: string, defaultRole?: GroupRole }) =>
             apiCreateGroup(name, isPrivate, password, defaultRole),
         onSuccess: async (group) => {
             toast.success(t("groupCreateSuccess"), { position: "top-center" });
@@ -219,7 +219,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
                 leaveGroup: (id) => leaveMutation.mutateAsync(id),
                 kickMember: (groupId, userId) => kickMutation.mutateAsync({groupId, userId}),
                 transferOwnership: (groupId, newOwnerId) => transferMutation.mutateAsync({groupId, newOwnerId}),
-                updateMemberRole: (groupId, userId, role) => updateRoleMutation.mutateAsync({groupId, userId, role: role as GroupRole}),
+                updateMemberRole: (groupId, userId, role) => updateRoleMutation.mutateAsync({groupId, userId, role}),
                 generateOtp: (groupId) => generateOtpMutation.mutateAsync(groupId),
                 updatePassword: (groupId, newPassword) => updatePasswordMutation.mutateAsync({groupId, newPassword}),
                 updateGroupSettings: (groupId, settings) => updateSettingsMutation.mutateAsync({groupId, settings}),

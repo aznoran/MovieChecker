@@ -6,7 +6,7 @@ import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
-import {EmotionEmojis, GroupType} from "@/lib/api";
+import {EmotionEmojis, GroupType, ContentType, Emotion} from "@/lib/api";
 import {
     getContentTypeLabels,
     getEmotionLabels,
@@ -392,14 +392,6 @@ export default function StatsPage() {
                         {/* ── By Content Type ── */}
                         {Object.keys(stats.byType ?? {}).length > 0 && (() => {
                             const contentTypeLabels = getContentTypeLabels(locale);
-                            // Map enum names to ContentType enum values for translation
-                            const typeNameMap: Record<string, string> = {
-                                "Movie": contentTypeLabels[0],
-                                "Series": contentTypeLabels[1],
-                                "Anime": contentTypeLabels[2],
-                                "Cartoon": contentTypeLabels[3],
-                                "Show": contentTypeLabels[4],
-                            };
                             const typeEntries = Object.entries(stats.byType ?? {});
                             const maxTypeCount = Math.max(...typeEntries.map(([, c]) => c));
                             const typeColors = [
@@ -422,7 +414,7 @@ export default function StatsPage() {
                                             {typeEntries.map(([typeName, count], i) => (
                                                 <div key={typeName} className="space-y-1">
                                                     <div className="flex items-center justify-between text-sm">
-                                                        <span>{typeNameMap[typeName] || typeName}</span>
+                                                        <span>{contentTypeLabels[typeName as ContentType] || typeName}</span>
                                                         <span className="font-semibold">{count}</span>
                                                     </div>
                                                     <ProgressBar
@@ -443,14 +435,6 @@ export default function StatsPage() {
                             const emotionEntries = Object.entries(stats.byEmotion ?? {});
                             const maxEmotionCount = Math.max(...emotionEntries.map(([, c]) => c));
                             const emotionLabels = getEmotionLabels(locale);
-                            // Map emotion enum names to emojis and translated labels
-                            const emotionEnumNames = ["Joy", "Sadness", "Excitement", "Cringe", "Confused", "Neutral"];
-                            const emotionNameToEmoji: Record<string, string> = {};
-                            const emotionNameToLabel: Record<string, string> = {};
-                            emotionEnumNames.forEach((name, idx) => {
-                                emotionNameToEmoji[name] = EmotionEmojis[idx as keyof typeof EmotionEmojis] || "";
-                                emotionNameToLabel[name] = emotionLabels[idx as keyof typeof emotionLabels] || name;
-                            });
                             return (
                                 <Card>
                                     <CardHeader className="pb-3">
@@ -462,8 +446,8 @@ export default function StatsPage() {
                                     <CardContent>
                                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                             {emotionEntries.map(([emotionName, count]) => {
-                                                const emoji = emotionNameToEmoji[emotionName] || "";
-                                                const displayName = emotionNameToLabel[emotionName] || emotionName;
+                                                const emoji = EmotionEmojis[emotionName] || "";
+                                                const displayName = emotionLabels[emotionName as Emotion] || emotionName;
                                                 const pct = maxEmotionCount > 0 ? Math.round((count / maxEmotionCount) * 100) : 0;
                                                 return (
                                                     <div

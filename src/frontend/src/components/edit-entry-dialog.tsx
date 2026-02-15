@@ -914,8 +914,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 {t("status")}
                             </FieldLabel>
                             <Select
-                                value={status.toString()}
-                                onValueChange={(v) => setStatus(Number(v) as WatchStatus)}
+                                value={status}
+                                onValueChange={(v) => setStatus(v as WatchStatus)}
                                 disabled={!canEdit}
                             >
                                 <SelectTrigger>
@@ -1187,10 +1187,10 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 <Button
                                     key={value}
                                     type="button"
-                                    variant={emotion === Number(value) ? "default" : "outline"}
+                                    variant={emotion === value ? "default" : "outline"}
                                     size="sm"
                                     disabled={!canEdit}
-                                    onClick={() => setEmotion(Number(value) as Emotion)}
+                                    onClick={() => setEmotion(value as Emotion)}
                                     className="text-xl px-3"
                                 >
                                     {emoji}

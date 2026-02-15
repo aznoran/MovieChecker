@@ -10,46 +10,41 @@
  * ---------------------------------------------------------------
  */
 
-/** @format int32 */
 export enum WatchStatus {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
+  Planned = "Planned",
+  Watching = "Watching",
+  Completed = "Completed",
+  Dropped = "Dropped",
 }
 
-/** @format int32 */
 export enum GroupType {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
+  Public = "Public",
+  Private = "Private",
+  Personal = "Personal",
 }
 
-/** @format int32 */
 export enum GroupRole {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
+  Viewer = "Viewer",
+  Member = "Member",
+  Admin = "Admin",
+  Owner = "Owner",
 }
 
-/** @format int32 */
 export enum Emotion {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
+  Joy = "Joy",
+  Sadness = "Sadness",
+  Excitement = "Excitement",
+  Cringe = "Cringe",
+  Confused = "Confused",
+  Neutral = "Neutral",
 }
 
-/** @format int32 */
 export enum ContentType {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
+  Movie = "Movie",
+  Series = "Series",
+  Anime = "Anime",
+  Cartoon = "Cartoon",
+  Show = "Show",
 }
 
 export interface AuthResponse {
@@ -378,7 +373,7 @@ export interface FullRequestParams
   /** request path */
   path: string;
   /** content type of request body */
-  type?: ContentType;
+  type?: HttpContentType;
   /** query params */
   query?: QueryParamsType;
   /** format of response (i.e. response.json() -> format: "json") */
@@ -401,7 +396,7 @@ export interface ApiConfig<SecurityDataType = unknown>
   format?: ResponseType;
 }
 
-export enum ContentType {
+export enum HttpContentType {
   Json = "application/json",
   JsonApi = "application/vnd.api+json",
   FormData = "multipart/form-data",
@@ -504,7 +499,7 @@ export class HttpClient<SecurityDataType = unknown> {
     const responseFormat = format || this.format || undefined;
 
     if (
-      type === ContentType.FormData &&
+      type === HttpContentType.FormData &&
       body &&
       body !== null &&
       typeof body === "object"
@@ -513,7 +508,7 @@ export class HttpClient<SecurityDataType = unknown> {
     }
 
     if (
-      type === ContentType.Text &&
+      type === HttpContentType.Text &&
       body &&
       body !== null &&
       typeof body !== "string"
@@ -556,7 +551,7 @@ export class Api<
         path: `/api/auth/register`,
         method: "POST",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -574,7 +569,7 @@ export class Api<
         path: `/api/auth/login`,
         method: "POST",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -595,7 +590,7 @@ export class Api<
         path: `/api/auth/language`,
         method: "POST",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -629,7 +624,7 @@ export class Api<
         path: `/api/groups`,
         method: "POST",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -666,7 +661,7 @@ export class Api<
         path: `/api/groups/check-invite`,
         method: "POST",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -684,7 +679,7 @@ export class Api<
         path: `/api/groups/join`,
         method: "POST",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -740,7 +735,7 @@ export class Api<
         path: `/api/groups/${id}/transfer`,
         method: "PUT",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -763,7 +758,7 @@ export class Api<
         path: `/api/groups/${id}/members/${userId}/role`,
         method: "PUT",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -801,7 +796,7 @@ export class Api<
         path: `/api/groups/${id}/password`,
         method: "PUT",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -863,8 +858,7 @@ export class Api<
      */
     moviesList: (
       query?: {
-        /** @format int32 */
-        type?: number;
+        type?: ContentType;
       },
       params: RequestParams = {},
     ) =>
@@ -889,7 +883,7 @@ export class Api<
         path: `/api/movies`,
         method: "POST",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -927,7 +921,7 @@ export class Api<
         path: `/api/movies/${id}`,
         method: "PUT",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -988,7 +982,7 @@ export class Api<
         path: `/api/upload/poster`,
         method: "POST",
         body: data,
-        type: ContentType.FormData,
+        type: HttpContentType.FormData,
         format: "json",
         ...params,
       }),
@@ -1040,7 +1034,7 @@ export class Api<
         path: `/api/user-settings`,
         method: "PUT",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -1085,7 +1079,7 @@ export class Api<
         path: `/api/watch-entries`,
         method: "POST",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -1123,7 +1117,7 @@ export class Api<
         path: `/api/watch-entries/${id}`,
         method: "PUT",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),
@@ -1183,7 +1177,7 @@ export class Api<
         path: `/api/watch-entries/${id}/rate`,
         method: "POST",
         body: data,
-        type: ContentType.Json,
+        type: HttpContentType.Json,
         format: "json",
         ...params,
       }),

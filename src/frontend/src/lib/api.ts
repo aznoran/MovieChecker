@@ -1,7 +1,10 @@
 import {
   Api,
-  WatchStatus as GeneratedWatchStatus,
-  GroupRole as GeneratedGroupRole,
+  ContentType,
+  WatchStatus,
+  Emotion,
+  GroupRole,
+  GroupType,
   CreateMovieRequest,
   UpdateMovieRequest,
 } from "./api.generated";
@@ -17,7 +20,8 @@ import type {
   StatsDto,
 } from "./api.generated";
 
-// Re-export generated Dto types directly
+// Re-export generated enums and Dto types directly
+export { ContentType, WatchStatus, Emotion, GroupRole, GroupType };
 export type { AuthResponse };
 export type User = UserDto;
 export type Movie = MovieDto;
@@ -28,54 +32,8 @@ export type EntryRating = EntryRatingDto;
 export type MemberRatingStats = MemberRatingDto;
 export type Stats = StatsDto;
 
-// Domain constants with named members (generated enums use Value0, Value1, etc.)
-export const ContentType = {
-  Movie: 0,
-  Series: 1,
-  Anime: 2,
-  Cartoon: 3,
-  Show: 4,
-} as const;
-export type ContentType = (typeof ContentType)[keyof typeof ContentType];
-
-export const WatchStatus = {
-  Planned: 0,
-  Watching: 1,
-  Completed: 2,
-  Dropped: 3,
-} as const;
-export type WatchStatus = (typeof WatchStatus)[keyof typeof WatchStatus];
-
-export const Emotion = {
-  Joy: 0,
-  Sadness: 1,
-  Excitement: 2,
-  Cringe: 3,
-  Confused: 4,
-  Neutral: 5,
-} as const;
-export type Emotion = (typeof Emotion)[keyof typeof Emotion];
-
-export const GroupRole = {
-  Viewer: 0,
-  Member: 1,
-  Admin: 2,
-  Owner: 3,
-} as const;
-export type GroupRole = (typeof GroupRole)[keyof typeof GroupRole];
-
-export const GroupType = {
-  Public: 0,
-  Private: 1,
-  Personal: 2,
-} as const;
-export type GroupType = (typeof GroupType)[keyof typeof GroupType];
-
-// Aliases for backward compatibility
-export { ContentType as ContentTypeEnum, WatchStatus as WatchStatusEnum, GroupRole as GroupRoleEnum };
-
 // Label constants
-export const EmotionEmojis: Record<Emotion, string> = {
+export const EmotionEmojis: Record<string, string> = {
   [Emotion.Joy]: "😊",
   [Emotion.Sadness]: "😢",
   [Emotion.Excitement]: "🤩",
@@ -145,7 +103,7 @@ export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
 };
 
 // Movies
-export const getMovies = async (type?: number): Promise<Movie[]> => {
+export const getMovies = async (type?: ContentType): Promise<Movie[]> => {
   const response = await apiClient.api.moviesList(type !== undefined ? { type } : undefined);
   return response.data;
 };
@@ -175,9 +133,9 @@ export const searchMovies = async (query: string): Promise<Movie[]> => {
 };
 
 // Watch Entries
-export const getWatchEntries = async (status?: number, groupId?: number): Promise<WatchEntry[]> => {
-  const query: { status?: GeneratedWatchStatus; groupId?: number } = {};
-  if (status !== undefined) query.status = status as GeneratedWatchStatus;
+export const getWatchEntries = async (status?: WatchStatus, groupId?: number): Promise<WatchEntry[]> => {
+  const query: { status?: WatchStatus; groupId?: number } = {};
+  if (status !== undefined) query.status = status;
   if (groupId !== undefined) query.groupId = groupId;
   const response = await apiClient.api.watchEntriesList(query);
   return response.data;
@@ -190,8 +148,8 @@ export const getWatchEntry = async (id: number): Promise<WatchEntry> => {
 
 export const createWatchEntry = async (entry: {
   movieId: number;
-  status: number;
-  emotion?: number;
+  status: WatchStatus;
+  emotion?: Emotion;
   comment?: string;
   groupId?: number;
   rating?: number;
@@ -205,8 +163,8 @@ export const createWatchEntry = async (entry: {
 export const updateWatchEntry = async (
   id: number,
   entry: {
-    status?: number;
-    emotion?: number;
+    status?: WatchStatus;
+    emotion?: Emotion;
     comment?: string;
     viewers?: number[];
     currentSeason?: number;
@@ -250,12 +208,12 @@ export const getGroup = async (id: number): Promise<Group> => {
   return response.data;
 };
 
-export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: number): Promise<Group> => {
+export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: GroupRole): Promise<Group> => {
   const response = await apiClient.api.groupsCreate({ 
     name, 
     isPrivate, 
     password, 
-    defaultRole: defaultRole as GeneratedGroupRole 
+    defaultRole
   });
   return response.data;
 };
@@ -292,8 +250,8 @@ export const transferOwnership = async (groupId: number, newOwnerId: number): Pr
   await apiClient.api.groupsTransferUpdate(groupId, { newOwnerId });
 };
 
-export const updateMemberRole = async (groupId: number, userId: number, role: number): Promise<void> => {
-  await apiClient.api.groupsMembersRoleUpdate(groupId, userId, { role: role as GeneratedGroupRole });
+export const updateMemberRole = async (groupId: number, userId: number, role: GroupRole): Promise<void> => {
+  await apiClient.api.groupsMembersRoleUpdate(groupId, userId, { role });
 };
 
 export const generateOtp = async (groupId: number): Promise<{ code: string; expiresAt: string }> => {

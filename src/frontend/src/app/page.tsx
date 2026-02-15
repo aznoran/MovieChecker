@@ -166,10 +166,10 @@ export default function HomePage() {
                     {Object.entries(watchStatusLabels).map(([value, label]) => (
                         <Button
                             key={value}
-                            variant={statusFilter === Number(value) ? "default" : "outline"}
+                            variant={statusFilter === value ? "default" : "outline"}
                             size="sm"
                             className="min-w-[9rem]"
-                            onClick={() => setStatusFilter(Number(value) as WatchStatus)}
+                            onClick={() => setStatusFilter(value as WatchStatus)}
                         >
                             {label}
                         </Button>

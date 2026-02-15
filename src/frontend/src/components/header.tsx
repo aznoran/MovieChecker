@@ -587,26 +587,26 @@ export function Header() {
                                                         {t("defaultRole")}
                                                     </FieldLabel>
                                                     <Select
-                                                        value={String(newGroupDefaultRole)}
-                                                        onValueChange={(value) => setNewGroupDefaultRole(Number(value) as GroupRole)}
+                                                        value={newGroupDefaultRole}
+                                                        onValueChange={(value) => setNewGroupDefaultRole(value as GroupRole)}
                                                     >
                                                         <SelectTrigger className="h-10 bg-background border-border/60">
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value={String(GroupRole.Viewer)}>
+                                                            <SelectItem value={GroupRole.Viewer}>
                                                                 <div className="flex items-center gap-2">
                                                                     <Eye className="h-4 w-4" />
                                                                     {t("roleViewer")}
                                                                 </div>
                                                             </SelectItem>
-                                                            <SelectItem value={String(GroupRole.Member)}>
+                                                            <SelectItem value={GroupRole.Member}>
                                                                 <div className="flex items-center gap-2">
                                                                     <User className="h-4 w-4" />
                                                                     {t("roleMember")}
                                                                 </div>
                                                             </SelectItem>
-                                                            <SelectItem value={String(GroupRole.Admin)}>
+                                                            <SelectItem value={GroupRole.Admin}>
                                                                 <div className="flex items-center gap-2">
                                                                     <Shield className="h-4 w-4" />
                                                                     {t("roleAdmin")}
@@ -1327,26 +1327,26 @@ export function Header() {
                                 <Field>
                                     <FieldLabel>{t("selectNewRole")}</FieldLabel>
                                     <Select
-                                        value={selectedNewRole?.toString()}
-                                        onValueChange={(value) => setSelectedNewRole(parseInt(value) as GroupRole)}
+                                        value={selectedNewRole ?? undefined}
+                                        onValueChange={(value) => setSelectedNewRole(value as GroupRole)}
                                     >
                                         <SelectTrigger className="h-9">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value={GroupRole.Viewer.toString()}>
+                                            <SelectItem value={GroupRole.Viewer}>
                                                 <div className="flex items-center gap-2">
                                                     <Eye className="h-4 w-4" />
                                                     {t("roleViewer")}
                                                 </div>
                                             </SelectItem>
-                                            <SelectItem value={GroupRole.Member.toString()}>
+                                            <SelectItem value={GroupRole.Member}>
                                                 <div className="flex items-center gap-2">
                                                     <User className="h-4 w-4" />
                                                     {t("roleMember")}
                                                 </div>
                                             </SelectItem>
-                                            <SelectItem value={GroupRole.Admin.toString()}>
+                                            <SelectItem value={GroupRole.Admin}>
                                                 <div className="flex items-center gap-2">
                                                     <Shield className="h-4 w-4" />
                                                     {t("roleAdmin")}
