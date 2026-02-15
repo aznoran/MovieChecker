@@ -8,7 +8,9 @@ Database schema is managed by [Flyway](https://flywaydb.org/) using versioned SQ
 db/migration/
 ├── V1__initial_schema.sql       — Base tables (movies, users, groups, etc.)
 ├── V2__personal_groups.sql      — GroupType, personal groups, data migration
-└── V3__watch_entry_groups.sql   — Many-to-many junction table
+├── V3__watch_entry_groups.sql   — Many-to-many junction table
+├── V4__member_permissions.sql   — Per-member custom permissions
+└── V5__remove_emotion_column.sql — Remove emotion field from watch_entries
 ```
 
 ## How It Works
