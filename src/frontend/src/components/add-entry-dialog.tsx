@@ -16,8 +16,6 @@ import {getCroppedImage} from "@/lib/crop-utils";
 import {
     ContentType,
     WatchStatus,
-    Emotion,
-    EmotionEmojis,
     GroupType,
 } from "@/lib/api.generated";
 import {
@@ -95,7 +93,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     // Group mode: selected member IDs and per-member ratings
     const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
     const [memberRatings, setMemberRatings] = useState<Record<number, number>>({});
-    const [emotion, setEmotion] = useState<Emotion | null>(null);
     const [comment, setComment] = useState("");
     const [posterFile, setPosterFile] = useState<File | null>(null);
     const [posterPreview, setPosterPreview] = useState<string | null>(null);
@@ -230,7 +227,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 rating: !isGroupMode && myRating ? myRating * 2 : undefined,
                 ratings: ratingsArray,
                 viewers: isGroupMode ? selectedMembers : undefined,
-                emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
                 comment: comment || undefined,
                 groupId: activeGroupId,
                 // Series/Anime tracking
@@ -278,7 +274,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setMyRating(0);
         setSelectedMembers([]);
         setMemberRatings({});
-        setEmotion(null);
         setComment("");
         setPosterFile(null);
         setPosterPreview(null);
@@ -1058,42 +1053,6 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     )}
 
                     <FieldGroup className="gap-4">
-                        {(status === WatchStatus.Completed || status === WatchStatus.Dropped) && (
-                        <Field>
-                            <FieldContent>
-                                <FieldLabel>{t("emotion")}</FieldLabel>
-                                <FieldDescription>
-                                    {t("emotionDescription")}
-                                </FieldDescription>
-                            </FieldContent>
-                            <div className="flex flex-wrap gap-2">
-                            {Object.entries(EmotionEmojis).map(([value, emoji]) => (
-                                <Button
-                                    key={value}
-                                    type="button"
-                                    variant={emotion === value ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setEmotion(value as Emotion)}
-                                    className="text-xl px-3"
-                                >
-                                    {emoji}
-                                </Button>
-                            ))}
-                            {emotion !== null && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setEmotion(null)}
-                                >
-                                    <X className="h-4 w-4 mr-1"/>
-                                    {t("clear")}
-                                </Button>
-                            )}
-                            </div>
-                        </Field>
-                        )}
-
                         <Field>
                             <FieldContent>
                                 <FieldLabel htmlFor="comment" className="flex items-center gap-1.5">

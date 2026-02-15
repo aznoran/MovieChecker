@@ -6,10 +6,9 @@ import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
-import {EmotionEmojis, GroupType, ContentType, Emotion} from "@/lib/api.generated";
+import {GroupType, ContentType} from "@/lib/api.generated";
 import {
     getContentTypeLabels,
-    getEmotionLabels,
 } from "@/lib/i18n/labels";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
@@ -424,54 +423,6 @@ export default function StatsPage() {
                                                     />
                                                 </div>
                                             ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })()}
-
-                        {/* ── Emotions ── */}
-                        {Object.keys(stats.byEmotion ?? {}).length > 0 && (() => {
-                            const emotionEntries = Object.entries(stats.byEmotion ?? {});
-                            const maxEmotionCount = Math.max(...emotionEntries.map(([, c]) => c));
-                            const emotionLabels = getEmotionLabels(locale);
-                            return (
-                                <Card>
-                                    <CardHeader className="pb-3">
-                                        <CardTitle className="text-base flex items-center gap-2">
-                                            <Smile className="h-4 w-4"/>
-                                            {t("emotionsAfterWatching")}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                            {emotionEntries.map(([emotionName, count]) => {
-                                                const emoji = EmotionEmojis[emotionName as Emotion] || "";
-                                                const displayName = emotionLabels[emotionName as Emotion] || emotionName;
-                                                const pct = maxEmotionCount > 0 ? Math.round((count / maxEmotionCount) * 100) : 0;
-                                                return (
-                                                    <div
-                                                        key={emotionName}
-                                                        className="flex items-center gap-3 rounded-lg border p-3"
-                                                    >
-                                                        <span className="text-2xl">{emoji}</span>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div
-                                                                className="flex items-center justify-between text-sm mb-1">
-                                                                <span className="truncate">{displayName}</span>
-                                                                <span className="font-semibold ml-2">{count}</span>
-                                                            </div>
-                                                            <div
-                                                                className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                                                                <div
-                                                                    className="h-full rounded-full bg-primary/60 transition-all duration-500"
-                                                                    style={{width: `${pct}%`}}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
                                         </div>
                                     </CardContent>
                                 </Card>

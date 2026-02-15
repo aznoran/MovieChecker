@@ -1,4 +1,4 @@
-import { ContentType, WatchStatus, Emotion, EmotionEmojis } from "@/lib/api";
+import { ContentType, WatchStatus } from "@/lib/api";
 import type { Locale } from "./index";
 import { t } from "./index";
 import en from "./en";
@@ -33,19 +33,6 @@ export function getWatchStatusLabels(locale: Locale): Record<WatchStatus, string
     [WatchStatus.Dropped]: t("statusDropped", locale),
   };
 }
-
-export function getEmotionLabels(locale: Locale): Record<Emotion, string> {
-  return {
-    [Emotion.Joy]: t("emotionJoy", locale),
-    [Emotion.Sadness]: t("emotionSadness", locale),
-    [Emotion.Excitement]: t("emotionExcitement", locale),
-    [Emotion.Cringe]: t("emotionCringe", locale),
-    [Emotion.Confused]: t("emotionConfused", locale),
-    [Emotion.Neutral]: t("emotionNeutral", locale),
-  };
-}
-
-export { EmotionEmojis };
 
 /**
  * Translate a genre string (comma-separated) from stored English names to the current locale.

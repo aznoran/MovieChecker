@@ -2,8 +2,8 @@ import {
   Api,
   ContentType,
   WatchStatus,
-  Emotion,
   GroupRole,
+  GroupType,
   CreateMovieRequest,
   UpdateMovieRequest,
   AuthResponse,
@@ -13,15 +13,9 @@ import {
   StatsDto,
 } from "./api.generated";
 
-// Label constants
-export const EmotionEmojis: Record<Emotion, string> = {
-  [Emotion.Joy]: "😊",
-  [Emotion.Sadness]: "😢",
-  [Emotion.Excitement]: "🤩",
-  [Emotion.Cringe]: "😬",
-  [Emotion.Confused]: "🤔",
-  [Emotion.Neutral]: "😐",
-};
+// Re-export types for convenience
+export { ContentType, WatchStatus, GroupRole, GroupType };
+export type { AuthResponse, MovieDto, WatchEntryDto, GroupDto, StatsDto };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -130,7 +124,6 @@ export const getWatchEntry = async (id: number): Promise<WatchEntryDto> => {
 export const createWatchEntry = async (entry: {
   movieId: number;
   status: WatchStatus;
-  emotion?: Emotion;
   comment?: string;
   groupId?: number;
   rating?: number;
@@ -145,7 +138,6 @@ export const updateWatchEntry = async (
   id: number,
   entry: {
     status?: WatchStatus;
-    emotion?: Emotion;
     comment?: string;
     viewers?: number[];
     currentSeason?: number;

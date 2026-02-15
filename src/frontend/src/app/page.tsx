@@ -9,7 +9,7 @@ import {useGroup} from "@/context/group-context";
 import {usePermissions} from "@/context/permissions-context";
 import {ConfirmDialog} from "@/components/confirm-dialog";
 import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
-import {WatchStatus, EmotionEmojis, GroupType, ContentType} from "@/lib/api.generated";
+import {WatchStatus, GroupType, ContentType} from "@/lib/api.generated";
 import type {WatchEntryDto} from "@/lib/api.generated";
 import {
     getContentTypeLabels,
@@ -250,11 +250,6 @@ export default function HomePage() {
                                                         )}
                                                     </p>
                                                 </div>
-                                                {entry.emotion !== undefined && entry.emotion !== null && (
-                                                    <span className="text-xl shrink-0">
-                                                      {EmotionEmojis[entry.emotion]}
-                                                    </span>
-                                                )}
                                             </div>
 
                                             <div className="flex flex-wrap items-center gap-1.5 mb-4">

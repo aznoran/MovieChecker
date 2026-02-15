@@ -18,10 +18,8 @@ import {
     ContentType,
     GroupType,
     WatchStatus,
-    Emotion,
-    EmotionEmojis,
 } from "@/lib/api.generated";
-import type {WatchEntry} from "@/lib/api.generated";
+import type {WatchEntryDto} from "@/lib/api.generated";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
@@ -76,7 +74,7 @@ import {toast} from "sonner";
 import * as React from "react";
 
 interface Props {
-    entry: WatchEntry;
+    entry: WatchEntryDto;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
@@ -120,7 +118,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             return map;
         }
     );
-    const [emotion, setEmotion] = useState<Emotion | null>(entry.emotion ?? null);
     const [comment, setComment] = useState(entry.comment || "");
     const [posterFile, setPosterFile] = useState<File | null>(null);
     const [posterPreview, setPosterPreview] = useState<string | null>(
@@ -164,7 +161,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 map[r.userId!] = (r.rating ?? 0) / 2;
             });
             setMemberRatings(map);
-            setEmotion(entry.emotion ?? null);
             setComment(entry.comment || "");
             setPosterFile(null);
             setPosterPreview(getPosterUrl(entry.movie?.posterUrl));
@@ -267,8 +263,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const hasEntryFieldsChanged = (): boolean => {
         if (status !== entry.status) return true;
         if ((comment || "") !== (entry.comment || "")) return true;
-        const origEmotion = entry.emotion ?? null;
-        if (emotion !== origEmotion) return true;
         if (isGroupMode) {
             const origViewers = (entry.ratings?.map((r) => r.userId!) ?? []).slice().sort((a, b) => a - b);
             const curViewers = selectedMembers.slice().sort((a, b) => a - b);
@@ -361,7 +355,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 await updateWatchEntry(entry.id!, {
                     status,
                     viewers: isGroupMode ? selectedMembers : undefined,
-                    emotion: (status === WatchStatus.Completed || status === WatchStatus.Dropped) ? (emotion ?? undefined) : undefined,
                     comment: comment || undefined,
                     ...(status === WatchStatus.Watching && (
                         (entry.movie?.type === ContentType.Anime ||
@@ -606,16 +599,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 {watchStatusLabels[status]}
                             </div>
                         </Field>
-
-                        {/* Readonly emotion */}
-                        {entry.emotion !== undefined && entry.emotion !== null && (
-                            <Field>
-                                <FieldLabel>{t("emotion")}</FieldLabel>
-                                <div className="text-xl">
-                                    {EmotionEmojis[entry.emotion]}
-                                </div>
-                            </Field>
-                        )}
 
                         {/* Readonly comment */}
                         {entry.comment && (
@@ -1174,44 +1157,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     )}
 
                     <FieldGroup className="gap-4">
-                        {(status === WatchStatus.Completed || status === WatchStatus.Dropped) && (
-                        <Field>
-                            <FieldContent>
-                                <FieldLabel>{t("emotion")}</FieldLabel>
-                                <FieldDescription>
-                                    {t("emotionDescription")}
-                                </FieldDescription>
-                            </FieldContent>
-                            <div className="flex flex-wrap gap-2">
-                            {Object.entries(EmotionEmojis).map(([value, emoji]) => (
-                                <Button
-                                    key={value}
-                                    type="button"
-                                    variant={emotion === value ? "default" : "outline"}
-                                    size="sm"
-                                    disabled={!canEdit}
-                                    onClick={() => setEmotion(value as Emotion)}
-                                    className="text-xl px-3"
-                                >
-                                    {emoji}
-                                </Button>
-                            ))}
-                            {emotion !== null && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={!canEdit}
-                                    onClick={() => setEmotion(null)}
-                                >
-                                    <X className="h-4 w-4 mr-1"/>
-                                    {t("clear")}
-                                </Button>
-                            )}
-                            </div>
-                        </Field>
-                        )}
-
                         <Field>
                             <FieldContent>
                                 <FieldLabel htmlFor="comment" className="flex items-center gap-1.5">
