@@ -33,7 +33,7 @@ export type MemberRatingStats = MemberRatingDto;
 export type Stats = StatsDto;
 
 // Label constants
-export const EmotionEmojis: Record<string, string> = {
+export const EmotionEmojis: Record<Emotion, string> = {
   [Emotion.Joy]: "😊",
   [Emotion.Sadness]: "😢",
   [Emotion.Excitement]: "🤩",

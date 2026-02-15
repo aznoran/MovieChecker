@@ -446,7 +446,7 @@ export default function StatsPage() {
                                     <CardContent>
                                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                             {emotionEntries.map(([emotionName, count]) => {
-                                                const emoji = EmotionEmojis[emotionName] || "";
+                                                const emoji = EmotionEmojis[emotionName as Emotion] || "";
                                                 const displayName = emotionLabels[emotionName as Emotion] || emotionName;
                                                 const pct = maxEmotionCount > 0 ? Math.round((count / maxEmotionCount) * 100) : 0;
                                                 return (
