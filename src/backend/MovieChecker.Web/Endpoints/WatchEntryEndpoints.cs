@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Localization;
 using MovieChecker.Domain.Models.Dtos;
 using MovieChecker.Domain.Models.Entities;
 using MovieChecker.Domain.Models.Enums;
@@ -176,10 +175,10 @@ public static class WatchEntryEndpoints
     }
 
     private static async Task<IResult> Create(
-        CreateWatchEntryRequest request,
-        ClaimsPrincipal user,
-        AppDbContext db,
-        ILocalizationService localizer)
+            CreateWatchEntryRequest request,
+            ClaimsPrincipal user,
+            AppDbContext db,
+            ILocalizationService localizer)
     {
         var userId = GetUserId(user);
 
@@ -190,27 +189,21 @@ public static class WatchEntryEndpoints
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
             return Results.BadRequest(new ErrorResponse(localizer["MovieNotFound"]));
 
-        // Validate group membership if group specified
-        if (request.GroupId.HasValue)
-        {
-            // Check if user can create in this group
-            if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
-                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsCreate"]));
+        var group = await db.Groups.FirstOrDefaultAsync(g => g.Id == request.GroupId);
 
-            // Check duplicate within group (via junction table or legacy GroupId)
-            if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId
-                                                    && (w.GroupId == request.GroupId.Value
-                                                        || w.WatchEntryGroups.Any(weg =>
-                                                            weg.GroupId == request.GroupId.Value))))
-                return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExistsGroup"]));
-        }
-        else
-        {
-            // Check duplicate for personal entries (legacy entries with GroupId == null)
-            if (await db.WatchEntries.AnyAsync(w =>
-                    w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
-                return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExists"]));
-        }
+        if (group is null)
+            return Results.BadRequest(new ErrorResponse(localizer["GroupNotFound"]));
+        
+        // Check if user can create in this group
+        if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsCreate"]));
+
+        // Check duplicate within group (via junction table or legacy GroupId)
+        if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId
+                && (w.GroupId == request.GroupId.Value
+                    || w.WatchEntryGroups.Any(weg =>
+                        weg.GroupId == request.GroupId.Value))))
+            return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExistsGroup"]));
 
         var entry = new WatchEntry
         {
@@ -244,7 +237,7 @@ public static class WatchEntryEndpoints
         }
 
         // Link entry to personal groups of viewers via junction table (instead of duplicating)
-        if (request.GroupId.HasValue && request.Viewers is { Count: > 0 })
+        if (group.GroupType != GroupType.Personal && request.Viewers is { Count: > 0 })
         {
             var viewerUserIds = request.Viewers.Distinct().ToList();
 
@@ -298,32 +291,53 @@ public static class WatchEntryEndpoints
         // Add bulk ratings if provided (group mode)
         if (request.Ratings is { Count: > 0 })
         {
-            // Get valid group member user IDs
-            var validUserIds = request.GroupId.HasValue
-                ? await db.GroupMembers
-                    .Where(m => m.GroupId == request.GroupId.Value)
-                    .Select(m => m.UserId)
-                    .ToListAsync()
-                : new List<int> { userId };
+            // Only allow bulk ratings when creating inside a group (otherwise you could rate "others" on a personal entry)
+            if (!request.GroupId.HasValue)
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
 
+            var groupId = request.GroupId.Value;
+
+            // Preload group member ids once
+            var groupMemberUserIds = await db.GroupMembers
+                .Where(m => m.GroupId == groupId)
+                .Select(m => m.UserId)
+                .ToHashSetAsync();
+
+            // Enforce "self vs others" permission per requested rating (same logic as POST /{id}/rate)
             foreach (var ri in request.Ratings)
             {
-                if (validUserIds.Contains(ri.UserId))
+                var targetUserId = ri.UserId;
+                var isRatingSelf = targetUserId == userId;
+
+                if (!groupMemberUserIds.Contains(targetUserId))
+                    return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+
+                var allowed = isRatingSelf
+                    ? await PermissionService.CanRateSelf(db, userId, groupId)
+                    : await PermissionService.CanRateOthers(db, userId, groupId);
+
+                if (!allowed)
+                    return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+
+                db.EntryRatings.Add(new EntryRating
                 {
-                    db.EntryRatings.Add(new EntryRating
-                    {
-                        WatchEntryId = entry.Id,
-                        UserId = ri.UserId,
-                        Rating = ri.Rating
-                    });
-                }
+                    WatchEntryId = entry.Id,
+                    UserId = targetUserId,
+                    Rating = ri.Rating
+                });
             }
 
             await db.SaveChangesAsync();
         }
         else if (request.Rating.HasValue)
         {
-            // Single own rating (backward compat)
+            // Single own rating (backward compat) - always self
+            if (request.GroupId.HasValue)
+            {
+                if (!await PermissionService.CanRateSelf(db, userId, request.GroupId.Value))
+                    return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+            }
+
             db.EntryRatings.Add(new EntryRating
             {
                 WatchEntryId = entry.Id,

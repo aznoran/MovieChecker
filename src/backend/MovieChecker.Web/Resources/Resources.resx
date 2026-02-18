@@ -202,4 +202,7 @@
   <data name="DisplayNameTooLong" xml:space="preserve">
     <value>Display name must not exceed 50 characters</value>
   </data>
+  <data name="GroupNotFound" xml:space="preserve">
+    <value>Group not found</value>
+  </data>
 </root>

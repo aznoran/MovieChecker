@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/cropper";
 import {getCroppedImage} from "@/lib/crop-utils";
 import {
-    ContentType,
+    EntryContentType,
     WatchStatus,
     GroupType,
 } from "@/lib/api.generated";
@@ -72,6 +72,8 @@ import {
 } from "@/components/ui/field";
 import {Switch} from "@/components/ui/switch";
 import {Label} from "@/components/ui/label";
+import {usePermissions} from "@/context/permissions-context";
+import {useAuth} from "@/context/auth-context";
 
 interface Props {
     open: boolean;
@@ -79,12 +81,17 @@ interface Props {
 }
 
 export function AddEntryDialog({open, onOpenChange}: Props) {
-    const {locale, t} = useLocale();
-    const {activeGroupId, activeGroup} = useGroup();
+    const { locale, t } = useLocale();
+    const { activeGroupId, activeGroup } = useGroup();
+    const { permissions } = usePermissions();
+    const { user: currentUser } = useAuth();
+
+    const canRateOthers = permissions.canRateOthers;
+
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [type, setType] = useState<ContentType>(ContentType.Movie);
+    const [type, setType] = useState<EntryContentType>(EntryContentType.Movie);
     const [year, setYear] = useState("");
     const [genre, setGenre] = useState("");
     const [status, setStatus] = useState<WatchStatus>(WatchStatus.Planned);
@@ -231,9 +238,9 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 groupId: activeGroupId,
                 // Series/Anime tracking
                 ...(status === WatchStatus.Watching && (
-                    (type === ContentType.Anime ||
-                        type === ContentType.Series ||
-                        type === ContentType.Cartoon)
+                    (type === EntryContentType.Anime ||
+                        type === EntryContentType.Series ||
+                        type === EntryContentType.Cartoon)
                 ) ? {
                     currentSeason: currentSeason ? parseInt(currentSeason) : undefined,
                     currentEpisode: currentEpisode ? parseInt(currentEpisode) : undefined,
@@ -267,7 +274,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const resetForm = () => {
         setTitle("");
         setDescription("");
-        setType(ContentType.Movie);
+        setType(EntryContentType.Movie);
         setYear("");
         setGenre("");
         setStatus(WatchStatus.Planned);
@@ -653,7 +660,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             </FieldLabel>
                             <Select
                                 value={type}
-                                onValueChange={(v) => setType(v as ContentType)}
+                                onValueChange={(v) => setType(v as EntryContentType)}
                             >
                                 <SelectTrigger>
                                     <SelectValue/>
@@ -777,6 +784,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                         <FieldGroup className="gap-4">
                                             {selectedMembers.map((uid) => {
                                                 const member = activeGroup.members?.find((m) => m.userId === uid);
+                                                const isUserEqualsCurrent = uid === currentUser?.id
                                                 if (!member) return null;
                                                 return (
                                                     <Field key={uid} orientation="horizontal" className="gap-4">
@@ -801,6 +809,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                                 max={10}
                                                                 step={0.5}
                                                                 clearable
+                                                                disabled={!canRateOthers && !isUserEqualsCurrent}
                                                             >
                                                                 {Array.from({length: 10}, (_, i) => (
                                                                     <RatingItem key={i}/>
@@ -815,9 +824,9 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                 )}
 
                             {status === WatchStatus.Watching && (
-                                type === ContentType.Anime ||
-                                type === ContentType.Series ||
-                                type === ContentType.Cartoon) && (
+                                type === EntryContentType.Anime ||
+                                type === EntryContentType.Series ||
+                                type === EntryContentType.Cartoon) && (
                                 <FieldSet>
                                     <FieldLegend variant="label">
                                         {t("trackingInfo")}
@@ -960,9 +969,9 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             )}
 
                             {status === WatchStatus.Watching && (
-                                type === ContentType.Anime ||
-                                type === ContentType.Series ||
-                                type === ContentType.Cartoon) && (
+                                type === EntryContentType.Anime ||
+                                type === EntryContentType.Series ||
+                                type === EntryContentType.Cartoon) && (
                                 <>
                                     <div className="grid grid-cols-2 gap-3">
                                         <Field>

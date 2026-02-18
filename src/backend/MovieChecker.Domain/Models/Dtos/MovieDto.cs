@@ -6,7 +6,7 @@ public record MovieDto(
     int Id,
     string Title,
     string? Description,
-    ContentType Type,
+    EntryContentType Type,
     int? Year,
     string? Genre,
     string? PosterUrl,

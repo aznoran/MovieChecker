@@ -1,9 +1,7 @@
 import {
   Api,
-  ContentType,
   WatchStatus,
   GroupRole,
-  GroupType,
   CreateMovieRequest,
   UpdateMovieRequest,
   AuthResponse,
@@ -13,9 +11,6 @@ import {
   StatsDto,
 } from "./api.generated";
 
-// Re-export types for convenience
-export { ContentType, WatchStatus, GroupRole, GroupType };
-export type { AuthResponse, MovieDto, WatchEntryDto, GroupDto, StatsDto };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -77,12 +72,6 @@ export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
   }
 };
 
-// Movies
-export const getMovies = async (type?: ContentType): Promise<MovieDto[]> => {
-  const response = await apiClient.api.moviesList(type !== undefined ? { type } : undefined);
-  return response.data;
-};
-
 export const getMovie = async (id: number): Promise<MovieDto> => {
   const response = await apiClient.api.moviesDetail(id);
   return response.data;
@@ -139,7 +128,6 @@ export const updateWatchEntry = async (
   entry: {
     status?: WatchStatus;
     comment?: string;
-    viewers?: number[];
     currentSeason?: number;
     currentEpisode?: number;
     totalEpisodes?: number;

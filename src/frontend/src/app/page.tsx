@@ -1,26 +1,26 @@
 "use client";
 
-import {useState, useEffect} from "react";
-import {useQuery, useMutation, useQueryClient, keepPreviousData} from "@tanstack/react-query";
-import {useRouter} from "next/navigation";
-import {useAuth} from "@/context/auth-context";
-import {useLocale} from "@/context/locale-context";
-import {useGroup} from "@/context/group-context";
-import {usePermissions} from "@/context/permissions-context";
-import {ConfirmDialog} from "@/components/confirm-dialog";
-import {getWatchEntries, deleteWatchEntry, getPosterUrl} from "@/lib/api";
-import {WatchStatus, GroupType, ContentType} from "@/lib/api.generated";
-import type {WatchEntryDto} from "@/lib/api.generated";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
+import { useLocale } from "@/context/locale-context";
+import { useGroup } from "@/context/group-context";
+import { usePermissions } from "@/context/permissions-context";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { getWatchEntries, deleteWatchEntry, getPosterUrl } from "@/lib/api";
+import { WatchStatus, GroupType, EntryContentType } from "@/lib/api.generated";
+import type { WatchEntryDto } from "@/lib/api.generated";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
     translateGenre,
 } from "@/lib/i18n/labels";
-import {AddEntryDialog} from "@/components/add-entry-dialog";
-import {EditEntryDialog} from "@/components/edit-entry-dialog";
-import {Button} from "@/components/ui/button";
-import {Card, CardContent} from "@/components/ui/card";
-import {Badge} from "@/components/ui/badge";
+import { AddEntryDialog } from "@/components/add-entry-dialog";
+import { EditEntryDialog } from "@/components/edit-entry-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
     Plus,
     Trash2,
@@ -36,7 +36,7 @@ import {
     RefreshCw,
     AlertCircle,
 } from "lucide-react";
-import {toast} from "sonner";
+import { toast } from "sonner";
 
 const statusColors: Record<WatchStatus, string> = {
     [WatchStatus.Planned]: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -235,7 +235,7 @@ export default function HomePage() {
                                                     </h3>
                                                     <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap min-w-0">
                                                         <Film className="h-3 w-3 shrink-0"/>
-                                                        {contentTypeLabels[movie.type! as ContentType]}
+                                                        {contentTypeLabels[movie.type! as EntryContentType]}
                                                         {movie.year && (
                                                             <>
                                                                 <Calendar className="h-3 w-3 ml-1 shrink-0"/>

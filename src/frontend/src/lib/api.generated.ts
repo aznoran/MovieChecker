@@ -10,7 +10,6 @@
  * ---------------------------------------------------------------
  */
 
-// Manually added enums for better type safety
 export enum WatchStatus {
   Planned = "Planned",
   Watching = "Watching",
@@ -18,12 +17,10 @@ export enum WatchStatus {
   Dropped = "Dropped",
 }
 
-export enum ContentType {
-  Movie = "Movie",
-  Series = "Series",
-  Anime = "Anime",
-  Cartoon = "Cartoon",
-  Show = "Show",
+export enum GroupType {
+  Public = "Public",
+  Private = "Private",
+  Personal = "Personal",
 }
 
 export enum GroupRole {
@@ -33,10 +30,12 @@ export enum GroupRole {
   Owner = "Owner",
 }
 
-export enum GroupType {
-  Public = "Public",
-  Private = "Private",
-  Personal = "Personal",
+export enum EntryContentType {
+  Movie = "Movie",
+  Series = "Series",
+  Anime = "Anime",
+  Cartoon = "Cartoon",
+  Show = "Show",
 }
 
 export interface AuthResponse {
@@ -48,13 +47,13 @@ export interface CreateGroupRequest {
   name?: string | null;
   isPrivate?: boolean;
   password?: string | null;
-  defaultRole?: GroupRole | null;
+  defaultRole?: GroupRole;
 }
 
 export interface CreateMovieRequest {
   title?: string | null;
   description?: string | null;
-  type?: ContentType;
+  type?: EntryContentType;
   /** @format int32 */
   year?: number | null;
   genre?: string | null;
@@ -119,7 +118,7 @@ export interface GroupDto {
   /** @format int32 */
   createdByUserId?: number;
   isPrivate?: boolean;
-  groupType?: "Public" | "Private" | "Personal";
+  groupType?: GroupType;
   defaultRole?: GroupRole;
   members?: GroupMemberDto[] | null;
   /** @format date-time */
@@ -176,7 +175,7 @@ export interface MovieDto {
   id?: number;
   title?: string | null;
   description?: string | null;
-  type?: ContentType;
+  type?: EntryContentType;
   /** @format int32 */
   year?: number | null;
   genre?: string | null;
@@ -264,7 +263,7 @@ export interface UpdateMemberRoleRequest {
 export interface UpdateMovieRequest {
   title?: string | null;
   description?: string | null;
-  type?: ContentType | null;
+  type?: EntryContentType;
   /** @format int32 */
   year?: number | null;
   genre?: string | null;
@@ -277,7 +276,7 @@ export interface UpdateUserSettingsRequest {
 }
 
 export interface UpdateWatchEntryRequest {
-  status?: WatchStatus | null;
+  status?: WatchStatus;
   comment?: string | null;
   privateComment?: string | null;
   /** @format date-time */
@@ -292,7 +291,6 @@ export interface UpdateWatchEntryRequest {
   totalEpisodes?: number | null;
   /** @format int32 */
   watchingTime?: number | null;
-  viewers?: number[] | null;
 }
 
 export interface UploadPosterResponse {
@@ -401,7 +399,7 @@ export interface ApiConfig<SecurityDataType = unknown>
   format?: ResponseType;
 }
 
-export enum HttpContentType {
+export enum ContentType {
   Json = "application/json",
   JsonApi = "application/vnd.api+json",
   FormData = "multipart/form-data",
@@ -556,7 +554,7 @@ export class Api<
         path: `/api/auth/register`,
         method: "POST",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -574,7 +572,7 @@ export class Api<
         path: `/api/auth/login`,
         method: "POST",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -595,7 +593,7 @@ export class Api<
         path: `/api/auth/language`,
         method: "POST",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -629,7 +627,7 @@ export class Api<
         path: `/api/groups`,
         method: "POST",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -666,7 +664,7 @@ export class Api<
         path: `/api/groups/check-invite`,
         method: "POST",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -684,7 +682,7 @@ export class Api<
         path: `/api/groups/join`,
         method: "POST",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -740,7 +738,7 @@ export class Api<
         path: `/api/groups/${id}/transfer`,
         method: "PUT",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -763,7 +761,7 @@ export class Api<
         path: `/api/groups/${id}/members/${userId}/role`,
         method: "PUT",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -801,7 +799,7 @@ export class Api<
         path: `/api/groups/${id}/password`,
         method: "PUT",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -823,7 +821,7 @@ export class Api<
         path: `/api/groups/${id}/settings`,
         method: "PUT",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -901,7 +899,8 @@ export class Api<
      */
     moviesList: (
       query?: {
-        type?: ContentType;
+        /** @format int32 */
+        type?: number;
       },
       params: RequestParams = {},
     ) =>
@@ -926,7 +925,7 @@ export class Api<
         path: `/api/movies`,
         method: "POST",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -964,7 +963,7 @@ export class Api<
         path: `/api/movies/${id}`,
         method: "PUT",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -1025,7 +1024,7 @@ export class Api<
         path: `/api/upload/poster`,
         method: "POST",
         body: data,
-        type: HttpContentType.FormData,
+        type: ContentType.FormData,
         format: "json",
         ...params,
       }),
@@ -1077,7 +1076,7 @@ export class Api<
         path: `/api/user-settings`,
         method: "PUT",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -1122,7 +1121,7 @@ export class Api<
         path: `/api/watch-entries`,
         method: "POST",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -1160,7 +1159,7 @@ export class Api<
         path: `/api/watch-entries/${id}`,
         method: "PUT",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -1220,7 +1219,7 @@ export class Api<
         path: `/api/watch-entries/${id}/rate`,
         method: "POST",
         body: data,
-        type: HttpContentType.Json,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

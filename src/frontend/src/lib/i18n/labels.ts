@@ -1,4 +1,4 @@
-import { ContentType, WatchStatus } from "@/lib/api";
+import { EntryContentType, WatchStatus } from "@/lib/api.generated";
 import type { Locale } from "./index";
 import { t } from "./index";
 import en from "./en";
@@ -15,13 +15,13 @@ genreKeys.forEach((key) => {
   genreEnglishToKey[en[key]] = key;
 });
 
-export function getContentTypeLabels(locale: Locale): Record<ContentType, string> {
+export function getContentTypeLabels(locale: Locale): Record<EntryContentType, string> {
   return {
-    [ContentType.Movie]: t("contentMovie", locale),
-    [ContentType.Series]: t("contentSeries", locale),
-    [ContentType.Anime]: t("contentAnime", locale),
-    [ContentType.Cartoon]: t("contentCartoon", locale),
-    [ContentType.Show]: t("contentShow", locale),
+    [EntryContentType.Movie]: t("contentMovie", locale),
+    [EntryContentType.Series]: t("contentSeries", locale),
+    [EntryContentType.Anime]: t("contentAnime", locale),
+    [EntryContentType.Cartoon]: t("contentCartoon", locale),
+    [EntryContentType.Show]: t("contentShow", locale),
   };
 }
 

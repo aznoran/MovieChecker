@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/cropper";
 import {getCroppedImage} from "@/lib/crop-utils";
 import {
-    ContentType,
+    EntryContentType,
     GroupType,
     WatchStatus,
 } from "@/lib/api.generated";
@@ -93,13 +93,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
     // If user can't edit and can't rate, don't show dialog (shouldn't happen)
     const isRateOnlyMode = !canEdit && canRateSelf;
-
-    console.log(entry)
-    console.log(permissions)
-    console.log("canEdit " + canEdit);
-    console.log("canRateSelf " + canRateSelf);
-    console.log("canRateOthers " + canRateOthers);
-    console.log("isRateOnlyMode " + isRateOnlyMode);
 
     const [status, setStatus] = useState<WatchStatus>(entry.status ?? WatchStatus.Planned);
     // Personal mode: single rating
@@ -269,7 +262,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if (origViewers.length !== curViewers.length || origViewers.some((v, i) => v !== curViewers[i])) return true;
         }
         if (status === WatchStatus.Watching &&
-            (entry.movie?.type === ContentType.Anime || entry.movie?.type === ContentType.Series || entry.movie?.type === ContentType.Cartoon)) {
+            (entry.movie?.type === EntryContentType.Anime || entry.movie?.type === EntryContentType.Series || entry.movie?.type === EntryContentType.Cartoon)) {
             if ((currentSeason || "") !== (entry.currentSeason?.toString() || "")) return true;
             if ((currentEpisode || "") !== (entry.currentEpisode?.toString() || "")) return true;
             if ((totalEpisodes || "") !== (entry.totalEpisodes?.toString() || "")) return true;
@@ -354,12 +347,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if (entryChanged) {
                 await updateWatchEntry(entry.id!, {
                     status,
-                    viewers: isGroupMode ? selectedMembers : undefined,
                     comment: comment || undefined,
                     ...(status === WatchStatus.Watching && (
-                        (entry.movie?.type === ContentType.Anime ||
-                            entry.movie?.type === ContentType.Series ||
-                            entry.movie?.type === ContentType.Cartoon)
+                        (entry.movie?.type === EntryContentType.Anime ||
+                            entry.movie?.type === EntryContentType.Series ||
+                            entry.movie?.type === EntryContentType.Cartoon)
                     ) ? {
                         currentSeason: currentSeason ? parseInt(currentSeason) : undefined,
                         currentEpisode: currentEpisode ? parseInt(currentEpisode) : undefined,
@@ -569,7 +561,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     <div>
                         <h3 className="font-semibold">{entry.movie?.title}</h3>
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            {contentTypeLabels[entry.movie!.type! as ContentType]}
+                            {contentTypeLabels[entry.movie!.type! as EntryContentType]}
                             {entry.movie?.year && (
                                 <>
                                     <Calendar className="h-3 w-3 ml-1"/>
@@ -622,7 +614,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 </FieldLegend>
                                 <FieldGroup className="gap-4">
                                     {(activeGroup?.members ?? []).map((m) => {
-                                        const existingRating = entry.ratings?.find(r => r.userId === m.userId);
                                         return (
                                             <Field key={m.userId} orientation="horizontal">
                                                 <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
@@ -1010,9 +1001,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                 )}
 
                             {status === WatchStatus.Watching && (
-                                entry.movie?.type === ContentType.Anime ||
-                                entry.movie?.type === ContentType.Series ||
-                                entry.movie?.type === ContentType.Cartoon) && (
+                                entry.movie?.type === EntryContentType.Anime ||
+                                entry.movie?.type === EntryContentType.Series ||
+                                entry.movie?.type === EntryContentType.Cartoon) && (
                                 <FieldSet>
                                     <FieldLegend variant="label">
                                         {t("trackingInfo")}

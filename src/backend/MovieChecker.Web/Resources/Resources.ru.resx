@@ -202,4 +202,7 @@
   <data name="DisplayNameTooLong" xml:space="preserve">
     <value>Имя не должно превышать 50 символов</value>
   </data>
+  <data name="GroupNotFound" xml:space="preserve">
+    <value>Группа не найдена</value>
+  </data>
 </root>

@@ -11,6 +11,5 @@ public record UpdateWatchEntryRequest(
     int? CurrentSeason,
     int? CurrentEpisode,
     int? TotalEpisodes,
-    int? WatchingTime,
-    List<int>? Viewers
+    int? WatchingTime
 );

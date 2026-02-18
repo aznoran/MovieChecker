@@ -1,8 +1,8 @@
 "use client";
 
-import {createContext, useContext, useState, useEffect, useCallback, useMemo} from "react";
-import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
-import {useAuth} from "@/context/auth-context";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/auth-context";
 import {
     getMyGroups,
     createGroup as apiCreateGroup,
@@ -15,8 +15,8 @@ import {
     updateGroupPassword as apiUpdateGroupPassword,
     updateGroupSettings as apiUpdateGroupSettings,
 } from "@/lib/api";
-import type {GroupDto} from "@/lib/api.generated";
-import {GroupType, GroupRole} from "@/lib/api.generated";
+import type { GroupDto } from "@/lib/api.generated";
+import { GroupType, GroupRole } from "@/lib/api.generated";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 

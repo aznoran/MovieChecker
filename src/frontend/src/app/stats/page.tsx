@@ -6,7 +6,7 @@ import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
-import {GroupType, ContentType} from "@/lib/api.generated";
+import {GroupType, EntryContentType} from "@/lib/api.generated";
 import {
     getContentTypeLabels,
 } from "@/lib/i18n/labels";
@@ -413,7 +413,7 @@ export default function StatsPage() {
                                             {typeEntries.map(([typeName, count], i) => (
                                                 <div key={typeName} className="space-y-1">
                                                     <div className="flex items-center justify-between text-sm">
-                                                        <span>{contentTypeLabels[typeName as ContentType] || typeName}</span>
+                                                        <span>{contentTypeLabels[typeName as EntryContentType] || typeName}</span>
                                                         <span className="font-semibold">{count}</span>
                                                     </div>
                                                     <ProgressBar

@@ -7,7 +7,7 @@ public class Movie
     public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public ContentType Type { get; set; } = ContentType.Movie;
+    public EntryContentType Type { get; set; } = EntryContentType.Movie;
     public int? Year { get; set; }
     public string? Genre { get; set; }
     public string? PosterUrl { get; set; }
