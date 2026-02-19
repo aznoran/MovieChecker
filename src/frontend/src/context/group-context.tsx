@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -45,7 +45,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const queryClient = useQueryClient();
     const {t} = useLocale();
 
-    const [activeGroupId, setActiveGroupIdState] = useState<number | undefined>(() => {
+    const [rawActiveGroupId, setRawActiveGroupIdState] = useState<number | undefined>(() => {
         if (typeof window === "undefined") return undefined;
         const stored = localStorage.getItem("activeGroupId");
         return stored ? parseInt(stored) : undefined;
@@ -58,7 +58,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     });
 
     const setActiveGroupId = useCallback((id: number | undefined) => {
-        setActiveGroupIdState(id);
+        setRawActiveGroupIdState(id);
         if (typeof window !== "undefined") {
             if (id !== undefined) {
                 localStorage.setItem("activeGroupId", id.toString());
@@ -69,35 +69,30 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     }, []);
 
     // Track previous auth state to detect actual logout (not initial false state)
-    const [wasAuthenticated, setWasAuthenticated] = useState(false);
+    const wasAuthenticatedRef = useRef(false);
 
     // Reset on logout: clear active group and all cached query data
     useEffect(() => {
         if (isAuthenticated) {
-            setWasAuthenticated(true);
-        } else if (wasAuthenticated) {
+            wasAuthenticatedRef.current = true;
+        } else if (wasAuthenticatedRef.current) {
             // Only clear when transitioning from authenticated to not authenticated (actual logout)
+            wasAuthenticatedRef.current = false;
             setActiveGroupId(undefined);
             queryClient.clear();
-            setWasAuthenticated(false);
         }
-    }, [isAuthenticated, wasAuthenticated, setActiveGroupId, queryClient]);
+    }, [isAuthenticated, setActiveGroupId, queryClient]);
 
     const personalGroup = useMemo(() => groups.find((g) => g.groupType === GroupType.Personal), [groups]);
 
-    // Auto-select personal group as default when groups are loaded and no active group is set
-    useEffect(() => {
-        if (isAuthenticated && !isLoading && activeGroupId === undefined && personalGroup) {
-            setActiveGroupId(personalGroup.id);
+    // Derive activeGroupId: use raw value if valid, otherwise fall back to personal group
+    const activeGroupId = useMemo(() => {
+        if (!isAuthenticated || isLoading) return rawActiveGroupId;
+        if (rawActiveGroupId !== undefined && groups.find((g) => g.id === rawActiveGroupId)) {
+            return rawActiveGroupId;
         }
-    }, [isAuthenticated, isLoading, activeGroupId, personalGroup, setActiveGroupId]);
-
-    // If activeGroupId is set but not in groups list, reset to personal group
-    useEffect(() => {
-        if (isAuthenticated && !isLoading && activeGroupId !== undefined && !groups.find((g) => g.id === activeGroupId)) {
-            setActiveGroupId(personalGroup?.id);
-        }
-    }, [groups, activeGroupId, isLoading, isAuthenticated, setActiveGroupId, personalGroup]);
+        return personalGroup?.id;
+    }, [rawActiveGroupId, isAuthenticated, isLoading, groups, personalGroup]);
 
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 

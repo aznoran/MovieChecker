@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 
 import { useDirection } from "@radix-ui/react-direction";

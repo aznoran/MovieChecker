@@ -1,25 +1,18 @@
 "use client";
 
-import {useState, useRef, useEffect, useCallback} from "react";
-import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry} from "@/lib/api";
-import {useLocale} from "@/context/locale-context";
-import {useAuth} from "@/context/auth-context";
-import {useGroup} from "@/context/group-context";
-import {usePermissions} from "@/context/permissions-context";
-import {
-    Cropper,
-    CropperImage,
-    CropperArea,
-    type CropperAreaData,
-} from "@/components/ui/cropper";
-import {getCroppedImage} from "@/lib/crop-utils";
+import { useState, useEffect, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry } from "@/lib/api";
+import { useLocale } from "@/context/locale-context";
+import { useAuth } from "@/context/auth-context";
+import { useGroup } from "@/context/group-context";
+import { usePermissions } from "@/context/permissions-context";
 import {
     EntryContentType,
     GroupType,
     WatchStatus,
 } from "@/lib/api.generated";
-import type {WatchEntryDto} from "@/lib/api.generated";
+import type { WatchEntryDto } from "@/lib/api.generated";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
@@ -30,9 +23,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {Button} from "@/components/ui/button";
-import {Input} from "@/components/ui/input";
-import {Textarea} from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
     SelectContent,
@@ -42,22 +34,14 @@ import {
 } from "@/components/ui/select";
 import {
     Pencil,
-    ImagePlus,
-    X,
     ListChecks,
-    Users,
     Star,
     MessageSquare,
     Loader2,
     Film,
     Calendar,
-    ClipboardPaste,
-    Crop,
-    ZoomIn,
-    RotateCw,
-    RotateCcw,
 } from "lucide-react";
-import {Rating, RatingItem} from "@/components/ui/rating";
+import { Rating, RatingItem } from "@/components/ui/rating";
 import {
     Field,
     FieldLabel,
@@ -68,10 +52,13 @@ import {
     FieldSet,
     FieldLegend,
 } from "@/components/ui/field";
-import {Switch} from "@/components/ui/switch";
-import {Label} from "@/components/ui/label";
-import {toast} from "sonner";
-import * as React from "react";
+import { toast } from "sonner";
+import { useImageCropper } from "@/hooks/use-image-cropper";
+import { useEntryValidation } from "@/hooks/use-entry-validation";
+import { PosterUploadSection } from "@/components/entry-dialogs/poster-upload-section";
+import { SeriesTrackingSection } from "@/components/entry-dialogs/series-tracking-section";
+import { RatingSection } from "@/components/entry-dialogs/rating-section";
+import { MemberSelect } from "@/components/entry-dialogs/member-select";
 
 interface Props {
     entry: WatchEntryDto;
@@ -79,53 +66,34 @@ interface Props {
     onOpenChange: (open: boolean) => void;
 }
 
-export function EditEntryDialog({entry, open, onOpenChange}: Props) {
-    const {locale, t} = useLocale();
-    const {user} = useAuth();
-    const {activeGroup} = useGroup();
-    const {permissions, isLoading: isPermissionsLoading} = usePermissions();
+export function EditEntryDialog({ entry, open, onOpenChange }: Props) {
+    const { locale, t } = useLocale();
+    const { user } = useAuth();
+    const { activeGroup } = useGroup();
+    const { permissions, isLoading: isPermissionsLoading } = usePermissions();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
-    // Determine permissions from provider
     const canEdit = (permissions.canEditOwnEntries && (entry as Record<string, unknown>).userId == user?.id) || permissions.canEditAllEntries;
     const canRateSelf = permissions.canRateSelf;
     const canRateOthers = permissions.canRateOthers;
-
-    // If user can't edit and can't rate, don't show dialog (shouldn't happen)
     const isRateOnlyMode = !canEdit && canRateSelf;
 
     const [status, setStatus] = useState<WatchStatus>(entry.status ?? WatchStatus.Planned);
-    // Personal mode: single rating
     const myExistingRating = entry.ratings?.find((r) => r.userId === user?.id);
     const [myRating, setMyRating] = useState((myExistingRating?.rating ?? 0) / 2);
-    // Group mode: selected members and per-member ratings
     const [selectedMembers, setSelectedMembers] = useState<number[]>(
         () => entry.ratings?.map((r) => r.userId!) ?? []
     );
     const [memberRatings, setMemberRatings] = useState<Record<number, number>>(
         () => {
             const map: Record<number, number> = {};
-            entry.ratings?.forEach((r) => {
-                map[r.userId!] = (r.rating ?? 0) / 2;
-            });
+            entry.ratings?.forEach((r) => { map[r.userId!] = (r.rating ?? 0) / 2; });
             return map;
         }
     );
     const [comment, setComment] = useState(entry.comment || "");
-    const [posterFile, setPosterFile] = useState<File | null>(null);
-    const [posterPreview, setPosterPreview] = useState<string | null>(
-        getPosterUrl(entry.movie?.posterUrl)
-    );
     const [posterRemoved, setPosterRemoved] = useState(false);
-    const [editorImageSrc, setEditorImageSrc] = useState<string | null>(null);
-    const [isCropping, setIsCropping] = useState(false);
-    const [crop, setCrop] = useState({x: 0, y: 0});
-    const [zoom, setZoom] = useState(1);
-    const [rotation, setRotation] = useState(0);
-    const [withGrid, setWithGrid] = useState(false);
-    const croppedAreaPixelsRef = useRef<CropperAreaData | null>(null);
     const [error, setError] = useState("");
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [currentEpisode, setCurrentEpisode] = useState(entry.currentEpisode?.toString() || "");
     const [totalEpisodes, setTotalEpisodes] = useState(entry.totalEpisodes?.toString() || "");
@@ -136,11 +104,18 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const [minutes, setMinutes] = useState(Math.floor((existingWatchingTime % 3600) / 60).toString());
     const [seconds, setSeconds] = useState((existingWatchingTime % 60).toString());
 
-    const onCropReset = useCallback(() => {
-        setCrop({x: 0, y: 0});
-        setZoom(1);
-        setRotation(0);
-    }, []);
+    const cropper = useImageCropper({
+        initialPreview: getPosterUrl(entry.movie?.posterUrl),
+        onPosterRemoved: () => setPosterRemoved(true),
+    });
+
+    const {
+        validationErrors,
+        setValidationErrors,
+        handleFieldChange,
+        validateAll,
+        resetValidation,
+    } = useEntryValidation();
 
     // Reset form state when entry changes or dialog opens
     useEffect(() => {
@@ -150,18 +125,10 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             setMyRating((myRat?.rating ?? 0) / 2);
             setSelectedMembers(entry.ratings?.map((r) => r.userId!) ?? []);
             const map: Record<number, number> = {};
-            entry.ratings?.forEach((r) => {
-                map[r.userId!] = (r.rating ?? 0) / 2;
-            });
+            entry.ratings?.forEach((r) => { map[r.userId!] = (r.rating ?? 0) / 2; });
             setMemberRatings(map);
             setComment(entry.comment || "");
-            setPosterFile(null);
-            setPosterPreview(getPosterUrl(entry.movie?.posterUrl));
             setPosterRemoved(false);
-            setIsCropping(false);
-            setEditorImageSrc(null);
-            onCropReset();
-            croppedAreaPixelsRef.current = null;
             setError("");
             setCurrentEpisode(entry.currentEpisode?.toString() || "");
             setTotalEpisodes(entry.totalEpisodes?.toString() || "");
@@ -170,90 +137,18 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             setHours(Math.floor(wt / 3600).toString());
             setMinutes(Math.floor((wt % 3600) / 60).toString());
             setSeconds((wt % 60).toString());
-            setValidationErrors({});
+            cropper.resetCropper(getPosterUrl(entry.movie?.posterUrl));
+            resetValidation();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, entry]);
 
-    // Validation errors
-    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-    const validationTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
-
-    const validateField = (name: string, value: string): string | null => {
-        switch (name) {
-            case "year":
-                if (value && (!/^\d+$/.test(value) || parseInt(value) < 1900 || parseInt(value) > 2100)) {
-                    return t("invalidYear");
-                }
-                return null;
-            case "comment":
-                if (value.length > 1000) return t("commentTooLong");
-                return null;
-            case "currentSeason":
-            case "currentEpisode":
-            case "totalEpisodes":
-                if (value && (!/^\d+$/.test(value) || parseInt(value) < 1)) {
-                    return t("invalidNumber");
-                }
-                return null;
-            case "hours":
-                if (value && (!/^\d+$/.test(value) || parseInt(value) < 0)) {
-                    return t("invalidNumber");
-                }
-                return null;
-            case "minutes":
-            case "seconds":
-                if (value && (!/^\d+$/.test(value) || parseInt(value) < 0 || parseInt(value) > 59)) {
-                    return t("invalidTimeComponent");
-                }
-                return null;
-            default:
-                return null;
-        }
-    };
-
-    const handleFieldChange = (name: string, value: string) => {
-        // Clear previous timeout for this field
-        if (validationTimeouts.current[name]) {
-            clearTimeout(validationTimeouts.current[name]);
-        }
-
-        // Clear error immediately when user starts typing
-        setValidationErrors(prev => {
-            const next = {...prev};
-            delete next[name];
-            return next;
-        });
-
-        // Set new timeout for validation (500ms after user stops typing)
-        validationTimeouts.current[name] = setTimeout(() => {
-            const error = validateField(name, value);
-            setValidationErrors(prev => {
-                const next = {...prev};
-                if (error) {
-                    next[name] = error;
-                } else {
-                    delete next[name];
-                }
-                return next;
-            });
-        }, 500);
-    };
-
-    // Cleanup timeouts on unmount
-    useEffect(() => {
-        return () => {
-            Object.values(validationTimeouts.current).forEach(timeout => clearTimeout(timeout));
-        };
-    }, []);
-
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
-
     const queryClient = useQueryClient();
 
     // --- Change detection helpers ---
-    const hasEntryFieldsChanged = (): boolean => {
+    const hasEntryFieldsChanged = useCallback((): boolean => {
         if (status !== entry.status) return true;
         if ((comment || "") !== (entry.comment || "")) return true;
         if (isGroupMode) {
@@ -270,17 +165,16 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if (newWt !== (entry.watchingTime || 0)) return true;
         }
         return false;
-    };
+    }, [status, comment, isGroupMode, selectedMembers, currentSeason, currentEpisode, totalEpisodes, hours, minutes, seconds, entry]);
 
     const hasPosterChanged = (): boolean => {
-        return !!posterFile || posterRemoved;
+        return !!cropper.posterFile || posterRemoved;
     };
 
-    const hasRatingsChanged = (): boolean => {
+    const hasRatingsChanged = useCallback((): boolean => {
         if (isGroupMode) {
             const origMap: Record<number, number> = {};
             entry.ratings?.forEach((r) => { origMap[r.userId!] = r.rating ?? 0; });
-            // Check ratings we can actually change
             const uidsToCheck = canRateOthers ? selectedMembers : (user?.id ? [user.id] : []);
             for (const uid of uidsToCheck) {
                 const newRating = Math.round((memberRatings[uid] ?? 0) * 2);
@@ -293,9 +187,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if (newRating !== origRating) return true;
         }
         return false;
-    };
+    }, [isGroupMode, selectedMembers, memberRatings, canRateOthers, user?.id, myRating, myExistingRating, entry.ratings]);
 
-    // Compute whether any changes exist for submit button state
     const hasChanges = isRateOnlyMode
         ? hasRatingsChanged()
         : (hasEntryFieldsChanged() || hasPosterChanged() || hasRatingsChanged());
@@ -305,7 +198,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             const ratingsChanged = hasRatingsChanged();
 
             if (isRateOnlyMode) {
-                // Rate-only mode: only submit ratings via the rate endpoint
                 if (ratingsChanged && user?.id) {
                     if (isGroupMode && canRateOthers) {
                         const origMap: Record<number, number> = {};
@@ -325,33 +217,27 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 return;
             }
 
-            // Full edit mode - detect what actually changed
             const entryChanged = hasEntryFieldsChanged();
             const posterChanged = hasPosterChanged();
-            const fileToUpload = overridePosterFile ?? posterFile;
+            const fileToUpload = overridePosterFile ?? cropper.posterFile;
 
-            // If nothing changed at all, just close
-            if (!entryChanged && !posterChanged && !ratingsChanged) {
-                return;
-            }
+            if (!entryChanged && !posterChanged && !ratingsChanged) return;
 
-            // Upload poster if changed
             if (fileToUpload) {
                 const posterUrl = await uploadPoster(fileToUpload);
-                await updateMovie(entry.movieId!, {posterUrl});
+                await updateMovie(entry.movieId!, { posterUrl });
             } else if (posterRemoved) {
-                await updateMovie(entry.movieId!, {posterUrl: ""});
+                await updateMovie(entry.movieId!, { posterUrl: "" });
             }
 
-            // Only call updateWatchEntry if editable fields changed
             if (entryChanged) {
                 await updateWatchEntry(entry.id!, {
                     status,
                     comment: comment || undefined,
                     ...(status === WatchStatus.Watching && (
-                        (entry.movie?.type === EntryContentType.Anime ||
-                            entry.movie?.type === EntryContentType.Series ||
-                            entry.movie?.type === EntryContentType.Cartoon)
+                        entry.movie?.type === EntryContentType.Anime ||
+                        entry.movie?.type === EntryContentType.Series ||
+                        entry.movie?.type === EntryContentType.Cartoon
                     ) ? {
                         currentSeason: currentSeason ? parseInt(currentSeason) : undefined,
                         currentEpisode: currentEpisode ? parseInt(currentEpisode) : undefined,
@@ -363,7 +249,6 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 });
             }
 
-            // Rate separately via the rate endpoint — only if ratings changed
             if (ratingsChanged && (status === WatchStatus.Completed || status === WatchStatus.Dropped) && user?.id) {
                 if (isGroupMode && canRateOthers) {
                     const origMap: Record<number, number> = {};
@@ -382,112 +267,64 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             }
         },
         onSuccess: () => {
-            toast.success(isRateOnlyMode ? t("ratingUpdated") : t("postUpdated"), { position: "top-center" })
-            queryClient.invalidateQueries({queryKey: ["watchEntries"]});
+            toast.success(isRateOnlyMode ? t("ratingUpdated") : t("postUpdated"), { position: "top-center" });
+            queryClient.invalidateQueries({ queryKey: ["watchEntries"] });
             onOpenChange(false);
         },
-        onError: (error: any) => {
-            const errorMessage = error?.response?.data?.message || (isRateOnlyMode ? t("failedToRate") : t("failedToUpdate"));
-            toast.error(errorMessage, { position: "top-center" })
+        onError: (error: unknown) => {
+            const err = error as Record<string, Record<string, Record<string, string>>>;
+            const errorMessage = err?.response?.data?.message || (isRateOnlyMode ? t("failedToRate") : t("failedToUpdate"));
+            toast.error(errorMessage, { position: "top-center" });
             setError(isRateOnlyMode ? t("failedToRate") : t("failedToUpdate"));
         },
     });
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        startCropping(file);
-    };
-
-    const startCropping = (file: File) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setEditorImageSrc(reader.result as string);
-            onCropReset();
-            croppedAreaPixelsRef.current = null;
-            setIsCropping(true);
-        };
-        reader.readAsDataURL(file);
-    };
-
-    const onCropComplete = useCallback((_: CropperAreaData, croppedPixels: CropperAreaData) => {
-        croppedAreaPixelsRef.current = croppedPixels;
-    }, []);
-
-    const applyCropAndGetFile = async (): Promise<File | null> => {
-        if (!editorImageSrc) return null;
-        let file: File;
-        if (croppedAreaPixelsRef.current) {
-            const blob = await getCroppedImage(editorImageSrc, croppedAreaPixelsRef.current, rotation);
-            file = new File([blob], "cropped-poster.jpg", {type: "image/jpeg"});
+    const handleToggleMember = (userId: number) => {
+        if (selectedMembers.includes(userId)) {
+            setSelectedMembers((prev) => prev.filter((id) => id !== userId));
+            setMemberRatings((prev) => {
+                const next = { ...prev };
+                delete next[userId];
+                return next;
+            });
         } else {
-            // User never interacted with the cropper — use original image as-is
-            const res = await fetch(editorImageSrc);
-            const blob = await res.blob();
-            file = new File([blob], "poster.jpg", {type: blob.type || "image/jpeg"});
-        }
-        setPosterFile(file);
-        const reader = new FileReader();
-        reader.onloadend = () => setPosterPreview(reader.result as string);
-        reader.readAsDataURL(file);
-        setIsCropping(false);
-        return file;
-    };
-
-    const handleApplyCrop = async () => {
-        try {
-            await applyCropAndGetFile();
-        } catch {
-            toast.error(t("cropFailed"), {position: "top-center"});
+            setSelectedMembers((prev) => [...prev, userId]);
         }
     };
 
-    const handleCancelCrop = () => {
-        if (!posterPreview) {
-            setEditorImageSrc(null);
-        }
-        setIsCropping(false);
+    const handleMemberRatingChange = (uid: number, value: number) => {
+        setMemberRatings((prev) => ({ ...prev, [uid]: value }));
+        const key = `memberRating_${uid}`;
+        setValidationErrors(prev => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+        });
     };
 
-    const handlePasteFromClipboard = async () => {
-        try {
-            const items = await navigator.clipboard.read();
-            for (const item of items) {
-                const imageType = item.types.find((t) => t.startsWith("image/"));
-                if (imageType) {
-                    const blob = await item.getType(imageType);
-                    const ext = imageType.split("/")[1] || "png";
-                    const file = new File([blob], `clipboard.${ext}`, {type: imageType});
-                    startCropping(file);
-                    return;
-                }
+    const handleRateOnlyMemberRatingChange = (uid: number, value: number) => {
+        setMemberRatings((prev) => ({ ...prev, [uid]: value }));
+        if (!selectedMembers.includes(uid)) {
+            setSelectedMembers((prev) => [...prev, uid]);
+        }
+    };
+
+    const handleRateOnlySelfRatingChange = (value: number) => {
+        if (isGroupMode && user?.id) {
+            setMemberRatings((prev) => ({ ...prev, [user.id!]: value }));
+            if (!selectedMembers.includes(user.id!)) {
+                setSelectedMembers((prev) => [...prev, user.id!]);
             }
-            toast.error(t("clipboardNoImage"), {position: "top-center"});
-        } catch {
-            toast.error(t("clipboardFailed"), {position: "top-center"});
+        } else {
+            setMyRating(value);
         }
-    };
-
-    const removePoster = () => {
-        setPosterFile(null);
-        setPosterPreview(null);
-        setPosterRemoved(true);
-        setEditorImageSrc(null);
-        setIsCropping(false);
-        onCropReset();
-        croppedAreaPixelsRef.current = null;
-        if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        // Don't submit if nothing changed
         if (!hasChanges) return;
 
-        // Validate all fields
-        const errors: Record<string, string> = {};
-        const fieldsToValidate = [
+        const errors = validateAll([
             { name: "comment", value: comment },
             { name: "currentSeason", value: currentSeason },
             { name: "currentEpisode", value: currentEpisode },
@@ -495,16 +332,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             { name: "hours", value: hours },
             { name: "minutes", value: minutes },
             { name: "seconds", value: seconds },
-        ];
+        ]);
 
-        fieldsToValidate.forEach(({ name, value }) => {
-            const error = validateField(name, value);
-            if (error) {
-                errors[name] = error;
-            }
-        });
-
-        // Validate member ratings
         if (isGroupMode && (status === WatchStatus.Completed || status === WatchStatus.Dropped)) {
             selectedMembers.forEach(uid => {
                 const rating = memberRatings[uid] || 0;
@@ -522,13 +351,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
         setError("");
 
-        // Auto-apply crop if still in cropping mode
         let croppedFile: File | null = null;
-        if (isCropping && editorImageSrc) {
+        if (cropper.isCropping && cropper.editorImageSrc) {
             try {
-                croppedFile = await applyCropAndGetFile();
+                croppedFile = await cropper.applyCropAndGetFile();
             } catch {
-                toast.error(t("cropFailed"), {position: "top-center"});
+                toast.error(t("cropFailed"), { position: "top-center" });
                 return;
             }
         }
@@ -536,20 +364,27 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         mutation.mutate(croppedFile);
     };
 
+    const showTracking = status === WatchStatus.Watching && (
+        entry.movie?.type === EntryContentType.Anime ||
+        entry.movie?.type === EntryContentType.Series ||
+        entry.movie?.type === EntryContentType.Cartoon
+    );
+
+    const showRating = status === WatchStatus.Completed || status === WatchStatus.Dropped;
+
     return (
-        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         {isRateOnlyMode ? (
                             <>
-                                <Star className="h-5 w-5"/>
+                                <Star className="h-5 w-5" />
                                 {t("rateOnlyTitle")}
                             </>
                         ) : (
                             <>
-                                <Pencil className="h-5 w-5"/>
+                                <Pencil className="h-5 w-5" />
                                 {t("editEntry")}
                             </>
                         )}
@@ -557,14 +392,14 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 </DialogHeader>
 
                 <div className="bg-muted p-3 rounded-lg mb-4 flex items-center gap-3">
-                    <Film className="h-5 w-5 text-muted-foreground shrink-0"/>
+                    <Film className="h-5 w-5 text-muted-foreground shrink-0" />
                     <div>
                         <h3 className="font-semibold">{entry.movie?.title}</h3>
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                             {contentTypeLabels[entry.movie!.type! as EntryContentType]}
                             {entry.movie?.year && (
                                 <>
-                                    <Calendar className="h-3 w-3 ml-1"/>
+                                    <Calendar className="h-3 w-3 ml-1" />
                                     {entry.movie?.year}
                                 </>
                             )}
@@ -574,17 +409,16 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
                 {isPermissionsLoading ? (
                     <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground"/>
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                 ) : isRateOnlyMode ? (
                     /* Rate-only form */
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <p className="text-sm text-muted-foreground">{t("rateOnlyDescription")}</p>
 
-                        {/* Readonly status */}
                         <Field>
                             <FieldLabel className="flex items-center gap-1.5">
-                                <ListChecks className="h-3.5 w-3.5"/>
+                                <ListChecks className="h-3.5 w-3.5" />
                                 {t("status")}
                             </FieldLabel>
                             <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
@@ -592,11 +426,10 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             </div>
                         </Field>
 
-                        {/* Readonly comment */}
                         {entry.comment && (
                             <Field>
                                 <FieldLabel className="flex items-center gap-1.5">
-                                    <MessageSquare className="h-3.5 w-3.5"/>
+                                    <MessageSquare className="h-3.5 w-3.5" />
                                     {t("comment")}
                                 </FieldLabel>
                                 <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md whitespace-pre-wrap">
@@ -606,71 +439,53 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                         )}
 
                         {isGroupMode && canRateOthers ? (
-                            /* Admin/Owner in group: can rate all members */
                             <FieldSet>
                                 <FieldLegend variant="label" className="flex items-center gap-1.5">
-                                    <Star className="h-3.5 w-3.5"/>
+                                    <Star className="h-3.5 w-3.5" />
                                     {t("ratings")}
                                 </FieldLegend>
                                 <FieldGroup className="gap-4">
-                                    {(activeGroup?.members ?? []).map((m) => {
-                                        return (
-                                            <Field key={m.userId} orientation="horizontal">
-                                                <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
-                                                    {m.displayName}
-                                                </FieldLabel>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="opacity-50">
-                                                        {memberRatings[m.userId!] || 0}/10
-                                                    </div>
-                                                    <Rating
-                                                        value={memberRatings[m.userId!] || 0}
-                                                        onValueChange={(v) => {
-                                                            setMemberRatings((prev) => ({...prev, [m.userId!]: v}));
-                                                            if (!selectedMembers.includes(m.userId!)) {
-                                                                setSelectedMembers((prev) => [...prev, m.userId!]);
-                                                            }
-                                                        }}
-                                                        max={10}
-                                                        step={0.5}
-                                                        clearable
-                                                    >
-                                                        {Array.from({length: 10}, (_, i) => (
-                                                            <RatingItem key={i}/>
-                                                        ))}
-                                                    </Rating>
+                                    {(activeGroup?.members ?? []).map((m) => (
+                                        <Field key={m.userId} orientation="horizontal">
+                                            <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
+                                                {m.displayName}
+                                            </FieldLabel>
+                                            <div className="flex items-center gap-4">
+                                                <div className="opacity-50">
+                                                    {memberRatings[m.userId!] || 0}/10
                                                 </div>
-                                            </Field>
-                                        );
-                                    })}
+                                                <Rating
+                                                    value={memberRatings[m.userId!] || 0}
+                                                    onValueChange={(v) => handleRateOnlyMemberRatingChange(m.userId!, v)}
+                                                    max={10}
+                                                    step={0.5}
+                                                    clearable
+                                                >
+                                                    {Array.from({ length: 10 }, (_, i) => (
+                                                        <RatingItem key={i} />
+                                                    ))}
+                                                </Rating>
+                                            </div>
+                                        </Field>
+                                    ))}
                                 </FieldGroup>
                             </FieldSet>
                         ) : (
-                            /* Viewer/Member: can only rate self */
                             <Field>
                                 <FieldLabel className="flex items-center gap-1.5">
-                                    <Star className="h-3.5 w-3.5"/>
+                                    <Star className="h-3.5 w-3.5" />
                                     {t("myRatingLabel")}
                                 </FieldLabel>
                                 <div className="flex items-center gap-4">
                                     <Rating
                                         value={isGroupMode ? (memberRatings[user?.id ?? 0] || 0) : myRating}
-                                        onValueChange={(v) => {
-                                            if (isGroupMode && user?.id) {
-                                                setMemberRatings((prev) => ({...prev, [user.id!]: v}));
-                                                if (!selectedMembers.includes(user.id!)) {
-                                                    setSelectedMembers((prev) => [...prev, user.id!]);
-                                                }
-                                            } else {
-                                                setMyRating(v);
-                                            }
-                                        }}
+                                        onValueChange={handleRateOnlySelfRatingChange}
                                         max={10}
                                         step={0.5}
                                         clearable
                                     >
-                                        {Array.from({length: 10}, (_, i) => (
-                                            <RatingItem key={i}/>
+                                        {Array.from({ length: 10 }, (_, i) => (
+                                            <RatingItem key={i} />
                                         ))}
                                     </Rating>
                                     <div className="opacity-50">
@@ -700,7 +515,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             >
                                 {mutation.isPending ? (
                                     <>
-                                        <Loader2 className="h-4 w-4 mr-1.5 animate-spin"/>
+                                        <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
                                         {t("saving")}
                                     </>
                                 ) : (
@@ -710,502 +525,156 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                         </div>
                     </form>
                 ) : (
-                /* Full edit form */
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Poster */}
-                    <Field>
-                        <FieldContent>
-                            <FieldLabel className="flex items-center gap-1.5">
-                                <ImagePlus className="h-4 w-4"/>
-                                {t("poster")}
-                            </FieldLabel>
-                            <FieldDescription>
-                                {t("posterDescription")}
-                            </FieldDescription>
-                        </FieldContent>
-                        {isCropping && editorImageSrc ? (
-                            <div className="space-y-3">
-                                <div className="relative w-full aspect-[4/3] bg-muted rounded-lg overflow-hidden border">
-                                    <Cropper
-                                        crop={crop}
-                                        zoom={zoom}
-                                        rotation={rotation}
-                                        aspectRatio={4 / 3}
-                                        withGrid={withGrid}
-                                        onCropChange={setCrop}
-                                        onZoomChange={setZoom}
-                                        onRotationChange={setRotation}
-                                        onCropAreaChange={onCropComplete}
-                                    >
-                                        <CropperImage
-                                            src={editorImageSrc}
-                                            alt="Image to crop"
-                                            crossOrigin="anonymous"
-                                        />
-                                        <CropperArea />
-                                    </Cropper>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-3">
-                                        <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0"/>
-                                        <span className="text-sm text-muted-foreground w-12">{t("zoom")}</span>
-                                        <input
-                                            type="range"
-                                            min={1}
-                                            max={3}
-                                            step={0.1}
-                                            value={zoom}
-                                            onChange={(e) => setZoom(Number(e.target.value))}
-                                            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <RotateCw className="h-4 w-4 text-muted-foreground shrink-0"/>
-                                        <span className="text-sm text-muted-foreground w-12">{t("rotate")}</span>
-                                        <input
-                                            type="range"
-                                            min={0}
-                                            max={360}
-                                            step={1}
-                                            value={rotation}
-                                            onChange={(e) => setRotation(Number(e.target.value))}
-                                            className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-8 w-8 shrink-0"
-                                            onClick={() => setRotation((prev) => (prev + 90) % 360)}
-                                        >
-                                            <RotateCw className="h-3.5 w-3.5"/>
-                                        </Button>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <Switch id="edit-crop-grid" checked={withGrid} onCheckedChange={setWithGrid} size="sm"/>
-                                            <Label htmlFor="edit-crop-grid" className="text-sm text-muted-foreground">{t("showGrid")}</Label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button type="button" onClick={handleApplyCrop} className="flex-1">
-                                        {t("applyCrop")}
-                                    </Button>
-                                    <Button type="button" variant="outline" size="icon" onClick={onCropReset}>
-                                        <RotateCcw className="h-3.5 w-3.5"/>
-                                    </Button>
-                                    <Button type="button" variant="outline" onClick={handleCancelCrop}>
-                                        {t("cancel")}
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : posterPreview ? (
-                            <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border">
-                                <img
-                                    src={posterPreview}
-                                    alt="Poster preview"
-                                    className="w-full h-full object-cover"
-                                />
-                                <div className="absolute top-2 right-2 flex gap-1">
-                                    <Button
-                                        type="button"
-                                        variant="secondary"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        aria-label={t("imageEditorTitle")}
-                                        onClick={() => {
-                                            if (!editorImageSrc && posterPreview) {
-                                                setEditorImageSrc(posterPreview);
-                                            }
-                                            setIsCropping(true);
-                                        }}
-                                    >
-                                        <Crop className="h-3.5 w-3.5"/>
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="secondary"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() => fileInputRef.current?.click()}
-                                    >
-                                        <ImagePlus className="h-3.5 w-3.5"/>
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="secondary"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={handlePasteFromClipboard}
-                                    >
-                                        <ClipboardPaste className="h-3.5 w-3.5"/>
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={removePoster}
-                                    >
-                                        <X className="h-4 w-4"/>
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="flex flex-col items-center justify-center flex-1 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors text-muted-foreground"
-                                >
-                                    <ImagePlus className="h-8 w-8 mb-2"/>
-                                    <span className="text-sm">{t("clickToUpload")}</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handlePasteFromClipboard}
-                                    className="flex flex-col items-center justify-center w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors text-muted-foreground"
-                                >
-                                    <ClipboardPaste className="h-8 w-8 mb-2"/>
-                                    <span className="text-xs text-center px-1">{t("pasteFromClipboard")}</span>
-                                </button>
-                            </div>
-                        )}
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp,image/gif"
-                            className="hidden"
-                            onChange={handleFileChange}
+                    /* Full edit form */
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <PosterUploadSection
+                            cropper={cropper}
+                            fileInputRef={cropper.fileInputRef}
+                            onFileChange={cropper.handleFileChange}
+                            gridSwitchId="edit-crop-grid"
+                            canReCropFromPreview
+                            showPasteInPreview
                         />
-                    </Field>
 
-                    <FieldGroup className="gap-4">
-                        <Field>
-                            <FieldLabel className="flex items-center gap-1.5">
-                                <ListChecks className="h-3.5 w-3.5"/>
-                                {t("status")}
-                            </FieldLabel>
-                            <Select
-                                value={status}
-                                onValueChange={(v) => setStatus(v as WatchStatus)}
-                                disabled={!canEdit}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue/>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(watchStatusLabels).map(([value, label]) => (
-                                        <SelectItem key={value} value={value}>
-                                            {label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                    </FieldGroup>
-
-                    {isGroupMode ? (
-                        <>
-                            {/* Group mode: member multi-select */}
+                        <FieldGroup className="gap-4">
                             <Field>
-                                <FieldContent>
-                                    <FieldLabel className="flex items-center gap-1.5">
-                                        <Users className="h-3.5 w-3.5"/>
-                                        {t("viewers")}
-                                    </FieldLabel>
-                                    <FieldDescription>
-                                        {t("membersDescription")}
-                                    </FieldDescription>
-                                </FieldContent>
-                                <div className="flex flex-wrap gap-2">
-                                    {(activeGroup.members ?? []).map((m) => {
-                                        const selected = selectedMembers.includes(m.userId!);
-                                        return (
-                                            <Button
-                                                key={m.userId}
-                                                type="button"
-                                                variant={selected ? "default" : "outline"}
-                                                size="sm"
-                                                disabled={!canEdit}
-                                                onClick={() => {
-                                                    if (selected) {
-                                                        setSelectedMembers((prev) => prev.filter((id) => id !== m.userId));
-                                                        setMemberRatings((prev) => {
-                                                            const next = {...prev};
-                                                            delete next[m.userId!];
-                                                            return next;
-                                                        });
-                                                    } else {
-                                                        setSelectedMembers((prev) => [...prev, m.userId!]);
-                                                    }
-                                                }}
-                                            >
-                                                {m.displayName}
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
+                                <FieldLabel className="flex items-center gap-1.5">
+                                    <ListChecks className="h-3.5 w-3.5" />
+                                    {t("status")}
+                                </FieldLabel>
+                                <Select
+                                    value={status}
+                                    onValueChange={(v) => setStatus(v as WatchStatus)}
+                                    disabled={!canEdit}
+                                >
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {Object.entries(watchStatusLabels).map(([value, label]) => (
+                                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </Field>
+                        </FieldGroup>
 
-                            {/* Per-member rating fields */}
-                            {(status === WatchStatus.Completed || status === WatchStatus.Dropped) &&
-                                selectedMembers.length > 0 && (
-                                    <FieldSet>
-                                        <FieldLegend variant="label" className="flex items-center gap-1.5">
-                                            <Star className="h-3.5 w-3.5"/>
-                                            {t("ratings")}
-                                        </FieldLegend>
-                                        <FieldGroup className="gap-4">
-                                            {selectedMembers.map((uid) => {
-                                                const member = activeGroup.members?.find((m) => m.userId === uid);
-                                                if (!member) return null;
-                                                const isSelf = uid === user?.id;
-                                                const canChangeRating = isSelf ? canRateSelf : canRateOthers;
-                                                return (
-                                                    <Field key={uid} orientation="horizontal">
-                                                        <FieldLabel className="flex items-center gap-1.5 min-w-0 shrink-0">
-                                                            {member.displayName}
-                                                        </FieldLabel>
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="opacity-50">
-                                                                {memberRatings[uid] || 0}/10
-                                                            </div>
-                                                            <Rating
-                                                                value={memberRatings[uid] || 0}
-                                                                onValueChange={canChangeRating ? (v) => {
-                                                                    setMemberRatings((prev) => ({...prev, [uid]: v}));
-                                                                    const key = `memberRating_${uid}`;
-                                                                    setValidationErrors(prev => {
-                                                                        const next = {...prev};
-                                                                        delete next[key];
-                                                                        return next;
-                                                                    });
-                                                                } : undefined}
-                                                                max={10}
-                                                                step={0.5}
-                                                                clearable
-                                                                disabled={!canChangeRating}
-                                                            >
-                                                                {Array.from({length: 10}, (_, i) => (
-                                                                    <RatingItem key={i}/>
-                                                                ))}
-                                                            </Rating>
-                                                        </div>
-                                                    </Field>
-                                                );
-                                            })}
-                                        </FieldGroup>
-                                    </FieldSet>
+                        {isGroupMode ? (
+                            <>
+                                <MemberSelect
+                                    members={activeGroup?.members ?? []}
+                                    selectedMembers={selectedMembers}
+                                    onToggleMember={handleToggleMember}
+                                    disabled={!canEdit}
+                                />
+
+                                {showRating && selectedMembers.length > 0 && (
+                                    <RatingSection
+                                        isGroupMode
+                                        members={activeGroup?.members ?? []}
+                                        selectedMembers={selectedMembers}
+                                        memberRatings={memberRatings}
+                                        onMemberRatingChange={handleMemberRatingChange}
+                                        myRating={myRating}
+                                        onMyRatingChange={setMyRating}
+                                        canRateOthers={canRateOthers}
+                                        canRateSelf={canRateSelf}
+                                        currentUserId={user?.id}
+                                    />
                                 )}
 
-                            {status === WatchStatus.Watching && (
-                                entry.movie?.type === EntryContentType.Anime ||
-                                entry.movie?.type === EntryContentType.Series ||
-                                entry.movie?.type === EntryContentType.Cartoon) && (
-                                <FieldSet>
-                                    <FieldLegend variant="label">
-                                        {t("trackingInfo")}
-                                    </FieldLegend>
-                                    <FieldGroup className="gap-4">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Field>
-                                                <FieldLabel htmlFor="currentSeason" className="text-sm">
-                                                    {t("season") || "Сезон"}
-                                                </FieldLabel>
-                                                <Input
-                                                    id="currentSeason"
-                                                    value={currentSeason}
-                                                    onChange={(e) => {
-                                                        setCurrentSeason(e.target.value);
-                                                        handleFieldChange("currentSeason", e.target.value);
-                                                    }}
-                                                    placeholder="1"
-                                                    className="h-8"
-                                                    aria-invalid={!!validationErrors.currentSeason}
-                                                />
-                                                {validationErrors.currentSeason && <FieldError className="text-xs">{validationErrors.currentSeason}</FieldError>}
-                                            </Field>
-                                            <Field>
-                                                <FieldLabel htmlFor="currentEpisode" className="text-sm">
-                                                    {t("episode") || "Серия"}
-                                                </FieldLabel>
-                                                <Input
-                                                    id="currentEpisode"
-                                                    value={currentEpisode}
-                                                    onChange={(e) => {
-                                                        setCurrentEpisode(e.target.value);
-                                                        handleFieldChange("currentEpisode", e.target.value);
-                                                    }}
-                                                    placeholder="1"
-                                                    className="h-8"
-                                                    aria-invalid={!!validationErrors.currentEpisode}
-                                                />
-                                                {validationErrors.currentEpisode && <FieldError className="text-xs">{validationErrors.currentEpisode}</FieldError>}
-                                            </Field>
-                                        </div>
-                                        <Field>
-                                            <FieldLabel htmlFor="totalEpisodes" className="text-sm">
-                                                {t("totalEpisodes") || "Всего серий"}
-                                            </FieldLabel>
-                                            <Input
-                                                id="totalEpisodes"
-                                                value={totalEpisodes}
-                                                onChange={(e) => {
-                                                    setTotalEpisodes(e.target.value);
-                                                    handleFieldChange("totalEpisodes", e.target.value);
-                                                }}
-                                                placeholder="13"
-                                                className="h-8"
-                                                aria-invalid={!!validationErrors.totalEpisodes}
-                                            />
-                                            {validationErrors.totalEpisodes && <FieldError className="text-xs">{validationErrors.totalEpisodes}</FieldError>}
-                                        </Field>
-                                        <Field>
-                                            <FieldContent>
-                                                <FieldLabel className="text-sm">
-                                                    {t("watchingTime")}
-                                                </FieldLabel>
-                                                <FieldDescription>
-                                                    {t("watchingTimeDescription")}
-                                                </FieldDescription>
-                                            </FieldContent>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                <div>
-                                                    <Input
-                                                        value={hours}
-                                                        onChange={(e) => {
-                                                            setHours(e.target.value);
-                                                            handleFieldChange("hours", e.target.value);
-                                                        }}
-                                                        placeholder="Часы"
-                                                        className="h-8"
-                                                        aria-invalid={!!validationErrors.hours}
-                                                    />
-                                                    {validationErrors.hours && <FieldError className="text-xs">{validationErrors.hours}</FieldError>}
-                                                </div>
-                                                <div>
-                                                    <Input
-                                                        value={minutes}
-                                                        onChange={(e) => {
-                                                            setMinutes(e.target.value);
-                                                            handleFieldChange("minutes", e.target.value);
-                                                        }}
-                                                        placeholder="Минуты"
-                                                        className="h-8"
-                                                        aria-invalid={!!validationErrors.minutes}
-                                                    />
-                                                    {validationErrors.minutes && <FieldError className="text-xs">{validationErrors.minutes}</FieldError>}
-                                                </div>
-                                                <div>
-                                                    <Input
-                                                        value={seconds}
-                                                        onChange={(e) => {
-                                                            setSeconds(e.target.value);
-                                                            handleFieldChange("seconds", e.target.value);
-                                                        }}
-                                                        placeholder="Секунды"
-                                                        className="h-8"
-                                                        aria-invalid={!!validationErrors.seconds}
-                                                    />
-                                                    {validationErrors.seconds && <FieldError className="text-xs">{validationErrors.seconds}</FieldError>}
-                                                </div>
-                                            </div>
-                                        </Field>
-                                    </FieldGroup>
-                                </FieldSet>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            {/* Personal mode: single rating */}
-                            {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
-                                <Field>
-                                    <FieldLabel className="flex items-center gap-1.5">
-                                        <Star className="h-3.5 w-3.5"/>
-                                        {t("myRatingLabel")}
+                                {showTracking && (
+                                    <SeriesTrackingSection
+                                        currentSeason={currentSeason}
+                                        setCurrentSeason={setCurrentSeason}
+                                        currentEpisode={currentEpisode}
+                                        setCurrentEpisode={setCurrentEpisode}
+                                        totalEpisodes={totalEpisodes}
+                                        setTotalEpisodes={setTotalEpisodes}
+                                        hours={hours}
+                                        setHours={setHours}
+                                        minutes={minutes}
+                                        setMinutes={setMinutes}
+                                        seconds={seconds}
+                                        setSeconds={setSeconds}
+                                        handleFieldChange={handleFieldChange}
+                                        validationErrors={validationErrors}
+                                    />
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {status !== WatchStatus.Planned && status !== WatchStatus.Watching && (
+                                    <RatingSection
+                                        isGroupMode={false}
+                                        members={[]}
+                                        selectedMembers={[]}
+                                        memberRatings={{}}
+                                        onMemberRatingChange={() => {}}
+                                        myRating={myRating}
+                                        onMyRatingChange={setMyRating}
+                                        canRateOthers={false}
+                                        canRateSelf
+                                        currentUserId={user?.id}
+                                    />
+                                )}
+                            </>
+                        )}
+
+                        <FieldGroup className="gap-4">
+                            <Field>
+                                <FieldContent>
+                                    <FieldLabel htmlFor="comment" className="flex items-center gap-1.5">
+                                        <MessageSquare className="h-3.5 w-3.5" />
+                                        {t("comment")}
                                     </FieldLabel>
-                                    <div className="flex items-cetner gap-4">
-                                        <Rating
-                                            value={myRating}
-                                            onValueChange={setMyRating}
-                                            max={10}
-                                            step={0.5}
-                                            clearable
-                                        >
-                                            {Array.from({length: 10}, (_, i) => (
-                                                <RatingItem key={i}/>
-                                            ))}
-                                        </Rating>
-                                        <div className="opacity-50">
-                                            {myRating}/10
-                                        </div>
-                                    </div>
-                                </Field>
-                            )}
-                        </>
-                    )}
+                                    <FieldDescription>{t("commentDescription")}</FieldDescription>
+                                </FieldContent>
+                                <Textarea
+                                    id="comment"
+                                    value={comment}
+                                    disabled={!canEdit}
+                                    onChange={(e) => {
+                                        setComment(e.target.value);
+                                        handleFieldChange("comment", e.target.value);
+                                    }}
+                                    rows={3}
+                                    placeholder={t("commentPlaceholder")}
+                                    aria-invalid={!!validationErrors.comment}
+                                />
+                                {validationErrors.comment && <FieldError>{validationErrors.comment}</FieldError>}
+                            </Field>
+                        </FieldGroup>
 
-                    <FieldGroup className="gap-4">
-                        <Field>
-                            <FieldContent>
-                                <FieldLabel htmlFor="comment" className="flex items-center gap-1.5">
-                                    <MessageSquare className="h-3.5 w-3.5"/>
-                                    {t("comment")}
-                                </FieldLabel>
-                                <FieldDescription>
-                                    {t("commentDescription")}
-                                </FieldDescription>
-                            </FieldContent>
-                            <Textarea
-                                id="comment"
-                                value={comment}
-                                disabled={!canEdit}
-                                onChange={(e) => {
-                                    setComment(e.target.value);
-                                    handleFieldChange("comment", e.target.value);
-                                }}
-                                rows={3}
-                                placeholder={t("commentPlaceholder")}
-                                aria-invalid={!!validationErrors.comment}
-                            />
-                            {validationErrors.comment && <FieldError>{validationErrors.comment}</FieldError>}
-                        </Field>
-                    </FieldGroup>
+                        {error && (
+                            <p className="text-sm text-destructive text-center">{error}</p>
+                        )}
 
-                    {error && (
-                        <p className="text-sm text-destructive text-center">{error}</p>
-                    )}
-
-                    <div className="flex gap-3 pt-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            className="flex-1"
-                        >
-                            {t("cancel")}
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={mutation.isPending || !hasChanges}
-                            className="flex-1"
-                        >
-                            {mutation.isPending ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin"/>
-                                    {t("saving")}
-                                </>
-                            ) : (
-                                t("save")
-                            )}
-                        </Button>
-                    </div>
-                </form>
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                className="flex-1"
+                            >
+                                {t("cancel")}
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={mutation.isPending || !hasChanges}
+                                className="flex-1"
+                            >
+                                {mutation.isPending ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                                        {t("saving")}
+                                    </>
+                                ) : (
+                                    t("save")
+                                )}
+                            </Button>
+                        </div>
+                    </form>
                 )}
             </DialogContent>
         </Dialog>
-        </>
     );
 }

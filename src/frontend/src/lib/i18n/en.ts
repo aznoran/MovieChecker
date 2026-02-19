@@ -84,6 +84,7 @@ const en = {
     deleteSucess: "Entry deleted successfully!",
     deleteError: "Failed to delete entry",
     authError: "Authentication failed. Please log in again",
+    editPermitted: "You dont have permission to edit this entry",
     titleRequired: "Title is required",
     clipboardNoImage: "No image found in clipboard",
     clipboardFailed: "Failed to read clipboard",

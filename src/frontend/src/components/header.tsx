@@ -2,7 +2,7 @@
 
 import {useState} from "react";
 import Link from "next/link";
-import {usePathname, useRouter} from "next/navigation";
+import {usePathname} from "next/navigation";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
@@ -77,7 +77,6 @@ import {ScrollArea} from "@/components/ui/scroll-area";
 
 export function Header() {
     const pathname = usePathname();
-    const router = useRouter();
     const {user, logout} = useAuth();
     const {locale, setLocale, t} = useLocale();
     const {

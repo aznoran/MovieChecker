@@ -22,7 +22,7 @@ import {
     Heart,
     Users,
     Film,
-    Smile,
+
     Loader2,
     Popcorn,
     Hash,

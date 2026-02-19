@@ -86,6 +86,7 @@ const ru: Record<TranslationKeys, string> = {
     deleteSucess: "Запись успешно удалена!",
     deleteError: "Ошибка при удалении записи",
     authError: "Ошибка аутентификации, войдите заново",
+    editPermitted: "У вас недостаточно прав для редактирования данной записи",
     titleRequired: "Название обязательно",
     clipboardNoImage: "В буфере нет изображения",
     clipboardFailed: "Не удалось прочитать буфер обмена",

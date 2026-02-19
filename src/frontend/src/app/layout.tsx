@@ -28,18 +28,18 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="dark" suppressHydrationWarning>
-        <body
-            className={`antialiased min-h-screen flex flex-col`}
-        >
-        <Providers>
-            <Header/>
-            <div className="flex-1">
-                {children}
-            </div>
-            <Footer/>
-            <Toaster/>
-        </Providers>
-        </body>
+            <body
+                className={`antialiased min-h-screen flex flex-col`}
+            >
+                <Providers>
+                    <Header/>
+                    <div className="flex-1">
+                        {children}
+                    </div>
+                    <Footer/>
+                    <Toaster/>
+                </Providers>
+            </body>
         </html>
     );
 }

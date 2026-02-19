@@ -9,7 +9,7 @@ import { useGroup } from "@/context/group-context";
 import { usePermissions } from "@/context/permissions-context";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { getWatchEntries, deleteWatchEntry, getPosterUrl } from "@/lib/api";
-import { WatchStatus, GroupType, EntryContentType } from "@/lib/api.generated";
+import { WatchStatus, EntryContentType } from "@/lib/api.generated";
 import type { WatchEntryDto } from "@/lib/api.generated";
 import {
     getContentTypeLabels,
@@ -50,7 +50,7 @@ export const dynamic = "force-dynamic";
 export default function HomePage() {
     const {isAuthenticated, isLoading: authLoading, user} = useAuth();
     const {locale, t} = useLocale();
-    const {activeGroupId, activeGroup} = useGroup();
+    const {activeGroupId} = useGroup();
     const {permissions} = usePermissions();
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -58,12 +58,10 @@ export default function HomePage() {
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
 
-    const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
-
     // Check if user can delete an entry based on permissions
     const canDeleteEntry = (entry: WatchEntryDto): boolean => {
         if (permissions.canDeleteAllEntries) return true;
-        if (permissions.canDeleteOwnEntries) return entry.ratings?.some(r => r.userId === user?.id) || false;
+        if (permissions.canDeleteOwnEntries) return entry.userId === user?.id || false;
         return false;
     };
 
@@ -328,29 +326,29 @@ export default function HomePage() {
                                             )}
                                         </div>
                                         {canDeleteEntry(entry) && (
-                                        <div className="flex justify-end pt-3 shrink-0">
-                                            <div onClick={(e) => e.stopPropagation()}>
-                                                <ConfirmDialog
-                                                    trigger={
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="text-destructive hover:text-destructive"
-                                                        >
-                                                            <Trash2 className="h-4 w-4 mr-1"/>
-                                                            {t("delete")}
-                                                        </Button>
-                                                    }
-                                                    onConfirm={() => deleteMutation.mutate(entry.id!)}
-                                                    title={t("delete")}
-                                                    description={t("deleteConfirm")}
-                                                    confirmText={t("delete")}
-                                                    cancelText={t("cancel")}
-                                                    variant="destructive"
-                                                    icon={<Trash2 className="h-6 w-6" />}
-                                                />
+                                            <div className="flex justify-end pt-3 shrink-0">
+                                                <div onClick={(e) => e.stopPropagation()}>
+                                                    <ConfirmDialog
+                                                        trigger={
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-destructive hover:text-destructive"
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mr-1"/>
+                                                                {t("delete")}
+                                                            </Button>
+                                                        }
+                                                        onConfirm={() => deleteMutation.mutate(entry.id!)}
+                                                        title={t("delete")}
+                                                        description={t("deleteConfirm")}
+                                                        confirmText={t("delete")}
+                                                        cancelText={t("cancel")}
+                                                        variant="destructive"
+                                                        icon={<Trash2 className="h-6 w-6" />}
+                                                    />
+                                                </div>
                                             </div>
-                                        </div>
                                         )}
                                     </CardContent>
                                 </Card>

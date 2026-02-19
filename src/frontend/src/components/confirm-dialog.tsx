@@ -26,15 +26,15 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({
-  trigger,
-  onConfirm,
-  title,
-  description,
-  confirmText,
-  cancelText,
-  variant = "default",
-  icon,
-}: ConfirmDialogProps) {
+                                  trigger,
+                                  onConfirm,
+                                  title,
+                                  description,
+                                  confirmText,
+                                  cancelText,
+                                  variant = "default",
+                                  icon,
+                              }: ConfirmDialogProps) {
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
@@ -61,8 +61,8 @@ export function ConfirmDialog({
                     </AlertDialogCancel>
                     <AlertDialogAction
                         className={`${variant === "destructive"
-                                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                : ""}`
+                            ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            : ""}`
                         }
                         onClick={onConfirm}
                     >
