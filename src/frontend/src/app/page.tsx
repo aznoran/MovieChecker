@@ -7,17 +7,17 @@ import { useAuth } from "@/context/auth-context";
 import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
 import { usePermissions } from "@/context/permissions-context";
-import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { getWatchEntries, deleteWatchEntry, getPosterUrl } from "@/lib/api";
-import { WatchStatus, EntryContentType } from "@/lib/api.generated";
-import type { WatchEntryDto } from "@/lib/api.generated";
+import { WatchStatus, EntryContentType } from "@/lib/api/generated";
+import type { WatchEntryDto } from "@/lib/api/generated";
 import {
     getContentTypeLabels,
     getWatchStatusLabels,
     translateGenre,
 } from "@/lib/i18n/labels";
-import { AddEntryDialog } from "@/components/add-entry-dialog";
-import { EditEntryDialog } from "@/components/edit-entry-dialog";
+import { AddEntryDialog } from "@/components/entry/add-entry-dialog";
+import { EditEntryDialog } from "@/components/entry/edit-entry-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -137,41 +137,39 @@ export default function HomePage() {
     }
 
     return (
-        <div className="min-h-screen bg-background">
-            <main className="container mx-auto px-4 py-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Popcorn className="h-6 w-6"/>
-                        {t("movieDiary")}
-                    </h1>
-                    {canCreate && (
-                        <Button className="min-w-[12rem]"  onClick={() => setAddOpen(true)}>
-                            <Plus className="h-4 w-4 mr-1.5"/>
-                            {t("addEntry")}
-                        </Button>
-                    )}
-                </div>
+        <div className="min-h-screen">
+            <main className="container mx-auto px-4 py-4">
 
-                <div className="flex flex-wrap gap-2 mb-6">
-                    <Button
-                        variant={statusFilter === null ? "default" : "outline"}
-                        size="sm"
-                        className="min-w-[5rem]"
-                        onClick={() => setStatusFilter(null)}
-                    >
-                        {t("all")}
-                    </Button>
-                    {Object.entries(watchStatusLabels).map(([value, label]) => (
+                <div className="flex flex-wrap justify-between">
+                    <div className="flex flex-wrap gap-2 mb-6">
                         <Button
-                            key={value}
-                            variant={statusFilter === value ? "default" : "outline"}
+                            variant={statusFilter === null ? "default" : "outline"}
                             size="sm"
-                            className="min-w-[9rem]"
-                            onClick={() => setStatusFilter(value as WatchStatus)}
+                            className="min-w-[5rem]"
+                            onClick={() => setStatusFilter(null)}
                         >
-                            {label}
+                            {t("all")}
                         </Button>
-                    ))}
+                        {Object.entries(watchStatusLabels).map(([value, label]) => (
+                            <Button
+                                key={value}
+                                variant={statusFilter === value ? "default" : "outline"}
+                                size="sm"
+                                className="min-w-[9rem]"
+                                onClick={() => setStatusFilter(value as WatchStatus)}
+                            >
+                                {label}
+                            </Button>
+                        ))}
+                    </div>
+                    <div>
+                        {canCreate && (
+                            <Button className="min-w-[12rem]"  onClick={() => setAddOpen(true)}>
+                                <Plus className="h-4 w-4 mr-1.5"/>
+                                {t("addEntry")}
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {isLoading ? (
@@ -199,7 +197,7 @@ export default function HomePage() {
                         )}
                     </div>
                 ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {entries.map((entry) => {
                             if (!entry.movie) return null;
                             const movie = entry.movie;

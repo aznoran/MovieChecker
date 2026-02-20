@@ -1,20 +1,11 @@
 import type {Metadata} from "next";
-// import {Geist, Geist_Mono} from "next/font/google";
 import "./globals.css";
-import {Providers} from "@/components/providers";
-import {Header} from "@/components/header";
-import {Footer} from "@/components/footer";
+import {Providers} from "@/components/layout/providers";
+import {AppSidebar} from "@/components/layout/app-sidebar";
+import {SidebarInset, SidebarProvider} from "@/components/ui/sidebar";
+import {NavBar} from "@/components/layout/navbar";
+import {Footer} from "@/components/layout/footer";
 import {Toaster} from "@/components/ui/sonner";
-
-// const geistSans = Geist({
-//     variable: "--font-geist-sans",
-//     subsets: ["latin"],
-// });
-
-// const geistMono = Geist_Mono({
-//     variable: "--font-geist-mono",
-//     subsets: ["latin"],
-// });
 
 export const metadata: Metadata = {
     title: "MovieChecker",
@@ -28,15 +19,20 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="dark" suppressHydrationWarning>
-            <body
-                className={`antialiased min-h-screen flex flex-col`}
-            >
+            <body className={`antialiased`}>
                 <Providers>
-                    <Header/>
-                    <div className="flex-1">
-                        {children}
-                    </div>
-                    <Footer/>
+                    <SidebarProvider>
+                        <AppSidebar/>
+                        <SidebarInset className="bg-transparent md:peer-data-[variant=inset]:shadow-none md:peer-data-[variant=inset]:ml-2 gap-2">
+                            <NavBar/>
+                            <div className="flex-1 flex flex-col rounded-xl border bg-card overflow-hidden">
+                                <div className="flex-1 p-4">
+                                    {children}
+                                </div>
+                                <Footer/>
+                            </div>
+                        </SidebarInset>
+                    </SidebarProvider>
                     <Toaster/>
                 </Providers>
             </body>

@@ -1,4 +1,4 @@
-import { EntryContentType, WatchStatus } from "@/lib/api.generated";
+import { EntryContentType, WatchStatus } from "@/lib/api/generated";
 import type { Locale } from "./index";
 import { t } from "./index";
 import en from "./en";

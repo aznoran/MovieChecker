@@ -7,7 +7,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import type { UserDto } from "@/lib/api.generated";
+import type { UserDto } from "@/lib/api/generated";
 import { login as apiLogin, register as apiRegister } from "@/lib/api";
 
 interface AuthContextType {

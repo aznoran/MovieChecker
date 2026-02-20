@@ -15,8 +15,8 @@ import {
     updateGroupPassword as apiUpdateGroupPassword,
     updateGroupSettings as apiUpdateGroupSettings,
 } from "@/lib/api";
-import type { GroupDto } from "@/lib/api.generated";
-import { GroupType, GroupRole } from "@/lib/api.generated";
+import type { GroupDto } from "@/lib/api/generated";
+import { GroupType, GroupRole } from "@/lib/api/generated";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 
@@ -66,7 +66,11 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
                 localStorage.removeItem("activeGroupId");
             }
         }
-    }, []);
+        // Invalidate data queries so they refetch for the new group
+        queryClient.invalidateQueries({queryKey: ["watchEntries"]});
+        queryClient.invalidateQueries({queryKey: ["stats"]});
+        queryClient.invalidateQueries({queryKey: ["permissions"]});
+    }, [queryClient]);
 
     // Track previous auth state to detect actual logout (not initial false state)
     const wasAuthenticatedRef = useRef(false);

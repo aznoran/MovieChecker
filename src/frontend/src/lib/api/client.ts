@@ -9,7 +9,7 @@ import {
     WatchEntryDto,
     GroupDto,
     StatsDto,
-} from "./api.generated";
+} from "./generated";
 
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";

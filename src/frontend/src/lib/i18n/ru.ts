@@ -18,6 +18,7 @@ const ru: Record<TranslationKeys, string> = {
     // Nav
     navDiary: "Дневник",
     navStats: "Статистика",
+    navPages: "Страницы",
 
     // Auth
     signIn: "Войти",

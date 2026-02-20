@@ -6,7 +6,7 @@ import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
-import {GroupType, EntryContentType} from "@/lib/api.generated";
+import {GroupType, EntryContentType} from "@/lib/api/generated";
 import {
     getContentTypeLabels,
 } from "@/lib/i18n/labels";
@@ -31,41 +31,10 @@ import {
 } from "lucide-react";
 import {toast} from "sonner";
 import {useEffect} from "react";
-import {Rating, RatingItem} from "@/components/ui/rating";
+import {ProgressBar} from "./_components/progress-bar";
+import {StarRating} from "./_components/star-rating";
 
 export const dynamic = "force-dynamic";
-
-function ProgressBar({
-     value,
-     max,
-     color,
- }: {
-    value: number;
-    max: number;
-    color: string;
-}) {
-    const pct = max > 0 ? (value / max) * 100 : 0;
-    return (
-        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-            <div
-                className={`h-full rounded-full transition-all duration-500 ${color}`}
-                style={{width: `${pct}%`}}
-            />
-        </div>
-    );
-}
-
-function StarRating({rating}: { rating: number }) {
-    const newRating = rating/2;
-    console.log(newRating)
-    return (
-        <Rating size="lg" value={newRating} max={10} readOnly step={1} className="gap-0.5 fill-yellow-400">
-            {Array.from({length: 10}, (_, i) => (
-                <RatingItem key={i} className="text-yellow-400"/>
-            ))}
-        </Rating>
-    );
-}
 
 export default function StatsPage() {
     const {isAuthenticated, isLoading: authLoading} = useAuth();
@@ -143,7 +112,7 @@ export default function StatsPage() {
         : [];
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen ">
             <main className="container mx-auto px-4 py-6 max-w-4xl">
 
                 {isLoading ? (

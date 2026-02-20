@@ -16,6 +16,7 @@ const en = {
     // Nav
     navDiary: "Diary",
     navStats: "Stats",
+    navPages: "Pages",
 
     // Auth
     signIn: "Sign In",

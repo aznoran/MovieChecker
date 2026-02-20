@@ -19,7 +19,7 @@ import {
     Film,
     Languages,
 } from "lucide-react";
-import {ThemeToggle} from "@/components/theme-toggle";
+import {ThemeToggle} from "@/components/shared/theme-toggle";
 import type {Locale} from "@/lib/i18n";
 
 export default function LandingPage() {
