@@ -22,6 +22,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Field, FieldLabel, FieldDescription } from "@/components/ui/field";
+import {
     Plus,
     Trash2,
     Star,
@@ -35,8 +50,61 @@ import {
     Play,
     RefreshCw,
     AlertCircle,
+    Settings,
 } from "lucide-react";
 import { toast } from "sonner";
+
+type CardSize = "small" | "medium" | "large";
+
+const CARD_SIZE_KEY = "moviechecker-card-size";
+
+const gridClasses: Record<CardSize, string> = {
+    small: "grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
+    medium: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+    large: "grid gap-5 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3",
+};
+
+const cardTitleClasses: Record<CardSize, string> = {
+    small: "font-semibold mb-1 truncate text-sm",
+    medium: "font-semibold mb-2 truncate",
+    large: "font-semibold mb-2 truncate text-lg",
+};
+
+const cardContentPadding: Record<CardSize, string> = {
+    small: "p-2.5 flex flex-col justify-between min-h-0 overflow-hidden",
+    medium: "p-4 flex flex-col justify-between min-h-0 overflow-hidden",
+    large: "p-5 flex flex-col justify-between min-h-0 overflow-hidden",
+};
+
+const descriptionLines: Record<CardSize, string> = {
+    small: "text-xs text-muted-foreground mb-2 break-words line-clamp-1",
+    medium: "text-xs text-muted-foreground mb-4 break-words line-clamp-2",
+    large: "text-sm text-muted-foreground mb-4 break-words line-clamp-3",
+};
+
+const descriptionLength: Record<CardSize, number> = {
+    small: 60,
+    medium: 100,
+    large: 200,
+};
+
+const commentLength: Record<CardSize, number> = {
+    small: 60,
+    medium: 100,
+    large: 200,
+};
+
+const commentLines: Record<CardSize, string> = {
+    small: "text-xs text-muted-foreground line-clamp-1 break-words flex items-start gap-1",
+    medium: "text-sm text-muted-foreground line-clamp-2 break-words flex items-start gap-1",
+    large: "text-sm text-muted-foreground line-clamp-3 break-words flex items-start gap-1",
+};
+
+const metaSpacing: Record<CardSize, string> = {
+    small: "mb-2",
+    medium: "mb-4",
+    large: "mb-4",
+};
 
 const statusColors: Record<WatchStatus, string> = {
     [WatchStatus.Planned]: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -71,6 +139,19 @@ export default function HomePage() {
     const [addOpen, setAddOpen] = useState(false);
     const [editEntry, setEditEntry] = useState<WatchEntryDto | null>(null);
     const [statusFilter, setStatusFilter] = useState<WatchStatus | null>(null);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [cardSize, setCardSize] = useState<CardSize>(() => {
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem(CARD_SIZE_KEY);
+            if (stored === "small" || stored === "medium" || stored === "large") return stored;
+        }
+        return "medium";
+    });
+
+    const handleCardSizeChange = (size: CardSize) => {
+        setCardSize(size);
+        localStorage.setItem(CARD_SIZE_KEY, size);
+    };
 
     const {data: entries = [], isLoading, error, refetch} = useQuery({
         queryKey: ["watchEntries", statusFilter, activeGroupId],
@@ -162,13 +243,21 @@ export default function HomePage() {
                             </Button>
                         ))}
                     </div>
-                    <div>
+                    <div className="flex items-start gap-2 mb-6">
                         {canCreate && (
-                            <Button className="min-w-[12rem]"  onClick={() => setAddOpen(true)}>
+                            <Button className="min-w-[12rem]" onClick={() => setAddOpen(true)}>
                                 <Plus className="h-4 w-4 mr-1.5"/>
                                 {t("addEntry")}
                             </Button>
                         )}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setSettingsOpen(true)}
+                            title={t("settings")}
+                        >
+                            <Settings className="h-4 w-4"/>
+                        </Button>
                     </div>
                 </div>
 
@@ -197,7 +286,7 @@ export default function HomePage() {
                         )}
                     </div>
                 ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div className={gridClasses[cardSize]}>
                         {entries.map((entry) => {
                             if (!entry.movie) return null;
                             const movie = entry.movie;
@@ -222,11 +311,11 @@ export default function HomePage() {
                                         </div>
                                     )}
 
-                                    <CardContent className="p-4 flex flex-col justify-between min-h-0 overflow-hidden">
+                                    <CardContent className={cardContentPadding[cardSize]}>
                                         <div className="min-w-0">
-                                            <div className="flex items-start justify-between gap-2 mb-4">
+                                            <div className={`flex items-start justify-between gap-2 ${metaSpacing[cardSize]}`}>
                                                 <div className="min-w-0 flex-1">
-                                                    <h3 className="font-semibold mb-2 truncate" title={movie.title ?? undefined}>
+                                                    <h3 className={cardTitleClasses[cardSize]} title={movie.title ?? undefined}>
                                                         {movie.title}
                                                     </h3>
                                                     <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap min-w-0">
@@ -248,7 +337,7 @@ export default function HomePage() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                                            <div className={`flex flex-wrap items-center gap-1.5 ${metaSpacing[cardSize]}`}>
                                                 <Badge
                                                     variant="outline"
                                                     className={statusColors[entry.status!]}
@@ -259,7 +348,7 @@ export default function HomePage() {
                                             {entry.status === WatchStatus.Watching && (
                                                 (entry.currentEpisode || entry.currentSeason || entry.watchingTime) && (
                                                     <div
-                                                        className="text-sm text-muted-foreground mb-4 flex items-start gap-1">
+                                                        className={`text-sm text-muted-foreground ${metaSpacing[cardSize]} flex items-start gap-1`}>
                                                         <Play className="h-3.5 w-3.5 mt-0.5 shrink-0"/>
                                                         <div className="flex flex-wrap gap-1">
                                                             {entry.currentSeason && (
@@ -292,7 +381,7 @@ export default function HomePage() {
                                                     (a.displayName ?? "").localeCompare(b.displayName ?? "")
                                                 );
                                                 return (
-                                                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm mb-4">
+                                                    <div className={`flex flex-wrap gap-x-3 gap-y-1 text-sm ${metaSpacing[cardSize]}`}>
                                                         {sorted.slice(0, 3).map((r) => (
                                                             <span key={r.id} className="flex items-center gap-1 min-w-0">
                                                               <Star className="h-3.5 w-3.5 text-yellow-400 shrink-0"/>
@@ -311,15 +400,15 @@ export default function HomePage() {
                                             })()}
 
                                             {movie.description && (
-                                                <p className="text-xs text-muted-foreground mb-4 break-words line-clamp-2" title={movie.description}>
-                                                    {movie.description.length > 100 ? movie.description.slice(0, 100) + "..." : movie.description}
+                                                <p className={descriptionLines[cardSize]} title={movie.description}>
+                                                    {movie.description.length > descriptionLength[cardSize] ? movie.description.slice(0, descriptionLength[cardSize]) + "..." : movie.description}
                                                 </p>
                                             )}
 
                                             {entry.comment && (
-                                                <p className="text-sm text-muted-foreground line-clamp-2 break-words flex items-start gap-1">
+                                                <p className={commentLines[cardSize]}>
                                                     <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0"/>
-                                                    <span className="min-w-0 break-words">{entry.comment.length > 100 ? entry.comment.slice(0, 100) + "..." : entry.comment}</span>
+                                                    <span className="min-w-0 break-words">{entry.comment.length > commentLength[cardSize] ? entry.comment.slice(0, commentLength[cardSize]) + "..." : entry.comment}</span>
                                                 </p>
                                             )}
                                         </div>
@@ -354,6 +443,31 @@ export default function HomePage() {
                         })}
                     </div>
                 )}
+
+                <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>{t("displaySettings")}</DialogTitle>
+                            <DialogDescription>{t("displaySettingsDescription")}</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <Field>
+                                <FieldLabel>{t("cardSize")}</FieldLabel>
+                                <FieldDescription>{t("cardSizeDescription")}</FieldDescription>
+                                <Select value={cardSize} onValueChange={(value) => handleCardSizeChange(value as CardSize)}>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="small">{t("cardSizeSmall")}</SelectItem>
+                                        <SelectItem value="medium">{t("cardSizeMedium")}</SelectItem>
+                                        <SelectItem value="large">{t("cardSizeLarge")}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
                 <AddEntryDialog open={addOpen} onOpenChange={setAddOpen}/>
                 {editEntry && (

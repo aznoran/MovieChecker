@@ -331,7 +331,16 @@ const ru: Record<TranslationKeys, string> = {
     landingWhy3Desc: "Основные функции полностью бесплатны. Никаких скрытых платежей или подписок.",
     landingCtaTitle: "Готовы начать отслеживание?",
     landingCtaSubtitle: "Присоединяйтесь к MovieChecker сегодня и никогда не забывайте, что вы смотрели",
-    landingCtaButton: "Создать бесплатный аккаунт"
+    landingCtaButton: "Создать бесплатный аккаунт",
+
+    // Card Size
+    cardSize: "Размер карточек",
+    cardSizeDescription: "Выберите размер карточек записей на главной странице",
+    cardSizeSmall: "Маленький",
+    cardSizeMedium: "Средний",
+    cardSizeLarge: "Большой",
+    displaySettings: "Настройки отображения",
+    displaySettingsDescription: "Настройте внешний вид дневника",
 };
 
 export default ru;

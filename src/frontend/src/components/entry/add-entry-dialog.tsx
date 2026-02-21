@@ -152,7 +152,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setMemberRatings({});
         setError("");
         cropper.resetCropper();
-    }, [form, cropper]);
+    }, [form, cropper.resetCropper]);
 
     useEffect(() => {
         if (open) resetForm();

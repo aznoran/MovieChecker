@@ -329,7 +329,16 @@ const en = {
     landingWhy3Desc: "Core features are completely free. No hidden costs or subscriptions.",
     landingCtaTitle: "Ready to Start Tracking?",
     landingCtaSubtitle: "Join MovieChecker today and never forget what you've watched",
-    landingCtaButton: "Create Free Account"
+    landingCtaButton: "Create Free Account",
+
+    // Card Size
+    cardSize: "Card Size",
+    cardSizeDescription: "Choose how large the entry cards appear on the main page",
+    cardSizeSmall: "Small",
+    cardSizeMedium: "Medium",
+    cardSizeLarge: "Large",
+    displaySettings: "Display Settings",
+    displaySettingsDescription: "Customize how your diary looks",
 } as const;
 
 export type TranslationKeys = keyof typeof en;

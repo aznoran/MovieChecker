@@ -137,7 +137,7 @@ export default function StatsPage() {
                     <div className="space-y-6">
 
                         {/* ── Hero Card ── */}
-                        <Card className="border-0 bg-gradient-to-br from-primary/10 via-background to-primary/5">
+                        <Card className="border-0 bg-gradient-to-br from-primary/10 via-card to-primary/5">
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
                                     <div>

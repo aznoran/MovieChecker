@@ -213,7 +213,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
             {/* Invite code */}
             {g.inviteCode && (
                 <div
-                    className="flex items-center gap-2 bg-background/60 p-2 rounded-lg border border-border/40">
+                    className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg border border-border/40">
                     <code
                         className="pl-2 text-sm font-mono flex-1 font-semibold tracking-wide">
                         {" " + g.inviteCode}
@@ -239,7 +239,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
 
                         {/* Rename */}
                         {settingsOpen && !settingsSwitchingToPrivate ? (
-                            <div className="space-y-3 bg-background/60 border border-border/60 p-3 rounded-xl animate-in slide-in-from-top-2">
+                            <div className="space-y-3 bg-muted/30 border border-border/60 p-3 rounded-xl animate-in slide-in-from-top-2">
                                 <Field>
                                     <FieldLabel className="text-sm font-medium">
                                         {t("renameGroup")}
@@ -282,7 +282,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                             </div>
                         ) : settingsOpen && settingsSwitchingToPrivate ? (
                             /* Switch to private - password prompt */
-                            <div className="space-y-3 bg-background/60 border border-border/60 p-3 rounded-xl animate-in slide-in-from-top-2">
+                            <div className="space-y-3 bg-muted/30 border border-border/60 p-3 rounded-xl animate-in slide-in-from-top-2">
                                 <Field>
                                     <FieldLabel className="text-sm font-medium">
                                         {t("groupPassword")}
@@ -407,7 +407,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                     className="h-1.5"
                                 />
 
-                                <div className="bg-background/80 backdrop-blur-sm p-3 rounded-lg shadow-sm">
+                                <div className="bg-muted/50 backdrop-blur-sm p-3 rounded-lg shadow-sm">
                                     <code
                                         className="text-3xl font-mono font-bold text-primary block text-center tracking-[0.4em] drop-shadow-sm">
                                         {generatedOtp.code}
@@ -430,7 +430,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                         {/* Password change form */}
                         {changePasswordOpen && (
                             <div
-                                className="bg-background/60 border border-border/60 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
+                                className="bg-muted/30 border border-border/60 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
                                 <Field>
                                     <FieldLabel htmlFor={`newPassword-${g.id}`}
                                                 className="text-sm font-medium">
@@ -502,7 +502,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                         return (
                             <div
                                 key={m.userId}
-                                className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-background/60 border border-border/40 hover:bg-background/80 transition-colors"
+                                className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-muted/30 border border-border/40 hover:bg-muted/50 transition-colors"
                             >
                                 <div className="flex items-center gap-2.5 text-sm min-w-0 flex-1">
                                     <div

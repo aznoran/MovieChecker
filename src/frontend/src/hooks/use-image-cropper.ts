@@ -118,14 +118,14 @@ export function useImageCropper(options: UseImageCropperOptions = {}) {
         options.onPosterRemoved?.();
     };
 
-    const resetCropper = (preview?: string | null) => {
+    const resetCropper = useCallback((preview?: string | null) => {
         setPosterFile(null);
         setPosterPreview(preview ?? null);
         setEditorImageSrc(null);
         setIsCropping(false);
         onCropReset();
         croppedAreaPixelsRef.current = null;
-    };
+    }, [onCropReset]);
 
     return {
         posterFile,

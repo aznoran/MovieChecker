@@ -174,7 +174,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             setError("");
             cropper.resetCropper(getPosterUrl(entry.movie?.posterUrl));
         }
-    }, [open, entry, form, user?.id, cropper]);
+    }, [open, entry, form, user?.id, cropper.resetCropper]);
 
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
