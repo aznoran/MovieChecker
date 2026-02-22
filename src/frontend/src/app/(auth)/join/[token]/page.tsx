@@ -48,7 +48,7 @@ export default function JoinByTokenPage() {
 
         const doJoin = async () => {
             try {
-                const group = await apiJoinGroup("", undefined, undefined, token);
+                const group = await apiJoinGroup("", undefined, token);
                 await queryClient.invalidateQueries({queryKey: ["groups"]});
                 setJoinedGroup(group);
                 setStatus("success");

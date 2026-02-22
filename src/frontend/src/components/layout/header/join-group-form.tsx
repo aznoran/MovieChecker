@@ -14,8 +14,7 @@ import {
     FieldGroup,
 } from "@/components/ui/field";
 import {InputOTP, InputOTPGroup, InputOTPSlot} from "@/components/ui/input-otp";
-import {cn} from "@/lib/utils";
-import {UserPlus, Lock, KeyRound} from "lucide-react";
+import {UserPlus, Lock} from "lucide-react";
 import {toast} from "sonner";
 
 interface JoinGroupFormProps {
@@ -27,14 +26,11 @@ export function JoinGroupForm({setError}: JoinGroupFormProps) {
     const {joinGroup} = useGroup();
 
     const [joinCode, setJoinCode] = useState("");
-    const [joinPassword, setJoinPassword] = useState("");
     const [joinOtp, setJoinOtp] = useState("");
-    const [useOtpMode, setUseOtpMode] = useState(false);
     const [joinStep, setJoinStep] = useState<"code" | "auth">("code");
     const [groupToJoin, setGroupToJoin] = useState<{
         name: string;
         isPrivate: boolean;
-        hasPassword: boolean;
     } | null>(null);
 
     const getErrorMessage = (err: unknown): string | undefined => {
@@ -66,10 +62,8 @@ export function JoinGroupForm({setError}: JoinGroupFormProps) {
             setGroupToJoin({
                 name: result.groupName || "",
                 isPrivate: result.isPrivate,
-                hasPassword: result.hasPassword,
             });
 
-            setUseOtpMode(!result.hasPassword);
             setJoinStep("auth");
         } catch (err) {
             setError(getErrorMessage(err) || t("invalidCode"));
@@ -79,11 +73,9 @@ export function JoinGroupForm({setError}: JoinGroupFormProps) {
     const handleJoinGroup = async () => {
         if (!joinCode.trim()) return;
         try {
-            await joinGroup(joinCode.trim(), joinPassword || undefined, joinOtp || undefined);
+            await joinGroup(joinCode.trim(), joinOtp || undefined);
             setJoinCode("");
-            setJoinPassword("");
             setJoinOtp("");
-            setUseOtpMode(false);
             setError("");
             setJoinStep("code");
             setGroupToJoin(null);
@@ -95,9 +87,7 @@ export function JoinGroupForm({setError}: JoinGroupFormProps) {
     const handleBackToCode = () => {
         setJoinStep("code");
         setGroupToJoin(null);
-        setJoinPassword("");
         setJoinOtp("");
-        setUseOtpMode(false);
         setError("");
     };
 
@@ -141,88 +131,35 @@ export function JoinGroupForm({setError}: JoinGroupFormProps) {
                                 <span className="font-medium">{groupToJoin?.name}</span>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                                {groupToJoin?.hasPassword
-                                    ? t("privateGroupWithPassword")
-                                    : t("privateGroupOtpOnly")}
+                                {t("privateGroupOtpOnly")}
                             </p>
                         </div>
 
-                        {groupToJoin?.hasPassword && (
-                            <Field>
-                                <FieldLabel className="text-sm font-medium mb-2">
-                                    {t("authenticationMethod")}
-                                </FieldLabel>
-                                <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
-                                    <Button
-                                        variant={!useOtpMode ? "default" : "ghost"}
-                                        size="sm"
-                                        className={cn(
-                                            "h-9 flex-1 transition-all",
-                                            !useOtpMode && "shadow-sm"
-                                        )}
-                                        onClick={() => setUseOtpMode(false)}
-                                    >
-                                        <Lock className="h-3.5 w-3.5 mr-2"/>
-                                        {t("password")}
-                                    </Button>
-                                    <Button
-                                        variant={useOtpMode ? "default" : "ghost"}
-                                        size="sm"
-                                        className={cn(
-                                            "h-9 flex-1 transition-all",
-                                            useOtpMode && "shadow-sm"
-                                        )}
-                                        onClick={() => setUseOtpMode(true)}
-                                    >
-                                        <KeyRound className="h-3.5 w-3.5 mr-2"/>
-                                        {t("otp")}
-                                    </Button>
-                                </div>
-                            </Field>
-                        )}
-
-                        {!useOtpMode && groupToJoin?.hasPassword ? (
-                            <Field>
-                                <FieldLabel htmlFor="joinPassword" className="text-sm font-medium">
-                                    {t("password")}
-                                </FieldLabel>
-                                <Input
-                                    id="joinPassword"
-                                    type="password"
-                                    value={joinPassword}
-                                    onChange={(e) => setJoinPassword(e.target.value)}
-                                    placeholder={t("enterPassword")}
-                                    className="h-10 bg-background border-border/60 focus-visible:ring-primary/20"
-                                    onKeyDown={(e) => e.key === "Enter" && handleJoinGroup()}
-                                />
-                            </Field>
-                        ) : (
-                            <Field>
-                                <FieldLabel className="text-sm font-medium">
-                                    {t("enterOtp")}
-                                </FieldLabel>
-                                <div
-                                    className="flex justify-center bg-gradient-to-br from-muted/50 to-muted/30 p-4 rounded-xl border border-border/40">
-                                    <InputOTP
-                                        maxLength={6}
-                                        value={joinOtp}
-                                        onChange={(value) => setJoinOtp(value)}
-                                    >
-                                        <InputOTPGroup>
-                                            <InputOTPSlot index={0}/>
-                                            <InputOTPSlot index={1}/>
-                                            <InputOTPSlot index={2}/>
-                                            <InputOTPSlot index={3}/>
-                                            <InputOTPSlot index={4}/>
-                                            <InputOTPSlot index={5}/>
-                                        </InputOTPGroup>
-                                    </InputOTP>
-                                </div>
-                                <FieldDescription className="text-center text-xs">
-                                    {t("enterSixDigitCode")}
-                                </FieldDescription>
-                            </Field>
-                        )}
+                        <Field>
+                            <FieldLabel className="text-sm font-medium">
+                                {t("enterOtp")}
+                            </FieldLabel>
+                            <div
+                                className="flex justify-center bg-gradient-to-br from-muted/50 to-muted/30 p-4 rounded-xl border border-border/40">
+                                <InputOTP
+                                    maxLength={6}
+                                    value={joinOtp}
+                                    onChange={(value) => setJoinOtp(value)}
+                                >
+                                    <InputOTPGroup>
+                                        <InputOTPSlot index={0}/>
+                                        <InputOTPSlot index={1}/>
+                                        <InputOTPSlot index={2}/>
+                                        <InputOTPSlot index={3}/>
+                                        <InputOTPSlot index={4}/>
+                                        <InputOTPSlot index={5}/>
+                                    </InputOTPGroup>
+                                </InputOTP>
+                            </div>
+                            <FieldDescription className="text-center text-xs">
+                                {t("enterSixDigitCode")}
+                            </FieldDescription>
+                        </Field>
 
                         <div className="flex gap-2 pt-2">
                             <Button

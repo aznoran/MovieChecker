@@ -34,10 +34,8 @@ export function CreateGroupForm({setError}: CreateGroupFormProps) {
 
     const [newGroupName, setNewGroupName] = useState("");
     const [newGroupIsPrivate, setNewGroupIsPrivate] = useState(false);
-    const [newGroupPassword, setNewGroupPassword] = useState("");
     const [newGroupDefaultRole, setNewGroupDefaultRole] = useState<GroupRole>(GroupRole.Member);
     const [groupNameError, setGroupNameError] = useState("");
-    const [groupPasswordError, setGroupPasswordError] = useState("");
 
     const handleCreateGroup = async () => {
         if (!newGroupName.trim()) {
@@ -49,21 +47,14 @@ export function CreateGroupForm({setError}: CreateGroupFormProps) {
             toast.error(t("groupNameTooLong"), { position: "top-center" });
             return;
         }
-        if (newGroupPassword && newGroupPassword.length > 50) {
-            setGroupPasswordError(t("groupPasswordTooLong"));
-            toast.error(t("groupPasswordTooLong"), { position: "top-center" });
-            return;
-        }
         try {
             const defaultRole = newGroupIsPrivate ? newGroupDefaultRole : GroupRole.Viewer;
-            await createGroup(newGroupName.trim(), newGroupIsPrivate, newGroupPassword || undefined, defaultRole);
+            await createGroup(newGroupName.trim(), newGroupIsPrivate, defaultRole);
             setNewGroupName("");
             setNewGroupIsPrivate(false);
-            setNewGroupPassword("");
             setNewGroupDefaultRole(GroupRole.Member);
             setError("");
             setGroupNameError("");
-            setGroupPasswordError("");
         } catch {
             setError(t("failedToAdd"));
         }
@@ -130,29 +121,6 @@ export function CreateGroupForm({setError}: CreateGroupFormProps) {
 
                 {newGroupIsPrivate && (
                     <div className="pl-5 border-l-2 border-primary/30 space-y-4 animate-in slide-in-from-left-2">
-                        <Field>
-                            <FieldLabel htmlFor="groupPassword" className="text-sm font-medium">
-                                {t("groupPassword")}
-                            </FieldLabel>
-                            <Input
-                                id="groupPassword"
-                                type="password"
-                                value={newGroupPassword}
-                                onChange={(e) => {
-                                    setNewGroupPassword(e.target.value);
-                                    setGroupPasswordError(e.target.value.length > 50 ? t("groupPasswordTooLong") : "");
-                                }}
-                                placeholder={t("groupPassword")}
-                                className="h-10 bg-background border-border/60 focus-visible:ring-primary/20"
-                                aria-invalid={!!groupPasswordError}
-                                onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
-                            />
-                            {groupPasswordError && <FieldError>{groupPasswordError}</FieldError>}
-                            <FieldDescription className="text-xs">
-                                {t("optionalPassword")}
-                            </FieldDescription>
-                        </Field>
-
                         <Field>
                             <FieldLabel htmlFor="defaultRole" className="text-sm font-medium">
                                 {t("defaultRole")}

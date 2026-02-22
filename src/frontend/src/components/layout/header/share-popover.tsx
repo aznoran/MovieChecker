@@ -29,15 +29,18 @@ import {
     Clock,
     Users,
     Loader2,
+    RefreshCw,
 } from "lucide-react";
 import {toast} from "sonner";
 
 interface SharePopoverProps {
     groupId: number;
     inviteCode: string | null;
+    isPublicGroup?: boolean;
+    canManage?: boolean;
 }
 
-export function SharePopover({groupId, inviteCode}: SharePopoverProps) {
+export function SharePopover({groupId, inviteCode, isPublicGroup = false, canManage = false}: SharePopoverProps) {
     const {t} = useLocale();
     const [open, setOpen] = useState(false);
     const [copied, setCopied] = useState<string | null>(null);
@@ -45,8 +48,8 @@ export function SharePopover({groupId, inviteCode}: SharePopoverProps) {
     const [loading, setLoading] = useState(false);
     const [creating, setCreating] = useState(false);
 
-    // Create form state
-    const [expirationMinutes, setExpirationMinutes] = useState<string>("1440"); // 1 day default
+    // Create form state (private groups only)
+    const [expirationMinutes, setExpirationMinutes] = useState<string>("1440");
     const [maxUses, setMaxUses] = useState<string>("");
 
     const loadLinks = useCallback(async () => {
@@ -87,11 +90,30 @@ export function SharePopover({groupId, inviteCode}: SharePopoverProps) {
         try {
             setCreating(true);
             const expires = expirationMinutes === "never" ? undefined : parseInt(expirationMinutes);
-            const max = maxUses ? parseInt(maxUses) : undefined;
+            const parsedMax = maxUses ? parseInt(maxUses) : undefined;
+            const max = parsedMax && parsedMax <= 999999 ? parsedMax : undefined;
             await createInviteLink(groupId, expires, max);
             toast.success(t("inviteLinkCreated"), {position: "top-center"});
             await loadLinks();
             setMaxUses("");
+        } catch {
+            toast.error(t("inviteLinkError"), {position: "top-center"});
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const handleRegenerateLink = async () => {
+        try {
+            setCreating(true);
+            // Delete all existing links
+            for (const link of links) {
+                await deleteInviteLink(groupId, link.id);
+            }
+            // Create a new permanent link
+            await createInviteLink(groupId);
+            toast.success(t("linkRegenerated"), {position: "top-center"});
+            await loadLinks();
         } catch {
             toast.error(t("inviteLinkError"), {position: "top-center"});
         } finally {
@@ -122,11 +144,12 @@ export function SharePopover({groupId, inviteCode}: SharePopoverProps) {
         return `${diffDays}d`;
     };
 
-    // Build the frontend join URL from the invite link
     const getJoinUrl = (link: InviteLinkDto) => {
         if (typeof window === "undefined") return "";
         return `${window.location.origin}/join/${link.token}`;
     };
+
+    const publicLink = isPublicGroup ? links[0] : null;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -172,130 +195,214 @@ export function SharePopover({groupId, inviteCode}: SharePopoverProps) {
                         </div>
                     )}
 
-                    {/* Create Invite Link */}
-                    <div className="space-y-2 pt-1">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            {t("createInviteLink")}
-                        </p>
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                                <div className="flex-1">
-                                    <Select
-                                        value={expirationMinutes}
-                                        onValueChange={setExpirationMinutes}
-                                    >
-                                        <SelectTrigger className="h-8 text-xs">
-                                            <Clock className="h-3 w-3 mr-1 text-muted-foreground"/>
-                                            <SelectValue/>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="60">{t("duration1Hour")}</SelectItem>
-                                            <SelectItem value="360">{t("duration6Hours")}</SelectItem>
-                                            <SelectItem value="720">{t("duration12Hours")}</SelectItem>
-                                            <SelectItem value="1440">{t("duration1Day")}</SelectItem>
-                                            <SelectItem value="10080">{t("duration7Days")}</SelectItem>
-                                            <SelectItem value="never">{t("durationNever")}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="w-20">
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        value={maxUses}
-                                        onChange={(e) => setMaxUses(e.target.value)}
-                                        placeholder={t("noLimit")}
-                                        className="h-8 text-xs"
-                                        title={t("maxUses")}
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Users className="h-3 w-3"/>
-                                <span>{t("maxUses")}: {maxUses || t("unlimited")}</span>
-                            </div>
-                            <Button
-                                size="sm"
-                                className="w-full h-8 text-xs"
-                                onClick={handleCreateLink}
-                                disabled={creating}
-                            >
-                                {creating ? (
-                                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin"/>
-                                ) : (
-                                    <Plus className="h-3.5 w-3.5 mr-1.5"/>
-                                )}
-                                {t("createInviteLink")}
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Active Links */}
-                    <div className="space-y-2 pt-1">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            {t("activeInviteLinks")}
-                        </p>
-                        {loading ? (
-                            <div className="flex justify-center py-3">
-                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>
-                            </div>
-                        ) : links.length === 0 ? (
-                            <p className="text-xs text-muted-foreground text-center py-2">
-                                {t("noActiveLinks")}
+                    {isPublicGroup ? (
+                        /* ── Public group: single permanent link ── */
+                        <div className="space-y-2 pt-1">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                {t("inviteLink")}
                             </p>
-                        ) : (
-                            <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                                {links.map((link) => (
-                                    <div
-                                        key={link.id}
-                                        className="flex items-center gap-1.5 bg-muted/30 p-2 rounded-lg border border-border/40 text-xs"
-                                    >
-                                        <Link className="h-3 w-3 text-muted-foreground shrink-0"/>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-muted-foreground">
-                                                    {formatExpiry(link.expiresAt)}
-                                                </span>
-                                                <span className="text-muted-foreground">
-                                                    {link.useCount}{link.maxUses ? `/${link.maxUses}` : ""} {t("uses")}
-                                                </span>
-                                            </div>
-                                        </div>
+                            {loading ? (
+                                <div className="flex justify-center py-3">
+                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>
+                                </div>
+                            ) : publicLink ? (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-1.5 bg-muted/30 p-2.5 rounded-lg border border-border/40">
+                                        <Link className="h-3.5 w-3.5 text-muted-foreground shrink-0"/>
+                                        <span className="text-xs text-muted-foreground truncate flex-1 font-mono">
+                                            {getJoinUrl(publicLink)}
+                                        </span>
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-6 w-6 p-0 hover:bg-primary/10"
-                                            onClick={() => handleCopy(getJoinUrl(link), `link-${link.id}`)}
+                                            className="h-6 w-6 p-0 hover:bg-primary/10 shrink-0"
+                                            onClick={() => handleCopy(getJoinUrl(publicLink), `link-${publicLink.id}`)}
                                         >
-                                            {copied === `link-${link.id}` ? (
-                                                <Check className="h-3 w-3 text-primary"/>
+                                            {copied === `link-${publicLink.id}` ? (
+                                                <Check className="h-3.5 w-3.5 text-primary"/>
                                             ) : (
-                                                <Copy className="h-3 w-3"/>
+                                                <Copy className="h-3.5 w-3.5"/>
                                             )}
                                         </Button>
+                                    </div>
+                                    {canManage && (
                                         <ConfirmDialog
                                             trigger={
                                                 <Button
-                                                    variant="ghost"
+                                                    variant="outline"
                                                     size="sm"
-                                                    className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                                    className="w-full h-8 text-xs"
+                                                    disabled={creating}
                                                 >
-                                                    <Trash2 className="h-3 w-3"/>
+                                                    {creating ? (
+                                                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin"/>
+                                                    ) : (
+                                                        <RefreshCw className="h-3.5 w-3.5 mr-1.5"/>
+                                                    )}
+                                                    {t("regenerateLink")}
                                                 </Button>
                                             }
-                                            onConfirm={() => handleRevokeLink(link.id)}
-                                            title={t("revokeLink")}
-                                            description={t("revokeLinkConfirm")}
-                                            confirmText={t("revokeLink")}
+                                            onConfirm={handleRegenerateLink}
+                                            title={t("regenerateLink")}
+                                            description={t("regenerateLinkConfirm")}
+                                            confirmText={t("regenerateLink")}
                                             cancelText={t("cancel")}
                                             variant="destructive"
-                                            icon={<Trash2 className="h-6 w-6"/>}
+                                            icon={<RefreshCw className="h-6 w-6"/>}
                                         />
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground text-center py-2">
+                                        {t("noActiveLinks")}
+                                    </p>
+                                    {canManage && (
+                                        <Button
+                                            size="sm"
+                                            className="w-full h-8 text-xs"
+                                            onClick={handleCreateLink}
+                                            disabled={creating}
+                                        >
+                                            {creating ? (
+                                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin"/>
+                                            ) : (
+                                                <Plus className="h-3.5 w-3.5 mr-1.5"/>
+                                            )}
+                                            {t("createInviteLink")}
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        /* ── Private group: full create/manage UI ── */
+                        <>
+                            <div className="space-y-2 pt-1">
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                    {t("createInviteLink")}
+                                </p>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1">
+                                            <Select
+                                                value={expirationMinutes}
+                                                onValueChange={setExpirationMinutes}
+                                            >
+                                                <SelectTrigger className="h-8 text-xs">
+                                                    <Clock className="h-3 w-3 mr-1 text-muted-foreground"/>
+                                                    <SelectValue/>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="60">{t("duration1Hour")}</SelectItem>
+                                                    <SelectItem value="360">{t("duration6Hours")}</SelectItem>
+                                                    <SelectItem value="720">{t("duration12Hours")}</SelectItem>
+                                                    <SelectItem value="1440">{t("duration1Day")}</SelectItem>
+                                                    <SelectItem value="10080">{t("duration7Days")}</SelectItem>
+                                                    <SelectItem value="never">{t("durationNever")}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="w-20">
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                value={maxUses}
+                                                onChange={(e) => setMaxUses(e.target.value)}
+                                                placeholder={t("noLimit")}
+                                                className="h-8 text-xs"
+                                                title={t("maxUses")}
+                                            />
+                                        </div>
                                     </div>
-                                ))}
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Users className="h-3 w-3"/>
+                                        <span>{t("maxUses")}: {maxUses || t("unlimited")}</span>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        className="w-full h-8 text-xs"
+                                        onClick={handleCreateLink}
+                                        disabled={creating}
+                                    >
+                                        {creating ? (
+                                            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin"/>
+                                        ) : (
+                                            <Plus className="h-3.5 w-3.5 mr-1.5"/>
+                                        )}
+                                        {t("createInviteLink")}
+                                    </Button>
+                                </div>
                             </div>
-                        )}
-                    </div>
+
+                            {/* Active Links */}
+                            <div className="space-y-2 pt-1">
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                    {t("activeInviteLinks")}
+                                </p>
+                                {loading ? (
+                                    <div className="flex justify-center py-3">
+                                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>
+                                    </div>
+                                ) : links.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground text-center py-2">
+                                        {t("noActiveLinks")}
+                                    </p>
+                                ) : (
+                                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                                        {links.map((link) => (
+                                            <div
+                                                key={link.id}
+                                                className="flex items-center gap-1.5 bg-muted/30 p-2 rounded-lg border border-border/40 text-xs"
+                                            >
+                                                <Link className="h-3 w-3 text-muted-foreground shrink-0"/>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-muted-foreground">
+                                                            {formatExpiry(link.expiresAt)}
+                                                        </span>
+                                                        <span className="text-muted-foreground">
+                                                            {link.useCount}{link.maxUses ? `/${link.maxUses}` : ""} {t("uses")}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-6 w-6 p-0 hover:bg-primary/10"
+                                                    onClick={() => handleCopy(getJoinUrl(link), `link-${link.id}`)}
+                                                >
+                                                    {copied === `link-${link.id}` ? (
+                                                        <Check className="h-3 w-3 text-primary"/>
+                                                    ) : (
+                                                        <Copy className="h-3 w-3"/>
+                                                    )}
+                                                </Button>
+                                                <ConfirmDialog
+                                                    trigger={
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                                        >
+                                                            <Trash2 className="h-3 w-3"/>
+                                                        </Button>
+                                                    }
+                                                    onConfirm={() => handleRevokeLink(link.id)}
+                                                    title={t("revokeLink")}
+                                                    description={t("revokeLinkConfirm")}
+                                                    confirmText={t("revokeLink")}
+                                                    cancelText={t("cancel")}
+                                                    variant="destructive"
+                                                    icon={<Trash2 className="h-6 w-6"/>}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             </PopoverContent>
         </Popover>

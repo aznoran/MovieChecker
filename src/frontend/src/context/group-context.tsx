@@ -12,7 +12,6 @@ import {
     transferOwnership as apiTransferOwnership,
     updateMemberRole as apiUpdateMemberRole,
     generateOtp as apiGenerateOtp,
-    updateGroupPassword as apiUpdateGroupPassword,
     updateGroupSettings as apiUpdateGroupSettings,
 } from "@/lib/api";
 import type { GroupDto } from "@/lib/api/generated";
@@ -26,15 +25,14 @@ interface GroupContextValue {
     activeGroupId: number | undefined;
     activeGroup: GroupDto | undefined;
     setActiveGroupId: (id: number | undefined) => void;
-    createGroup: (name: string, isPrivate?: boolean, password?: string, defaultRole?: GroupRole) => Promise<GroupDto>;
-    joinGroup: (code: string, password?: string, otp?: string, inviteLinkToken?: string) => Promise<GroupDto>;
+    createGroup: (name: string, isPrivate?: boolean, defaultRole?: GroupRole) => Promise<GroupDto>;
+    joinGroup: (code: string, otp?: string, inviteLinkToken?: string) => Promise<GroupDto>;
     leaveGroup: (id: number) => Promise<void>;
     kickMember: (groupId: number, userId: number) => Promise<void>;
     transferOwnership: (groupId: number, newOwnerId: number) => Promise<void>;
     updateMemberRole: (groupId: number, userId: number, role: GroupRole) => Promise<void>;
     generateOtp: (groupId: number) => Promise<{ code: string; expiresAt: string }>;
-    updatePassword: (groupId: number, newPassword?: string) => Promise<void>;
-    updateGroupSettings: (groupId: number, settings: { name?: string; isPrivate?: boolean }) => Promise<GroupDto>;
+    updateGroupSettings: (groupId: number, settings: { name?: string; isPrivate?: boolean; defaultRole?: GroupRole }) => Promise<GroupDto>;
     isLoading: boolean;
 }
 
@@ -101,8 +99,8 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 
     const createMutation = useMutation({
-        mutationFn: ({ name, isPrivate, password, defaultRole }: { name: string, isPrivate?: boolean, password?: string, defaultRole?: GroupRole }) =>
-            apiCreateGroup(name, isPrivate, password, defaultRole),
+        mutationFn: ({ name, isPrivate, defaultRole }: { name: string, isPrivate?: boolean, defaultRole?: GroupRole }) =>
+            apiCreateGroup(name, isPrivate, defaultRole),
         onSuccess: async (group) => {
             toast.success(t("groupCreateSuccess"), { position: "top-center" });
             await queryClient.invalidateQueries({queryKey: ["groups"]});
@@ -114,8 +112,8 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     });
 
     const joinMutation = useMutation({
-        mutationFn: ({ code, password, otp, inviteLinkToken }: { code: string, password?: string, otp?: string, inviteLinkToken?: string }) =>
-            apiJoinGroup(code, password, otp, inviteLinkToken),
+        mutationFn: ({ code, otp, inviteLinkToken }: { code: string, otp?: string, inviteLinkToken?: string }) =>
+            apiJoinGroup(code, otp, inviteLinkToken),
         onSuccess: async (group) => {
             toast.success(t("joinSuccess"), { position: "top-center" })
             await queryClient.invalidateQueries({queryKey: ["groups"]});
@@ -181,20 +179,8 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         }
     });
 
-    const updatePasswordMutation = useMutation({
-        mutationFn: ({groupId, newPassword}: { groupId: number; newPassword?: string }) =>
-            apiUpdateGroupPassword(groupId, newPassword),
-        onSuccess: () => {
-            toast.success(t("passwordUpdateSuccess"), { position: "top-center" })
-            queryClient.invalidateQueries({queryKey: ["groups"]});
-        },
-        onError: () => {
-            toast.error(t("passwordUpdateError"), { position: "top-center" })
-        }
-    });
-
     const updateSettingsMutation = useMutation({
-        mutationFn: ({groupId, settings}: { groupId: number; settings: { name?: string; isPrivate?: boolean } }) =>
+        mutationFn: ({groupId, settings}: { groupId: number; settings: { name?: string; isPrivate?: boolean; defaultRole?: GroupRole } }) =>
             apiUpdateGroupSettings(groupId, settings),
         onSuccess: () => {
             toast.success(t("groupSettingsUpdated"), { position: "top-center" })
@@ -213,14 +199,13 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
                 activeGroupId,
                 activeGroup,
                 setActiveGroupId,
-                createGroup: (name, isPrivate, password, defaultRole) => createMutation.mutateAsync({ name, isPrivate, password, defaultRole }),
-                joinGroup: (code, password, otp, inviteLinkToken) => joinMutation.mutateAsync({ code, password, otp, inviteLinkToken }),
+                createGroup: (name, isPrivate, defaultRole) => createMutation.mutateAsync({ name, isPrivate, defaultRole }),
+                joinGroup: (code, otp, inviteLinkToken) => joinMutation.mutateAsync({ code, otp, inviteLinkToken }),
                 leaveGroup: (id) => leaveMutation.mutateAsync(id),
                 kickMember: (groupId, userId) => kickMutation.mutateAsync({groupId, userId}),
                 transferOwnership: (groupId, newOwnerId) => transferMutation.mutateAsync({groupId, newOwnerId}),
                 updateMemberRole: (groupId, userId, role) => updateRoleMutation.mutateAsync({groupId, userId, role}),
                 generateOtp: (groupId) => generateOtpMutation.mutateAsync(groupId),
-                updatePassword: (groupId, newPassword) => updatePasswordMutation.mutateAsync({groupId, newPassword}),
                 updateGroupSettings: (groupId, settings) => updateSettingsMutation.mutateAsync({groupId, settings}),
                 isLoading,
             }}

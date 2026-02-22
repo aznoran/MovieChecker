@@ -169,11 +169,10 @@ export const getGroup = async (id: number): Promise<GroupDto> => {
     return response.data;
 };
 
-export const createGroup = async (name: string, isPrivate: boolean = false, password?: string, defaultRole?: GroupRole): Promise<GroupDto> => {
+export const createGroup = async (name: string, isPrivate: boolean = false, defaultRole?: GroupRole): Promise<GroupDto> => {
     const response = await apiClient.api.groupsCreate({
         name,
         isPrivate,
-        password,
         defaultRole
     });
     return response.data;
@@ -182,20 +181,18 @@ export const createGroup = async (name: string, isPrivate: boolean = false, pass
 export const checkInviteCode = async (inviteCode: string): Promise<{
     exists: boolean;
     isPrivate: boolean;
-    hasPassword: boolean;
     groupName: string | null;
 }> => {
     const response = await apiClient.api.groupsCheckInviteCreate({inviteCode});
     return {
         exists: response.data.exists ?? false,
         isPrivate: response.data.isPrivate ?? false,
-        hasPassword: response.data.hasPassword ?? false,
         groupName: response.data.groupName ?? null,
     };
 };
 
-export const joinGroup = async (inviteCode: string, password?: string, otp?: string, inviteLinkToken?: string): Promise<GroupDto> => {
-    const response = await apiClient.api.groupsJoinCreate({inviteCode, password, otp, inviteLinkToken});
+export const joinGroup = async (inviteCode: string, otp?: string, inviteLinkToken?: string): Promise<GroupDto> => {
+    const response = await apiClient.api.groupsJoinCreate({inviteCode, otp, inviteLinkToken});
     return response.data;
 };
 
@@ -223,13 +220,10 @@ export const generateOtp = async (groupId: number): Promise<{ code: string; expi
     };
 };
 
-export const updateGroupPassword = async (groupId: number, newPassword?: string): Promise<void> => {
-    await apiClient.api.groupsPasswordUpdate(groupId, {newPassword});
-};
-
 export const updateGroupSettings = async (groupId: number, settings: {
     name?: string;
-    isPrivate?: boolean
+    isPrivate?: boolean;
+    defaultRole?: GroupRole;
 }): Promise<GroupDto> => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";

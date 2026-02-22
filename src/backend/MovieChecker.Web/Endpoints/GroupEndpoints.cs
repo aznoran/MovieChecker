@@ -82,13 +82,6 @@ public static class GroupEndpoints
             .WithSummary("Generate OTP for group")
             .WithDescription("Generates a one-time password for joining a private group");
 
-        group.MapPut("/{id:int}/password", UpdatePassword)
-            .Produces<SuccessResponse>(StatusCodes.Status200OK)
-            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound)
-            .WithSummary("Update group password")
-            .WithDescription("Updates the password for a private group");
-
         group.MapPut("/{id:int}/settings", UpdateGroupSettings)
             .Produces<GroupDto>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
@@ -225,16 +218,13 @@ public static class GroupEndpoints
         // Validate field lengths
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 50)
             return Results.BadRequest(new ErrorResponse("Group name is required and must not exceed 50 characters"));
-        if (request.Password != null && request.Password.Length > 50)
-            return Results.BadRequest(new ErrorResponse("Password must not exceed 50 characters"));
 
         // For public groups, default role must be Viewer
         // For private groups, use the requested default role or default to Member
-        var defaultRole = request.IsPrivate 
+        var defaultRole = request.IsPrivate
             ? (request.DefaultRole ?? GroupRole.Member)
             : GroupRole.Viewer;
 
-        // Password is optional for private groups (can use OTP instead)
         var g = new Group
         {
             Name = request.Name,
@@ -243,9 +233,6 @@ public static class GroupEndpoints
             IsPrivate = request.IsPrivate,
             GroupType = request.IsPrivate ? GroupType.Private : GroupType.Public,
             DefaultRole = defaultRole,
-            PasswordHash = !string.IsNullOrWhiteSpace(request.Password) 
-                ? BCrypt.Net.BCrypt.HashPassword(request.Password) 
-                : null
         };
 
         db.Groups.Add(g);
@@ -289,7 +276,7 @@ public static class GroupEndpoints
                 g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
 
         if (group == null)
-            return Results.Ok(new GroupInfoResponse(false, false, false, null));
+            return Results.Ok(new GroupInfoResponse(false, false, null));
 
         // Cannot join personal groups
         if (group.GroupType == GroupType.Personal)
@@ -303,7 +290,6 @@ public static class GroupEndpoints
         return Results.Ok(new GroupInfoResponse(
             true,
             group.IsPrivate,
-            !string.IsNullOrWhiteSpace(group.PasswordHash),
             group.Name
         ));
     }
@@ -378,42 +364,18 @@ public static class GroupEndpoints
         if (group.GroupType == GroupType.Personal)
             return Results.BadRequest(new ErrorResponse(localizer["CannotJoinPersonalGroup"]));
 
-        // 2. Check authentication - invite link token bypasses password/OTP
+        // 2. Check authentication - invite link token bypasses OTP
         if (usedInviteLink == null && group.IsPrivate)
         {
-            bool authenticated = false;
-
-            // Try OTP first if provided
-            if (!string.IsNullOrWhiteSpace(request.Otp))
+            // Private groups require OTP when not using invite link
+            if (string.IsNullOrWhiteSpace(request.Otp))
             {
-                authenticated = await otpService.ValidateOtpAsync(group.Id, request.Otp);
-                if (!authenticated)
-                    return Results.BadRequest(new ErrorResponse(localizer["InvalidOrExpiredOtp"]));
-            }
-            // Then try password if group has one
-            else if (!string.IsNullOrWhiteSpace(group.PasswordHash))
-            {
-                if (string.IsNullOrWhiteSpace(request.Password))
-                {
-                    return Results.BadRequest(new ErrorResponse(localizer["PasswordOrOtpRequired"]));
-                }
-
-                if (!BCrypt.Net.BCrypt.Verify(request.Password, group.PasswordHash))
-                {
-                    return Results.Unauthorized();
-                }
-                authenticated = true;
-            }
-            // Group is private but has no password (OTP-only)
-            else
-            {
-                return Results.BadRequest(new ErrorResponse(localizer["OtpOnlyGroup"]));
+                return Results.BadRequest(new ErrorResponse(localizer["OtpRequired"]));
             }
 
-            if (!authenticated)
-            {
-                return Results.Unauthorized();
-            }
+            var otpValid = await otpService.ValidateOtpAsync(group.Id, request.Otp);
+            if (!otpValid)
+                return Results.BadRequest(new ErrorResponse(localizer["InvalidOrExpiredOtp"]));
         }
 
         // 3. Check membership
@@ -501,15 +463,16 @@ public static class GroupEndpoints
 
         var group = await db.Groups
             .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (group is null)
             return Results.NotFound();
 
         var currentMember = group.Members.FirstOrDefault(m => m.UserId == currentUserId);
-        
-        // Only Owner and Admin can delete members
-        if (currentMember == null || (currentMember.Role != GroupRole.Owner && currentMember.Role != GroupRole.Admin))
+
+        // Check ManageMembers permission (includes custom permissions)
+        if (currentMember == null || !PermissionService.GetEffectivePermissions(currentMember).HasFlag(Permission.ManageMembers))
         {
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRemove"]));
         }
@@ -522,6 +485,13 @@ public static class GroupEndpoints
         if (memberToDelete.Role == GroupRole.Owner)
         {
             return Results.BadRequest(new ErrorResponse(localizer["CannotRemoveOwner"]));
+        }
+
+        // Non-Admin/Owner with ManageMembers can't kick Admin+
+        if (currentMember.Role != GroupRole.Owner && currentMember.Role != GroupRole.Admin
+            && memberToDelete.Role >= GroupRole.Admin)
+        {
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRemove"]));
         }
 
         db.GroupMembers.Remove(memberToDelete);
@@ -617,8 +587,8 @@ public static class GroupEndpoints
 
         var currentMember = group.Members.FirstOrDefault(m => m.UserId == currentUserId);
 
-        // Only Owner and Admin can update roles
-        if (currentMember == null || (currentMember.Role != GroupRole.Owner && currentMember.Role != GroupRole.Admin))
+        // Check ManageMembers permission (includes custom permissions)
+        if (currentMember == null || !PermissionService.GetEffectivePermissions(currentMember).HasFlag(Permission.ManageMembers))
         {
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsChangeRole"]));
         }
@@ -633,8 +603,8 @@ public static class GroupEndpoints
             return Results.BadRequest(new ErrorResponse(localizer["CannotChangeOwnerRole"]));
         }
 
-        // Admins cannot modify other Admins' or Owner's roles
-        if (currentMember.Role == GroupRole.Admin && memberToUpdate.Role >= GroupRole.Admin)
+        // Non-Owner cannot modify Admin+ roles
+        if (currentMember.Role != GroupRole.Owner && memberToUpdate.Role >= GroupRole.Admin)
         {
             return Results.BadRequest(new ErrorResponse(localizer["AdminsCannotModify"]));
         }
@@ -678,6 +648,7 @@ public static class GroupEndpoints
 
         var group = await db.Groups
             .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (group == null)
@@ -685,8 +656,8 @@ public static class GroupEndpoints
 
         var member = group.Members.FirstOrDefault(m => m.UserId == userId);
 
-        // Only Owner and Admin can generate OTP
-        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+        // Check ManageMembers permission
+        if (member == null || !PermissionService.GetEffectivePermissions(member).HasFlag(Permission.ManageMembers))
         {
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsOtp"]));
         }
@@ -702,57 +673,13 @@ public static class GroupEndpoints
         return Results.Ok(new GenerateOtpResponse(code, expiresAt));
     }
 
-    private static async Task<IResult> UpdatePassword(
-        int id,
-        UpdateGroupPasswordRequest request,
-        ClaimsPrincipal user,
-        AppDbContext db,
-        ILocalizationService localizer)
-    {
-        var userId = GetUserId(user);
-
-        var group = await db.Groups
-            .Include(g => g.Members)
-            .FirstOrDefaultAsync(g => g.Id == id);
-
-        if (group == null)
-            return Results.NotFound();
-
-        var member = group.Members.FirstOrDefault(m => m.UserId == userId);
-
-        // Only Owner and Admin can change password
-        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
-        {
-            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsPassword"]));
-        }
-
-        // Group must be private to have a password
-        if (!group.IsPrivate)
-        {
-            return Results.BadRequest(new ErrorResponse(localizer["OnlyPrivateGroupsPassword"]));
-        }
-
-        // Validate password length
-        if (request.NewPassword != null && request.NewPassword.Length > 50)
-        {
-            return Results.BadRequest(new ErrorResponse("Password must not exceed 50 characters"));
-        }
-
-        // Update password (null removes it, making group OTP-only)
-        group.PasswordHash = !string.IsNullOrWhiteSpace(request.NewPassword)
-            ? BCrypt.Net.BCrypt.HashPassword(request.NewPassword)
-            : null;
-
-        await db.SaveChangesAsync();
-
-        return Results.Ok(new SuccessResponse(localizer["PasswordUpdatedSuccessfully"]));
-    }
-
     private static async Task<IResult> UpdateGroupSettings(
         int id,
         UpdateGroupSettingsRequest request,
         ClaimsPrincipal user,
         AppDbContext db,
+        HybridCache cache,
+        OtpService otpService,
         ILocalizationService localizer)
     {
         var userId = GetUserId(user);
@@ -769,8 +696,8 @@ public static class GroupEndpoints
 
         var member = group.Members.FirstOrDefault(m => m.UserId == userId);
 
-        // Only Owner and Admin can update settings
-        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+        // Check ManageGroup permission
+        if (member == null || !PermissionService.GetEffectivePermissions(member).HasFlag(Permission.ManageGroup))
         {
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
         }
@@ -788,7 +715,7 @@ public static class GroupEndpoints
         }
 
         // Update privacy if provided
-        if (request.IsPrivate.HasValue)
+        if (request.IsPrivate.HasValue && request.IsPrivate.Value != group.IsPrivate)
         {
             group.IsPrivate = request.IsPrivate.Value;
             group.GroupType = request.IsPrivate.Value ? GroupType.Private : GroupType.Public;
@@ -798,6 +725,38 @@ public static class GroupEndpoints
             {
                 group.DefaultRole = GroupRole.Viewer;
             }
+
+            // Delete all invite links and evict their cache entries
+            var inviteLinks = await db.InviteLinks
+                .Where(il => il.GroupId == group.Id)
+                .ToListAsync();
+            foreach (var link in inviteLinks)
+            {
+                await cache.RemoveAsync(InviteLinkCacheKey(link.Token));
+            }
+            db.InviteLinks.RemoveRange(inviteLinks);
+
+            // Invalidate all OTPs
+            await otpService.InvalidateAllOtpsAsync(group.Id);
+
+            // Regenerate invite code
+            group.InviteCode = GenerateInviteCode();
+        }
+
+        // Update default role if provided
+        if (request.DefaultRole.HasValue)
+        {
+            var newRole = request.DefaultRole.Value;
+            // Cannot set default role to Owner
+            if (newRole == GroupRole.Owner)
+                return Results.BadRequest(new ErrorResponse("Cannot set default role to Owner"));
+
+            // Public groups can only have Viewer as default role
+            if (!group.IsPrivate && newRole != GroupRole.Viewer)
+                return Results.BadRequest(new ErrorResponse("Public groups can only have Viewer as the default role"));
+
+            // Private groups allow Viewer, Member, or Admin
+            group.DefaultRole = newRole;
         }
 
         await db.SaveChangesAsync();
@@ -1010,25 +969,37 @@ public static class GroupEndpoints
 
         var group = await db.Groups
             .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (group == null)
             return Results.NotFound();
 
         var member = group.Members.FirstOrDefault(m => m.UserId == userId);
-        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+        if (member == null)
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
+
+        var effectivePerms = PermissionService.GetEffectivePermissions(member);
+        if (!effectivePerms.HasFlag(Permission.ManageMembers) && !effectivePerms.HasFlag(Permission.ManageGroup))
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
 
         var token = Guid.NewGuid().ToString("N");
+
+        // Public groups get permanent links (no expiry, no max uses)
+        var expiresAt = !group.IsPrivate
+            ? (DateTime?)null
+            : request.ExpiresInMinutes.HasValue
+                ? DateTime.UtcNow.AddMinutes(request.ExpiresInMinutes.Value)
+                : null;
+        var maxUses = !group.IsPrivate ? (int?)null
+            : request.MaxUses is > 0 and <= 999999 ? request.MaxUses : null;
 
         var inviteLink = new InviteLink
         {
             GroupId = group.Id,
             Token = token,
-            ExpiresAt = request.ExpiresInMinutes.HasValue
-                ? DateTime.UtcNow.AddMinutes(request.ExpiresInMinutes.Value)
-                : null,
-            MaxUses = request.MaxUses,
+            ExpiresAt = expiresAt,
+            MaxUses = maxUses,
             CreatedByUserId = userId,
         };
 
@@ -1070,14 +1041,23 @@ public static class GroupEndpoints
 
         var group = await db.Groups
             .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (group == null)
             return Results.NotFound();
 
         var member = group.Members.FirstOrDefault(m => m.UserId == userId);
-        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+        if (member == null)
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
+
+        // Public groups: all members can view links; Private groups: need ManageMembers or ManageGroup
+        if (group.IsPrivate)
+        {
+            var effectivePerms = PermissionService.GetEffectivePermissions(member);
+            if (!effectivePerms.HasFlag(Permission.ManageMembers) && !effectivePerms.HasFlag(Permission.ManageGroup))
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
+        }
 
         var now = DateTime.UtcNow;
         var baseUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
@@ -1113,13 +1093,18 @@ public static class GroupEndpoints
 
         var group = await db.Groups
             .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (group == null)
             return Results.NotFound();
 
         var member = group.Members.FirstOrDefault(m => m.UserId == userId);
-        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+        if (member == null)
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
+
+        var effectivePerms = PermissionService.GetEffectivePermissions(member);
+        if (!effectivePerms.HasFlag(Permission.ManageMembers) && !effectivePerms.HasFlag(Permission.ManageGroup))
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
 
         var link = await db.InviteLinks

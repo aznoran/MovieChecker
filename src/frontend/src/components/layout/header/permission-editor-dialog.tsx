@@ -209,7 +209,7 @@ export function PermissionEditorDialog({
                     </div>
                 )}
 
-                <DialogFooter className="gap-2 sm:gap-0">
+                <DialogFooter className="flex flex-row items-center gap-2">
                     {hasChangesFromRoleDefaults() && (
                         <Button
                             variant="outline"
@@ -221,21 +221,23 @@ export function PermissionEditorDialog({
                             {t("resetToDefaults")}
                         </Button>
                     )}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onClose}
-                    >
-                        {t("cancel")}
-                    </Button>
-                    <Button
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={saving || isLoading}
-                    >
-                        {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin"/>}
-                        {t("save")}
-                    </Button>
+                    <div className="flex items-center gap-2 ml-auto">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={onClose}
+                        >
+                            {t("cancel")}
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={handleSave}
+                            disabled={saving || isLoading}
+                        >
+                            {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin"/>}
+                            {t("save")}
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

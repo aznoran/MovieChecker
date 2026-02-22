@@ -1,9 +1,11 @@
 "use client"
 
 import {useState} from "react";
+import {useQuery} from "@tanstack/react-query";
 import {useAuth} from "@/context/auth-context";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
+import {getMyPermissions} from "@/lib/api/client";
 import {GroupRole, GroupType} from "@/lib/api/generated";
 import type {GroupDto} from "@/lib/api/generated";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
@@ -17,6 +19,13 @@ import {
     FieldGroup,
     FieldSeparator,
 } from "@/components/ui/field";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {Progress} from "@/components/ui/progress";
 import {
     Lock,
@@ -28,7 +37,6 @@ import {
     Check,
     Settings,
     KeyRound,
-    RefreshCw,
     Shield,
     Eye,
     UserCog,
@@ -49,21 +57,20 @@ interface GroupCardProps {
 export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
     const {user} = useAuth();
     const {t} = useLocale();
-    const {leaveGroup, kickMember, transferOwnership, generateOtp, updatePassword, updateGroupSettings} = useGroup();
+    const {leaveGroup, kickMember, transferOwnership, generateOtp, updateGroupSettings} = useGroup();
 
     const isOwner = user?.id === g.createdByUserId;
-    const currentUserMember = (g.members ?? []).find(m => m.userId === user?.id);
-    const isAdmin = currentUserMember?.role === GroupRole.Admin;
-    const canManage = isOwner || isAdmin;
+    const {data: permissions} = useQuery({
+        queryKey: ["permissions", g.id],
+        queryFn: () => getMyPermissions(g.id!),
+    });
+    const canManageMembers = permissions?.canManageMembers ?? false;
+    const canManageGroup = permissions?.canManageGroup ?? false;
 
     // Local state for this card
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [editGroupName, setEditGroupName] = useState("");
     const [settingsNameError, setSettingsNameError] = useState("");
-    const [settingsSwitchingToPrivate, setSettingsSwitchingToPrivate] = useState(false);
-    const [settingsPassword, setSettingsPassword] = useState("");
-    const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-    const [newPassword, setNewPassword] = useState("");
     const [generatedOtp, setGeneratedOtp] = useState<{ code: string; expiresAt: string; remainingSeconds: number } | null>(null);
     const [copied, setCopied] = useState(false);
     const [permissionEditorTarget, setPermissionEditorTarget] = useState<{
@@ -96,28 +103,8 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
     };
 
     const handleToggleGroupType = async () => {
-        if (g.isPrivate) {
-            try {
-                await updateGroupSettings(g.id!, { isPrivate: false });
-            } catch {
-                setError(t("groupSettingsError"));
-            }
-        } else {
-            setSettingsSwitchingToPrivate(true);
-            setSettingsOpen(true);
-            setSettingsPassword("");
-        }
-    };
-
-    const handleConfirmSwitchToPrivate = async () => {
         try {
-            await updateGroupSettings(g.id!, { isPrivate: true });
-            if (settingsPassword.trim()) {
-                await updatePassword(g.id!, settingsPassword);
-            }
-            setSettingsSwitchingToPrivate(false);
-            setSettingsOpen(false);
-            setSettingsPassword("");
+            await updateGroupSettings(g.id!, { isPrivate: !g.isPrivate });
         } catch {
             setError(t("groupSettingsError"));
         }
@@ -144,16 +131,6 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
             }, 10 * 1000);
         } catch {
             setError(t("otpGenerateError"));
-        }
-    };
-
-    const handleUpdatePassword = async () => {
-        try {
-            await updatePassword(g.id!, newPassword || undefined);
-            setChangePasswordOpen(false);
-            setNewPassword("");
-        } catch {
-            setError(t("passwordUpdateError"));
         }
     };
 
@@ -219,8 +196,8 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                 />
             </div>
 
-            {/* Share popover for invite code + invite links (Owner/Admin only) */}
-            {g.inviteCode && canManage && (
+            {/* Invite code + share popover */}
+            {g.inviteCode && (canManageMembers || !g.isPrivate) && (
                 <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg border border-border/40">
                     <code className="pl-2 text-sm font-mono flex-1 font-semibold tracking-wide">
                         {" " + g.inviteCode}
@@ -234,11 +211,16 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                         {copied ? <Check className="h-3.5 w-3.5 text-primary"/> :
                             <Copy className="h-3.5 w-3.5"/>}
                     </Button>
-                    <SharePopover groupId={g.id!} inviteCode={g.inviteCode}/>
+                    <SharePopover
+                        groupId={g.id!}
+                        inviteCode={g.inviteCode}
+                        isPublicGroup={!g.isPrivate}
+                        canManage={isOwner || canManageMembers}
+                    />
                 </div>
             )}
-            {/* Show invite code for non-admins (read-only) */}
-            {g.inviteCode && !canManage && (
+            {/* Show invite code for non-managers in private groups (read-only, no share) */}
+            {g.inviteCode && g.isPrivate && !canManageMembers && (
                 <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg border border-border/40">
                     <code className="pl-2 text-sm font-mono flex-1 font-semibold tracking-wide">
                         {" " + g.inviteCode}
@@ -255,15 +237,15 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                 </div>
             )}
 
-            {/* Group Settings (Owner/Admin only) */}
-            {canManage && (
+            {/* Group Settings */}
+            {canManageGroup && (
                 <div className="">
                     <FieldSeparator className="my-0.5"/>
                     <div className="space-y-4 pt-6">
                         <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">{t("groupSettings")}</p>
 
                         {/* Rename */}
-                        {settingsOpen && !settingsSwitchingToPrivate ? (
+                        {settingsOpen ? (
                             <div className="space-y-3 bg-muted/30 border border-border/60 p-3 rounded-xl animate-in slide-in-from-top-2">
                                 <Field>
                                     <FieldLabel className="text-sm font-medium">
@@ -305,47 +287,6 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                     </Button>
                                 </div>
                             </div>
-                        ) : settingsOpen && settingsSwitchingToPrivate ? (
-                            /* Switch to private - password prompt */
-                            <div className="space-y-3 bg-muted/30 border border-border/60 p-3 rounded-xl animate-in slide-in-from-top-2">
-                                <Field>
-                                    <FieldLabel className="text-sm font-medium">
-                                        {t("groupPassword")}
-                                    </FieldLabel>
-                                    <Input
-                                        type="password"
-                                        value={settingsPassword}
-                                        onChange={(e) => setSettingsPassword(e.target.value)}
-                                        placeholder={t("groupPassword")}
-                                        className="h-9 bg-background border-border/60"
-                                    />
-                                    <FieldDescription className="text-xs">
-                                        {t("setPasswordForPrivate")}
-                                    </FieldDescription>
-                                </Field>
-                                <div className="flex gap-2 pt-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-9 flex-1 border-border/60"
-                                        onClick={() => {
-                                            setSettingsSwitchingToPrivate(false);
-                                            setSettingsOpen(false);
-                                            setSettingsPassword("");
-                                        }}
-                                    >
-                                        {t("cancel")}
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        className="h-9 flex-1 bg-primary hover:bg-primary/90"
-                                        onClick={handleConfirmSwitchToPrivate}
-                                    >
-                                        <Check className="h-3.5 w-3.5 mr-1.5"/>
-                                        {t("save")}
-                                    </Button>
-                                </div>
-                            </div>
                         ) : (
                             <div className="space-y-2">
                                 <Button
@@ -355,7 +296,6 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                     onClick={() => {
                                         setSettingsOpen(true);
                                         setEditGroupName(g.name ?? "");
-                                        setSettingsSwitchingToPrivate(false);
                                     }}
                                 >
                                     <Settings className="h-3.5 w-3.5 mr-1.5"/>
@@ -379,37 +319,85 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                         </>
                                     )}
                                 </Button>
+
+                                {/* Default role selector */}
+                                {g.isPrivate ? (
+                                    <Field>
+                                        <FieldLabel className="text-xs font-medium">
+                                            {t("defaultRole")}
+                                        </FieldLabel>
+                                        <Select
+                                            value={g.defaultRole ?? GroupRole.Member}
+                                            onValueChange={async (value) => {
+                                                try {
+                                                    await updateGroupSettings(g.id!, {defaultRole: value as GroupRole});
+                                                } catch {
+                                                    setError(t("groupSettingsError"));
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="h-9 text-xs bg-background border-border/60">
+                                                <SelectValue/>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={GroupRole.Viewer}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Eye className="h-3.5 w-3.5"/>
+                                                        {t("roleViewer")}
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem value={GroupRole.Member}>
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="h-3.5 w-3.5"/>
+                                                        {t("roleMember")}
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem value={GroupRole.Admin}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Shield className="h-3.5 w-3.5"/>
+                                                        {t("roleAdmin")}
+                                                    </div>
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FieldDescription className="text-xs">
+                                            {t("defaultRoleDescription")}
+                                        </FieldDescription>
+                                    </Field>
+                                ) : (
+                                    <Field>
+                                        <FieldLabel className="text-xs font-medium">
+                                            {t("defaultRole")}
+                                        </FieldLabel>
+                                        <div className="flex items-center gap-2 h-9 px-3 rounded-md bg-muted/50 border border-border/40 text-xs text-muted-foreground">
+                                            <Eye className="h-3.5 w-3.5"/>
+                                            {t("roleViewer")}
+                                        </div>
+                                        <FieldDescription className="text-xs">
+                                            {t("defaultRoleDescription")}
+                                        </FieldDescription>
+                                    </Field>
+                                )}
                             </div>
                         )}
                     </div>
                 </div>
             )}
 
-            {/* OTP Management for private groups (Owner/Admin only) */}
-            {g.isPrivate && canManage && (
+            {/* OTP Management for private groups */}
+            {g.isPrivate && canManageMembers && (
                 <div className="">
                     <FieldSeparator className="my-0.5"/>
                     <div className="space-y-4 pt-6">
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
-                                onClick={handleGenerateOtp}
-                            >
-                                <KeyRound className="h-3.5 w-3.5 mr-1.5"/>
-                                {t("generateOtp")}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-9 text-xs flex-1 border-border/60 hover:bg-primary/5 hover:border-primary/40"
-                                onClick={() => setChangePasswordOpen(true)}
-                            >
-                                <RefreshCw className="h-3.5 w-3.5 mr-1.5"/>
-                                {t("changePassword")}
-                            </Button>
-                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 text-xs w-full border-border/60 hover:bg-primary/5 hover:border-primary/40"
+                            onClick={handleGenerateOtp}
+                        >
+                            <KeyRound className="h-3.5 w-3.5 mr-1.5"/>
+                            {t("generateOtp")}
+                        </Button>
 
                         {/* Show generated OTP */}
                         {generatedOtp && (
@@ -452,50 +440,6 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                             </div>
                         )}
 
-                        {/* Password change form */}
-                        {changePasswordOpen && (
-                            <div
-                                className="bg-muted/30 border border-border/60 p-3 rounded-xl space-y-2.5 animate-in slide-in-from-top-2">
-                                <Field>
-                                    <FieldLabel htmlFor={`newPassword-${g.id}`}
-                                                className="text-sm font-medium">
-                                        {t("newPassword")}
-                                    </FieldLabel>
-                                    <Input
-                                        id={`newPassword-${g.id}`}
-                                        type="password"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        placeholder={t("newPassword")}
-                                        className="h-9 bg-background border-border/60"
-                                    />
-                                    <FieldDescription className="text-xs">
-                                        {t("optionalPassword")}
-                                    </FieldDescription>
-                                </Field>
-                                <div className="flex gap-2 pt-4">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-9 flex-1 border-border/60"
-                                        onClick={() => {
-                                            setChangePasswordOpen(false);
-                                            setNewPassword("");
-                                        }}
-                                    >
-                                        {t("cancel")}
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        className="h-9 flex-1 bg-primary hover:bg-primary/90"
-                                        onClick={handleUpdatePassword}
-                                    >
-                                        <Check className="h-3.5 w-3.5 mr-1.5"/>
-                                        {t("save")}
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             )}
@@ -554,8 +498,8 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                     </div>
                                 </div>
 
-                                {/* Owner/Admin actions on other members */}
-                                {canManage && !isSelf && !isMemberOwner && (
+                                {/* Member management actions */}
+                                {canManageMembers && !isSelf && !isMemberOwner && (
                                     <div className="flex items-center gap-1 shrink-0 ml-2">
                                         {isOwner && (
                                             <>
