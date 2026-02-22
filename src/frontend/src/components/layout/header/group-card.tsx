@@ -34,7 +34,11 @@ import {
     UserCog,
     ShieldCheck,
     UserMinus,
+    AlertTriangle,
+    ShieldEllipsis,
 } from "lucide-react";
+import {PermissionEditorDialog} from "./permission-editor-dialog";
+import {SharePopover} from "./share-popover";
 
 interface GroupCardProps {
     group: GroupDto;
@@ -62,6 +66,11 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
     const [newPassword, setNewPassword] = useState("");
     const [generatedOtp, setGeneratedOtp] = useState<{ code: string; expiresAt: string; remainingSeconds: number } | null>(null);
     const [copied, setCopied] = useState(false);
+    const [permissionEditorTarget, setPermissionEditorTarget] = useState<{
+        userId: number;
+        displayName: string;
+        role: GroupRole;
+    } | null>(null);
 
     const handleCopyCode = async (code: string) => {
         await navigator.clipboard.writeText(code);
@@ -210,12 +219,28 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                 />
             </div>
 
-            {/* Invite code */}
-            {g.inviteCode && (
-                <div
-                    className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg border border-border/40">
-                    <code
-                        className="pl-2 text-sm font-mono flex-1 font-semibold tracking-wide">
+            {/* Share popover for invite code + invite links (Owner/Admin only) */}
+            {g.inviteCode && canManage && (
+                <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg border border-border/40">
+                    <code className="pl-2 text-sm font-mono flex-1 font-semibold tracking-wide">
+                        {" " + g.inviteCode}
+                    </code>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-primary/10"
+                        onClick={() => handleCopyCode(g.inviteCode!)}
+                    >
+                        {copied ? <Check className="h-3.5 w-3.5 text-primary"/> :
+                            <Copy className="h-3.5 w-3.5"/>}
+                    </Button>
+                    <SharePopover groupId={g.id!} inviteCode={g.inviteCode}/>
+                </div>
+            )}
+            {/* Show invite code for non-admins (read-only) */}
+            {g.inviteCode && !canManage && (
+                <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg border border-border/40">
+                    <code className="pl-2 text-sm font-mono flex-1 font-semibold tracking-wide">
                         {" " + g.inviteCode}
                     </code>
                     <Button
@@ -518,8 +543,13 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                                 </span>
                                             )}
                                         </span>
-                                        <span className="text-xs text-muted-foreground">
+                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
                                             {roleLabel}
+                                            {m.hasCustomPermissions && (
+                                                <span title={t("customPermissionsWarning")}>
+                                                    <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0"/>
+                                                </span>
+                                            )}
                                         </span>
                                     </div>
                                 </div>
@@ -529,6 +559,19 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                     <div className="flex items-center gap-1 shrink-0 ml-2">
                                         {isOwner && (
                                             <>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 w-7 p-0 hover:bg-amber-500/10 hover:text-amber-500 rounded-md"
+                                                    title={t("permissionEditor")}
+                                                    onClick={() => setPermissionEditorTarget({
+                                                        userId: m.userId!,
+                                                        displayName: m.displayName ?? "",
+                                                        role: m.role!,
+                                                    })}
+                                                >
+                                                    <ShieldEllipsis className="h-3.5 w-3.5"/>
+                                                </Button>
                                                 <ConfirmDialog
                                                     trigger={
                                                         <Button
@@ -613,6 +656,17 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                     })}
                 </div>
             </FieldGroup>
+
+            {permissionEditorTarget && (
+                <PermissionEditorDialog
+                    open={!!permissionEditorTarget}
+                    onClose={() => setPermissionEditorTarget(null)}
+                    groupId={g.id!}
+                    userId={permissionEditorTarget.userId}
+                    displayName={permissionEditorTarget.displayName}
+                    role={permissionEditorTarget.role}
+                />
+            )}
         </FieldGroup>
     );
 }

@@ -27,7 +27,7 @@ interface GroupContextValue {
     activeGroup: GroupDto | undefined;
     setActiveGroupId: (id: number | undefined) => void;
     createGroup: (name: string, isPrivate?: boolean, password?: string, defaultRole?: GroupRole) => Promise<GroupDto>;
-    joinGroup: (code: string, password?: string, otp?: string) => Promise<GroupDto>;
+    joinGroup: (code: string, password?: string, otp?: string, inviteLinkToken?: string) => Promise<GroupDto>;
     leaveGroup: (id: number) => Promise<void>;
     kickMember: (groupId: number, userId: number) => Promise<void>;
     transferOwnership: (groupId: number, newOwnerId: number) => Promise<void>;
@@ -114,8 +114,8 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     });
 
     const joinMutation = useMutation({
-        mutationFn: ({ code, password, otp }: { code: string, password?: string, otp?: string }) => 
-            apiJoinGroup(code, password, otp),
+        mutationFn: ({ code, password, otp, inviteLinkToken }: { code: string, password?: string, otp?: string, inviteLinkToken?: string }) =>
+            apiJoinGroup(code, password, otp, inviteLinkToken),
         onSuccess: async (group) => {
             toast.success(t("joinSuccess"), { position: "top-center" })
             await queryClient.invalidateQueries({queryKey: ["groups"]});
@@ -214,7 +214,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
                 activeGroup,
                 setActiveGroupId,
                 createGroup: (name, isPrivate, password, defaultRole) => createMutation.mutateAsync({ name, isPrivate, password, defaultRole }),
-                joinGroup: (code, password, otp) => joinMutation.mutateAsync({ code, password, otp }),
+                joinGroup: (code, password, otp, inviteLinkToken) => joinMutation.mutateAsync({ code, password, otp, inviteLinkToken }),
                 leaveGroup: (id) => leaveMutation.mutateAsync(id),
                 kickMember: (groupId, userId) => kickMutation.mutateAsync({groupId, userId}),
                 transferOwnership: (groupId, newOwnerId) => transferMutation.mutateAsync({groupId, newOwnerId}),

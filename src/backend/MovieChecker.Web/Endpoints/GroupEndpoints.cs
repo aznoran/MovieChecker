@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Localization;
 using MovieChecker.Domain.Models.Dtos;
 using MovieChecker.Domain.Models.Entities;
@@ -100,10 +101,45 @@ public static class GroupEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .WithSummary("Get my permissions for a group")
             .WithDescription("Returns the effective permissions for the current user in a specific group");
+
+        group.MapGet("/{id:int}/members/{userId:int}/permissions", GetMemberPermissions)
+            .Produces<MemberPermissionDetailResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Get member permissions")
+            .WithDescription("Returns detailed permission info for a group member");
+
+        group.MapPut("/{id:int}/members/{userId:int}/permissions", UpdateMemberPermissions)
+            .Produces<MemberPermissionDetailResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Update member permissions")
+            .WithDescription("Updates custom permissions for a group member (Owner/Admin only)");
+
+        group.MapPost("/{id:int}/invite-links", CreateInviteLink)
+            .Produces<InviteLinkDto>(StatusCodes.Status201Created)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Create invite link")
+            .WithDescription("Creates a time-limited invite link for a group (Owner/Admin only)");
+
+        group.MapGet("/{id:int}/invite-links", GetInviteLinks)
+            .Produces<List<InviteLinkDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Get active invite links")
+            .WithDescription("Returns all active invite links for a group (Owner/Admin only)");
+
+        group.MapDelete("/{id:int}/invite-links/{linkId:int}", DeleteInviteLink)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Revoke invite link")
+            .WithDescription("Revokes an invite link (Owner/Admin only)");
     }
 
     private static int GetUserId(ClaimsPrincipal user) =>
         int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+
+    private static string InviteLinkCacheKey(string token) => $"invite_link:{token}";
 
 
     private static string GenerateInviteCode()
@@ -121,6 +157,8 @@ public static class GroupEndpoints
             .Where(g => g.Members.Any(m => m.UserId == userId))
             .Include(g => g.Members)
                 .ThenInclude(m => m.User)
+            .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .OrderByDescending(g => g.CreatedAt)
             .ToListAsync();
 
@@ -136,7 +174,8 @@ public static class GroupEndpoints
                 m.UserId,
                 m.User.DisplayName,
                 m.Role,
-                m.JoinedAt
+                m.JoinedAt,
+                m.CustomPermission != null
             )).ToList(),
             g.CreatedAt
         )).ToList();
@@ -151,6 +190,8 @@ public static class GroupEndpoints
         var g = await db.Groups
             .Include(g => g.Members)
                 .ThenInclude(m => m.User)
+            .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == id && g.Members.Any(m => m.UserId == userId));
 
         if (g == null) return Results.NotFound();
@@ -167,7 +208,8 @@ public static class GroupEndpoints
                 m.UserId,
                 m.User.DisplayName,
                 m.Role,
-                m.JoinedAt
+                m.JoinedAt,
+                m.CustomPermission != null
             )).ToList(),
             g.CreatedAt
         ));
@@ -228,7 +270,7 @@ public static class GroupEndpoints
             g.IsPrivate,
             g.GroupType,
             g.DefaultRole,
-            [new GroupMemberDto(userId, displayName, GroupRole.Owner, DateTime.UtcNow)],
+            [new GroupMemberDto(userId, displayName, GroupRole.Owner, DateTime.UtcNow, false)],
             g.CreatedAt
         ));
     }
@@ -271,14 +313,63 @@ public static class GroupEndpoints
         ClaimsPrincipal user,
         AppDbContext db,
         OtpService otpService,
+        HybridCache cache,
         ILocalizationService localizer)
     {
         var userId = GetUserId(user);
 
-        // 1. Find the group
-        var group = await db.Groups
-            .FirstOrDefaultAsync(g => 
-                g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
+        // 1. Find the group - either by invite link token or invite code
+        Group? group;
+        InviteLink? usedInviteLink = null;
+
+        if (!string.IsNullOrWhiteSpace(request.InviteLinkToken))
+        {
+            // Use HybridCache to look up group ID from invite link token
+            var cachedGroupId = await cache.GetOrCreateAsync(
+                InviteLinkCacheKey(request.InviteLinkToken),
+                async cancel =>
+                {
+                    var link = await db.InviteLinks
+                        .AsNoTracking()
+                        .Where(il => il.Token == request.InviteLinkToken)
+                        .Select(il => new { il.GroupId })
+                        .FirstOrDefaultAsync(cancel);
+                    return link?.GroupId ?? 0;
+                },
+                new HybridCacheEntryOptions
+                {
+                    Expiration = TimeSpan.FromMinutes(10),
+                    LocalCacheExpiration = TimeSpan.FromMinutes(5),
+                });
+
+            if (cachedGroupId == 0)
+                return Results.BadRequest(new ErrorResponse(localizer["InvalidInviteLink"]));
+
+            // Still need the full entity for use-count increment (must be tracked)
+            usedInviteLink = await db.InviteLinks
+                .Include(il => il.Group)
+                .FirstOrDefaultAsync(il => il.Token == request.InviteLinkToken);
+
+            if (usedInviteLink == null)
+            {
+                await cache.RemoveAsync(InviteLinkCacheKey(request.InviteLinkToken));
+                return Results.BadRequest(new ErrorResponse(localizer["InvalidInviteLink"]));
+            }
+
+            if (usedInviteLink.ExpiresAt.HasValue && usedInviteLink.ExpiresAt.Value < DateTime.UtcNow)
+                return Results.BadRequest(new ErrorResponse(localizer["InviteLinkExpired"]));
+
+            if (usedInviteLink.MaxUses.HasValue && usedInviteLink.UseCount >= usedInviteLink.MaxUses.Value)
+                return Results.BadRequest(new ErrorResponse(localizer["InviteLinkMaxUsesReached"]));
+
+            group = usedInviteLink.Group;
+        }
+        else
+        {
+            group = await db.Groups
+                .FirstOrDefaultAsync(g =>
+                    g.InviteCode == request.InviteCode.Trim().ToUpperInvariant());
+        }
 
         if (group == null)
             return Results.NotFound(new ErrorResponse(localizer["InvalidInviteCode"]));
@@ -287,8 +378,8 @@ public static class GroupEndpoints
         if (group.GroupType == GroupType.Personal)
             return Results.BadRequest(new ErrorResponse(localizer["CannotJoinPersonalGroup"]));
 
-        // 2. Check password or OTP for private groups
-        if (group.IsPrivate)
+        // 2. Check authentication - invite link token bypasses password/OTP
+        if (usedInviteLink == null && group.IsPrivate)
         {
             bool authenticated = false;
 
@@ -330,20 +421,29 @@ public static class GroupEndpoints
             return Results.BadRequest(new ErrorResponse(localizer["AlreadyMember"]));
 
         // 4. Add member with default role
-        db.GroupMembers.Add(new GroupMember 
-        { 
-            GroupId = group.Id, 
+        db.GroupMembers.Add(new GroupMember
+        {
+            GroupId = group.Id,
             UserId = userId,
             Role = group.DefaultRole
         });
+
+        // Increment invite link use count if used
+        if (usedInviteLink != null)
+        {
+            usedInviteLink.UseCount++;
+        }
+
         await db.SaveChangesAsync();
 
         var updatedGroup = await db.Groups
             .Include(g => g.Members)
-            .ThenInclude(m => m.User)
+                .ThenInclude(m => m.User)
+            .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == group.Id);
 
-        if (updatedGroup == null) 
+        if (updatedGroup == null)
             return Results.NotFound();
 
         // 5. Return updated group
@@ -359,7 +459,8 @@ public static class GroupEndpoints
                 m.UserId,
                 m.User.DisplayName ?? m.User.Username,
                 m.Role,
-                m.JoinedAt
+                m.JoinedAt,
+                m.CustomPermission != null
             )).ToList(),
             updatedGroup.CreatedAt
         ));
@@ -444,7 +545,9 @@ public static class GroupEndpoints
 
         var group = await db.Groups
             .Include(g => g.Members)
-            .ThenInclude(m => m.User)
+                .ThenInclude(m => m.User)
+            .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (group is null)
@@ -461,7 +564,7 @@ public static class GroupEndpoints
 
         // Action: transfer ownership
         group.CreatedByUserId = request.NewOwnerId;
-        
+
         // Update roles: old owner becomes Admin, new owner becomes Owner
         var oldOwnerMember = group.Members.FirstOrDefault(m => m.UserId == currentUserId);
         if (oldOwnerMember != null)
@@ -469,7 +572,7 @@ public static class GroupEndpoints
             oldOwnerMember.Role = GroupRole.Admin;
         }
         newOwnerMember.Role = GroupRole.Owner;
-        
+
         await db.SaveChangesAsync();
 
         // Response: 200 OK with updated group DTO (or change to Results.NoContent() if you prefer 204)
@@ -485,7 +588,8 @@ public static class GroupEndpoints
                 m.UserId,
                 m.User.DisplayName ?? m.User.Username,
                 m.Role,
-                m.JoinedAt
+                m.JoinedAt,
+                m.CustomPermission != null
             )).ToList(),
             group.CreatedAt
         ));
@@ -503,7 +607,9 @@ public static class GroupEndpoints
 
         var group = await db.Groups
             .Include(g => g.Members)
-            .ThenInclude(m => m.User)
+                .ThenInclude(m => m.User)
+            .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (group == null)
@@ -554,7 +660,8 @@ public static class GroupEndpoints
                 m.UserId,
                 m.User.DisplayName ?? m.User.Username,
                 m.Role,
-                m.JoinedAt
+                m.JoinedAt,
+                m.CustomPermission != null
             )).ToList(),
             group.CreatedAt
         ));
@@ -652,7 +759,9 @@ public static class GroupEndpoints
 
         var group = await db.Groups
             .Include(g => g.Members)
-            .ThenInclude(m => m.User)
+                .ThenInclude(m => m.User)
+            .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (group == null)
@@ -705,7 +814,8 @@ public static class GroupEndpoints
                 m.UserId,
                 m.User.DisplayName ?? m.User.Username,
                 m.Role,
-                m.JoinedAt
+                m.JoinedAt,
+                m.CustomPermission != null
             )).ToList(),
             group.CreatedAt
         ));
@@ -735,5 +845,295 @@ public static class GroupEndpoints
             perms.Value.HasFlag(Permission.ManageMembers),
             perms.Value.HasFlag(Permission.ManageGroup)
         ));
+    }
+
+    private static MemberPermissionDetailResponse BuildPermissionDetail(
+        GroupMember member)
+    {
+        var roleDefaults = PermissionService.GetRolePermissions(member.Role);
+        var granted = member.CustomPermission?.GrantedPermissions ?? Permission.None;
+        var revoked = member.CustomPermission?.RevokedPermissions ?? Permission.None;
+        var effective = PermissionService.GetEffectivePermissions(member);
+
+        return new MemberPermissionDetailResponse(
+            (int)roleDefaults,
+            (int)granted,
+            (int)revoked,
+            (int)effective,
+            effective.HasFlag(Permission.ViewEntries),
+            effective.HasFlag(Permission.CreateEntries),
+            effective.HasFlag(Permission.EditOwnEntries),
+            effective.HasFlag(Permission.EditAllEntries),
+            effective.HasFlag(Permission.DeleteOwnEntries),
+            effective.HasFlag(Permission.DeleteAllEntries),
+            effective.HasFlag(Permission.RateSelf),
+            effective.HasFlag(Permission.RateOthers),
+            effective.HasFlag(Permission.ManageMembers),
+            effective.HasFlag(Permission.ManageGroup),
+            member.CustomPermission != null
+        );
+    }
+
+    private static async Task<IResult> GetMemberPermissions(
+        int id,
+        int userId,
+        ClaimsPrincipal user,
+        AppDbContext db)
+    {
+        var currentUserId = GetUserId(user);
+
+        var group = await db.Groups
+            .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
+            .FirstOrDefaultAsync(g => g.Id == id);
+
+        if (group == null)
+            return Results.NotFound();
+
+        var currentMember = group.Members.FirstOrDefault(m => m.UserId == currentUserId);
+        if (currentMember == null)
+            return Results.NotFound();
+
+        // Any member can view their own; Owner/Admin can view anyone's
+        if (currentUserId != userId
+            && currentMember.Role != GroupRole.Owner
+            && currentMember.Role != GroupRole.Admin)
+        {
+            return Results.BadRequest(new ErrorResponse("Insufficient permissions"));
+        }
+
+        var targetMember = group.Members.FirstOrDefault(m => m.UserId == userId);
+        if (targetMember == null)
+            return Results.NotFound();
+
+        return Results.Ok(BuildPermissionDetail(targetMember));
+    }
+
+    private static async Task<IResult> UpdateMemberPermissions(
+        int id,
+        int userId,
+        UpdateMemberPermissionsRequest request,
+        ClaimsPrincipal user,
+        AppDbContext db)
+    {
+        var currentUserId = GetUserId(user);
+
+        var group = await db.Groups
+            .Include(g => g.Members)
+                .ThenInclude(m => m.CustomPermission)
+            .FirstOrDefaultAsync(g => g.Id == id);
+
+        if (group == null)
+            return Results.NotFound();
+
+        var currentMember = group.Members.FirstOrDefault(m => m.UserId == currentUserId);
+        if (currentMember == null)
+            return Results.NotFound();
+
+        var targetMember = group.Members.FirstOrDefault(m => m.UserId == userId);
+        if (targetMember == null)
+            return Results.NotFound();
+
+        // Cannot modify Owner's permissions
+        if (targetMember.Role == GroupRole.Owner)
+            return Results.BadRequest(new ErrorResponse("Cannot modify owner's permissions"));
+
+        // Auth: Owner can edit anyone (except Owner, checked above); Admin can edit Viewer/Member
+        if (currentMember.Role == GroupRole.Owner)
+        {
+            // OK
+        }
+        else if (currentMember.Role == GroupRole.Admin)
+        {
+            if (targetMember.Role >= GroupRole.Admin)
+                return Results.BadRequest(new ErrorResponse("Admins cannot modify admin or higher permissions"));
+        }
+        else
+        {
+            return Results.BadRequest(new ErrorResponse("Insufficient permissions"));
+        }
+
+        var granted = (Permission)request.GrantedPermissions;
+        var revoked = (Permission)request.RevokedPermissions;
+
+        // Cannot grant ManageGroup to non-owners
+        if (granted.HasFlag(Permission.ManageGroup))
+            return Results.BadRequest(new ErrorResponse("Cannot grant ManageGroup to non-owners"));
+
+        // Granted & revoked must not overlap
+        if ((granted & revoked) != Permission.None)
+            return Results.BadRequest(new ErrorResponse("Granted and revoked permissions must not overlap"));
+
+        // If both are None → reset to defaults (delete record)
+        if (granted == Permission.None && revoked == Permission.None)
+        {
+            if (targetMember.CustomPermission != null)
+            {
+                db.Remove(targetMember.CustomPermission);
+                await db.SaveChangesAsync();
+                // Reload to get clean state
+                targetMember.CustomPermission = null;
+            }
+        }
+        else if (targetMember.CustomPermission != null)
+        {
+            targetMember.CustomPermission.GrantedPermissions = granted;
+            targetMember.CustomPermission.RevokedPermissions = revoked;
+            await db.SaveChangesAsync();
+        }
+        else
+        {
+            var newPermission = new MemberPermission
+            {
+                GroupMemberId = targetMember.Id,
+                GrantedPermissions = granted,
+                RevokedPermissions = revoked,
+            };
+            db.Set<MemberPermission>().Add(newPermission);
+            await db.SaveChangesAsync();
+            targetMember.CustomPermission = newPermission;
+        }
+
+        return Results.Ok(BuildPermissionDetail(targetMember));
+    }
+
+    private static async Task<IResult> CreateInviteLink(
+        int id,
+        CreateInviteLinkRequest request,
+        ClaimsPrincipal user,
+        AppDbContext db,
+        HybridCache cache,
+        HttpContext httpContext,
+        ILocalizationService localizer)
+    {
+        var userId = GetUserId(user);
+
+        var group = await db.Groups
+            .Include(g => g.Members)
+            .FirstOrDefaultAsync(g => g.Id == id);
+
+        if (group == null)
+            return Results.NotFound();
+
+        var member = group.Members.FirstOrDefault(m => m.UserId == userId);
+        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
+
+        var token = Guid.NewGuid().ToString("N");
+
+        var inviteLink = new InviteLink
+        {
+            GroupId = group.Id,
+            Token = token,
+            ExpiresAt = request.ExpiresInMinutes.HasValue
+                ? DateTime.UtcNow.AddMinutes(request.ExpiresInMinutes.Value)
+                : null,
+            MaxUses = request.MaxUses,
+            CreatedByUserId = userId,
+        };
+
+        db.InviteLinks.Add(inviteLink);
+        await db.SaveChangesAsync();
+
+        // Pre-populate the cache with the new link's group ID
+        await cache.SetAsync(
+            InviteLinkCacheKey(token),
+            group.Id,
+            new HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(10),
+                LocalCacheExpiration = TimeSpan.FromMinutes(5),
+            });
+
+        var baseUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+        var url = $"{baseUrl}/api/groups/join?token={token}";
+
+        return Results.Created($"/api/groups/{id}/invite-links/{inviteLink.Id}", new InviteLinkDto(
+            inviteLink.Id,
+            inviteLink.Token,
+            url,
+            inviteLink.ExpiresAt,
+            inviteLink.MaxUses,
+            inviteLink.UseCount,
+            inviteLink.CreatedAt
+        ));
+    }
+
+    private static async Task<IResult> GetInviteLinks(
+        int id,
+        ClaimsPrincipal user,
+        AppDbContext db,
+        HttpContext httpContext,
+        ILocalizationService localizer)
+    {
+        var userId = GetUserId(user);
+
+        var group = await db.Groups
+            .Include(g => g.Members)
+            .FirstOrDefaultAsync(g => g.Id == id);
+
+        if (group == null)
+            return Results.NotFound();
+
+        var member = group.Members.FirstOrDefault(m => m.UserId == userId);
+        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
+
+        var now = DateTime.UtcNow;
+        var baseUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+
+        var links = await db.InviteLinks
+            .Where(il => il.GroupId == id)
+            .Where(il => !il.ExpiresAt.HasValue || il.ExpiresAt.Value > now)
+            .Where(il => !il.MaxUses.HasValue || il.UseCount < il.MaxUses.Value)
+            .OrderByDescending(il => il.CreatedAt)
+            .Select(il => new InviteLinkDto(
+                il.Id,
+                il.Token,
+                $"{baseUrl}/api/groups/join?token={il.Token}",
+                il.ExpiresAt,
+                il.MaxUses,
+                il.UseCount,
+                il.CreatedAt
+            ))
+            .ToListAsync();
+
+        return Results.Ok(links);
+    }
+
+    private static async Task<IResult> DeleteInviteLink(
+        int id,
+        int linkId,
+        ClaimsPrincipal user,
+        AppDbContext db,
+        HybridCache cache,
+        ILocalizationService localizer)
+    {
+        var userId = GetUserId(user);
+
+        var group = await db.Groups
+            .Include(g => g.Members)
+            .FirstOrDefaultAsync(g => g.Id == id);
+
+        if (group == null)
+            return Results.NotFound();
+
+        var member = group.Members.FirstOrDefault(m => m.UserId == userId);
+        if (member == null || (member.Role != GroupRole.Owner && member.Role != GroupRole.Admin))
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsEdit"]));
+
+        var link = await db.InviteLinks
+            .FirstOrDefaultAsync(il => il.Id == linkId && il.GroupId == id);
+
+        if (link == null)
+            return Results.NotFound();
+
+        // Evict cache before removing
+        await cache.RemoveAsync(InviteLinkCacheKey(link.Token));
+
+        db.InviteLinks.Remove(link);
+        await db.SaveChangesAsync();
+
+        return Results.NoContent();
     }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
@@ -112,6 +112,42 @@ const statusColors: Record<WatchStatus, string> = {
     [WatchStatus.Completed]: "bg-green-500/20 text-green-400 border-green-500/30",
     [WatchStatus.Dropped]: "bg-red-500/20 text-red-400 border-red-500/30",
 };
+
+function PosterImage({src, alt}: {src: string; alt?: string}) {
+    const [loaded, setLoaded] = useState(false);
+    const [errored, setErrored] = useState(false);
+
+    const handleLoad = useCallback(() => setLoaded(true), []);
+    const handleError = useCallback(() => {
+        setLoaded(true);
+        setErrored(true);
+    }, []);
+
+    if (errored) {
+        return (
+            <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
+                <ImageOff className="h-10 w-10 text-muted-foreground/40"/>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full aspect-[4/3] overflow-hidden relative">
+            {!loaded && (
+                <div className="absolute inset-0 bg-muted flex items-center justify-center z-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40"/>
+                </div>
+            )}
+            <img
+                src={src}
+                alt={alt}
+                className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
+                onLoad={handleLoad}
+                onError={handleError}
+            />
+        </div>
+    );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -298,13 +334,7 @@ export default function HomePage() {
                                     onClick={() => setEditEntry(entry)}
                                 >
                                     {posterSrc ? (
-                                        <div className="w-full aspect-[4/3] overflow-hidden">
-                                            <img
-                                                src={posterSrc}
-                                                alt={movie.title ?? undefined}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
+                                        <PosterImage src={posterSrc} alt={movie.title ?? undefined}/>
                                     ) : (
                                         <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
                                             <ImageOff className="h-10 w-10 text-muted-foreground/40"/>

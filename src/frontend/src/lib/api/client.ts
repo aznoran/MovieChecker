@@ -194,8 +194,8 @@ export const checkInviteCode = async (inviteCode: string): Promise<{
     };
 };
 
-export const joinGroup = async (inviteCode: string, password?: string, otp?: string): Promise<GroupDto> => {
-    const response = await apiClient.api.groupsJoinCreate({inviteCode, password, otp});
+export const joinGroup = async (inviteCode: string, password?: string, otp?: string, inviteLinkToken?: string): Promise<GroupDto> => {
+    const response = await apiClient.api.groupsJoinCreate({inviteCode, password, otp, inviteLinkToken});
     return response.data;
 };
 
@@ -240,6 +240,55 @@ export const updateGroupSettings = async (groupId: number, settings: {
         },
     });
     return response.data;
+};
+
+// Invite Links
+export interface InviteLinkDto {
+    id: number;
+    token: string;
+    url: string;
+    expiresAt: string | null;
+    maxUses: number | null;
+    useCount: number;
+    createdAt: string;
+}
+
+export const createInviteLink = async (groupId: number, expiresInMinutes?: number, maxUses?: number): Promise<InviteLinkDto> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+    const response = await apiClient.instance.post(`/api/groups/${groupId}/invite-links`, {
+        expiresInMinutes: expiresInMinutes ?? null,
+        maxUses: maxUses ?? null,
+    }, {
+        headers: {
+            ...(token ? {Authorization: `Bearer ${token}`} : {}),
+            "Accept-Language": locale,
+        },
+    });
+    return response.data as InviteLinkDto;
+};
+
+export const getInviteLinks = async (groupId: number): Promise<InviteLinkDto[]> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+    const response = await apiClient.instance.get(`/api/groups/${groupId}/invite-links`, {
+        headers: {
+            ...(token ? {Authorization: `Bearer ${token}`} : {}),
+            "Accept-Language": locale,
+        },
+    });
+    return response.data as InviteLinkDto[];
+};
+
+export const deleteInviteLink = async (groupId: number, linkId: number): Promise<void> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+    await apiClient.instance.delete(`/api/groups/${groupId}/invite-links/${linkId}`, {
+        headers: {
+            ...(token ? {Authorization: `Bearer ${token}`} : {}),
+            "Accept-Language": locale,
+        },
+    });
 };
 
 // Permissions
@@ -309,6 +358,52 @@ export const updateUserSettings = async (settings: {
         preventOthersAddingToMyPersonal: response.data.preventOthersAddingToMyPersonal ?? false,
         preventMeAddingToMyPersonal: response.data.preventMeAddingToMyPersonal ?? false,
     };
+};
+
+// Member Permissions
+export interface MemberPermissionDetail {
+    roleDefaultFlags: number;
+    grantedPermissionsFlags: number;
+    revokedPermissionsFlags: number;
+    effectivePermissionsFlags: number;
+    canViewEntries: boolean;
+    canCreateEntries: boolean;
+    canEditOwnEntries: boolean;
+    canEditAllEntries: boolean;
+    canDeleteOwnEntries: boolean;
+    canDeleteAllEntries: boolean;
+    canRateSelf: boolean;
+    canRateOthers: boolean;
+    canManageMembers: boolean;
+    canManageGroup: boolean;
+    hasCustomPermissions: boolean;
+}
+
+export const getMemberPermissions = async (groupId: number, userId: number): Promise<MemberPermissionDetail> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+    const response = await apiClient.instance.get(`/api/groups/${groupId}/members/${userId}/permissions`, {
+        headers: {
+            ...(token ? {Authorization: `Bearer ${token}`} : {}),
+            "Accept-Language": locale,
+        },
+    });
+    return response.data as MemberPermissionDetail;
+};
+
+export const updateMemberPermissions = async (groupId: number, userId: number, granted: number, revoked: number): Promise<MemberPermissionDetail> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+    const response = await apiClient.instance.put(`/api/groups/${groupId}/members/${userId}/permissions`, {
+        grantedPermissions: granted,
+        revokedPermissions: revoked,
+    }, {
+        headers: {
+            ...(token ? {Authorization: `Bearer ${token}`} : {}),
+            "Accept-Language": locale,
+        },
+    });
+    return response.data as MemberPermissionDetail;
 };
 
 // Export the API client instance for direct access if needed

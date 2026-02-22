@@ -6,5 +6,6 @@ public record GroupMemberDto(
     int UserId,
     string DisplayName,
     GroupRole Role,
-    DateTime JoinedAt
+    DateTime JoinedAt,
+    bool HasCustomPermissions
 );

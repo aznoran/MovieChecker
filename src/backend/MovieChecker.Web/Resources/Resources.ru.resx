@@ -205,4 +205,13 @@
   <data name="GroupNotFound" xml:space="preserve">
     <value>Группа не найдена</value>
   </data>
+  <data name="InvalidInviteLink" xml:space="preserve">
+    <value>Недействительная ссылка-приглашение</value>
+  </data>
+  <data name="InviteLinkExpired" xml:space="preserve">
+    <value>Срок действия ссылки-приглашения истёк</value>
+  </data>
+  <data name="InviteLinkMaxUsesReached" xml:space="preserve">
+    <value>Ссылка-приглашение достигла максимального количества использований</value>
+  </data>
 </root>

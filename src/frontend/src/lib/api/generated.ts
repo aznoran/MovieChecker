@@ -139,6 +139,7 @@ export interface GroupMemberDto {
   role?: GroupRole;
   /** @format date-time */
   joinedAt?: string;
+  hasCustomPermissions?: boolean;
 }
 
 export interface HealthResponse {
@@ -149,6 +150,7 @@ export interface JoinGroupRequest {
   inviteCode?: string | null;
   password?: string | null;
   otp?: string | null;
+  inviteLinkToken?: string | null;
 }
 
 export interface LanguageResponse {
@@ -158,6 +160,28 @@ export interface LanguageResponse {
 export interface LoginRequest {
   username?: string | null;
   password?: string | null;
+}
+
+export interface MemberPermissionDetailResponse {
+  /** @format int32 */
+  roleDefaultFlags?: number;
+  /** @format int32 */
+  grantedPermissionsFlags?: number;
+  /** @format int32 */
+  revokedPermissionsFlags?: number;
+  /** @format int32 */
+  effectivePermissionsFlags?: number;
+  canViewEntries?: boolean;
+  canCreateEntries?: boolean;
+  canEditOwnEntries?: boolean;
+  canEditAllEntries?: boolean;
+  canDeleteOwnEntries?: boolean;
+  canDeleteAllEntries?: boolean;
+  canRateSelf?: boolean;
+  canRateOthers?: boolean;
+  canManageMembers?: boolean;
+  canManageGroup?: boolean;
+  hasCustomPermissions?: boolean;
 }
 
 export interface MemberRatingDto {
@@ -254,6 +278,13 @@ export interface UpdateGroupPasswordRequest {
 export interface UpdateGroupSettingsRequest {
   name?: string | null;
   isPrivate?: boolean | null;
+}
+
+export interface UpdateMemberPermissionsRequest {
+  /** @format int32 */
+  grantedPermissions?: number;
+  /** @format int32 */
+  revokedPermissions?: number;
 }
 
 export interface UpdateMemberRoleRequest {
@@ -838,6 +869,49 @@ export class Api<
       this.request<PermissionsResponse, void>({
         path: `/api/groups/${id}/my-permissions`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Returns detailed permission info for a group member
+     *
+     * @tags GroupEndpoints
+     * @name GroupsMembersPermissionsList
+     * @summary Get member permissions
+     * @request GET:/api/groups/{id}/members/{userId}/permissions
+     */
+    groupsMembersPermissionsList: (
+      id: number,
+      userId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<MemberPermissionDetailResponse, ErrorResponse | void>({
+        path: `/api/groups/${id}/members/${userId}/permissions`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Updates custom permissions for a group member (Owner/Admin only)
+     *
+     * @tags GroupEndpoints
+     * @name GroupsMembersPermissionsUpdate
+     * @summary Update member permissions
+     * @request PUT:/api/groups/{id}/members/{userId}/permissions
+     */
+    groupsMembersPermissionsUpdate: (
+      id: number,
+      userId: number,
+      data: UpdateMemberPermissionsRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<MemberPermissionDetailResponse, ErrorResponse | void>({
+        path: `/api/groups/${id}/members/${userId}/permissions`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

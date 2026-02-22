@@ -4,7 +4,7 @@ import {usePathname} from "next/navigation"
 import Link from "next/link"
 import {useLocale} from "@/context/locale-context"
 import {useGroup} from "@/context/group-context"
-import {GroupType} from "@/lib/api/generated"
+import {GroupRole, GroupType} from "@/lib/api/generated"
 import {useNavLinks} from "@/hooks/use-nav-links"
 import {
     Sidebar,
@@ -19,7 +19,7 @@ import {
     SidebarRail,
 } from "@/components/ui/sidebar"
 import {Avatar, AvatarFallback} from "@/components/ui/avatar"
-import {Film} from "lucide-react"
+import {Crown, Film, Shield} from "lucide-react"
 
 export function AppSidebar() {
     const pathname = usePathname()
@@ -79,6 +79,14 @@ export function AppSidebar() {
                                         .slice(0, 2)
                                         .toUpperCase()
 
+                                    let roleIcon = <></>;
+
+                                    if (member.role === GroupRole.Owner) {
+                                        roleIcon = <Crown className="h-4 w-4 text-yellow-500 shrink-0"/>;
+                                    } else if (member.role === GroupRole.Admin) {
+                                        roleIcon = <Shield className="h-4 w-4 text-blue-500 shrink-0"/>;
+                                    }
+
                                     return (
                                         <SidebarMenuItem key={member.userId}>
                                             <SidebarMenuButton>
@@ -86,6 +94,7 @@ export function AppSidebar() {
                                                     <AvatarFallback>{initials}</AvatarFallback>
                                                 </Avatar>
                                                 <span>{member.displayName}</span>
+                                                <span>{roleIcon}</span>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>
                                     )

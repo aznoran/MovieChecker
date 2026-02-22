@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, useEffect, useMemo} from "react";
+import {useState, useEffect, useMemo, useRef} from "react";
 import {useRouter, useSearchParams} from "next/navigation";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
@@ -48,6 +48,7 @@ export function LoginForm() {
 
     const {login, register, isAuthenticated} = useAuth();
     const router = useRouter();
+    const hasRedirected = useRef(false);
 
     const loginSchema = useMemo(() => z.object({
         username: z.string().min(1, t("usernameRequired")),
@@ -99,8 +100,26 @@ export function LoginForm() {
         }
     }, [searchParams, t]);
 
+    // Redirect authenticated users, checking for pending invite token
+    useEffect(() => {
+        if (!isAuthenticated || hasRedirected.current) return;
+        hasRedirected.current = true;
+
+        let redirectTo = "/";
+        const raw = localStorage.getItem("pendingInviteToken");
+        if (raw) {
+            localStorage.removeItem("pendingInviteToken");
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed.token && Date.now() - parsed.ts < 5 * 60 * 1000) {
+                    redirectTo = `/join/${parsed.token}`;
+                }
+            } catch { /* ignore malformed */ }
+        }
+        router.push(redirectTo);
+    }, [isAuthenticated, router]);
+
     if (isAuthenticated) {
-        router.push("/");
         return null;
     }
 
@@ -148,7 +167,8 @@ export function LoginForm() {
             } else {
                 await login(values.username, values.password);
             }
-            router.push("/");
+            // Auth state updated → re-render → guard handles redirect
+            // (including pending invite token check)
         } catch (err) {
             setError(parseBackendError(err));
         } finally {

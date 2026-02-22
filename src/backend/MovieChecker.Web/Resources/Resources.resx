@@ -205,4 +205,13 @@
   <data name="GroupNotFound" xml:space="preserve">
     <value>Group not found</value>
   </data>
+  <data name="InvalidInviteLink" xml:space="preserve">
+    <value>Invalid invite link</value>
+  </data>
+  <data name="InviteLinkExpired" xml:space="preserve">
+    <value>This invite link has expired</value>
+  </data>
+  <data name="InviteLinkMaxUsesReached" xml:space="preserve">
+    <value>This invite link has reached its maximum number of uses</value>
+  </data>
 </root>
