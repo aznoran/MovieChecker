@@ -68,6 +68,8 @@ export function LoginForm() {
         setLocale(next);
     };
 
+    const isProcessing = loading || authLoading;
+
     const handleLogin = async () => {
         setError("");
         setLoading(true);
@@ -114,10 +116,10 @@ export function LoginForm() {
 
                         <Button
                             className="w-full"
-                            disabled={loading || authLoading}
+                            disabled={isProcessing}
                             onClick={handleLogin}
                         >
-                            {loading || authLoading ? (
+                            {isProcessing ? (
                                 <>
                                     <Loader2 className="h-4 w-4 mr-1.5 animate-spin"/>
                                     {t("pleaseWait")}

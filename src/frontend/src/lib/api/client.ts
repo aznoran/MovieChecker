@@ -56,15 +56,8 @@ apiClient.instance.interceptors.response.use(
 
 // Auth
 export const getCurrentUser = async (): Promise<UserDto> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
-    const response = await apiClient.instance.get("/api/auth/me", {
-        headers: {
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
-            "Accept-Language": locale,
-        },
-    });
-    return response.data as UserDto;
+    const response = await apiClient.instance.get<UserDto>("/api/auth/me");
+    return response.data;
 };
 
 export const setLanguage = async (language: "en" | "ru"): Promise<void> => {

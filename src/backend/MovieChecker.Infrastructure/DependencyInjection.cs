@@ -46,7 +46,7 @@ public static class DependencyInjection
 
         // Authentik OIDC JWT Authentication
         var authentikAuthority = configuration["Authentik:Authority"]
-            ?? "https://auth.xui123qweqwe.org/application/o/moviechecker/";
+            ?? "http://localhost:9000/application/o/moviechecker/";
         var authentikClientId = configuration["Authentik:ClientId"] ?? "moviechecker";
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -141,11 +141,12 @@ public static class DependencyInjection
                             return;
                         }
 
-                        // Add local user ID as NameIdentifier so existing endpoints work unchanged
+                        // Add local user ID as NameIdentifier so existing endpoints work unchanged.
+                        // Authentik tokens may include a 'sub' mapped to NameIdentifier by default,
+                        // so remove any existing NameIdentifier claims first.
                         var identity = context.Principal?.Identity as ClaimsIdentity;
                         if (identity != null)
                         {
-                            // Remove any existing NameIdentifier claims
                             var existing = identity.FindAll(ClaimTypes.NameIdentifier).ToList();
                             foreach (var claim in existing)
                                 identity.TryRemoveClaim(claim);
