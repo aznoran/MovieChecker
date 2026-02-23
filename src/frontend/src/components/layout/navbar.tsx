@@ -27,10 +27,10 @@ export function NavBar() {
     return (
         <>
             <div className="sticky top-0 z-50 pointer-events-none pb-4 pt-2">
-            <header className="flex h-14 shrink-0 items-center gap-8 rounded-xl border bg-card px-4 pointer-events-auto">
+            <header className="flex h-14 shrink-0 items-center gap-4 rounded-xl border bg-card px-4 pointer-events-auto">
                 <SidebarTrigger/>
                 <Separator orientation="vertical" className="h-4"/>
-                <div className="flex items-center justify-center gap-1.5 min-w-[5.5rem]">
+                <div className="flex items-center justify-center gap-1.5 min-w-[8rem]">
                     <PageIcon className="h-4 w-4 text-muted-foreground shrink-0"/>
                     <span className="text-sm font-medium">{currentPage.label}</span>
                 </div>

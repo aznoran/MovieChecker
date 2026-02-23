@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import {PermissionEditorDialog} from "./permission-editor-dialog";
 import {SharePopover} from "./share-popover";
+import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 
 interface GroupCardProps {
     group: GroupDto;
@@ -71,7 +72,11 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [editGroupName, setEditGroupName] = useState("");
     const [settingsNameError, setSettingsNameError] = useState("");
-    const [generatedOtp, setGeneratedOtp] = useState<{ code: string; expiresAt: string; remainingSeconds: number } | null>(null);
+    const [generatedOtp, setGeneratedOtp] = useState<{
+        code: string;
+        expiresAt: string;
+        remainingSeconds: number
+    } | null>(null);
     const [copied, setCopied] = useState(false);
     const [permissionEditorTarget, setPermissionEditorTarget] = useState<{
         userId: number;
@@ -104,7 +109,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
 
     const handleToggleGroupType = async () => {
         try {
-            await updateGroupSettings(g.id!, { isPrivate: !g.isPrivate });
+            await updateGroupSettings(g.id!, {isPrivate: !g.isPrivate});
         } catch {
             setError(t("groupSettingsError"));
         }
@@ -113,7 +118,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
     const handleGenerateOtp = async () => {
         try {
             const result = await generateOtp(g.id!);
-            setGeneratedOtp({ ...result, remainingSeconds: 10 });
+            setGeneratedOtp({...result, remainingSeconds: 10});
 
             const interval = setInterval(() => {
                 setGeneratedOtp(prev => {
@@ -121,7 +126,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                         clearInterval(interval);
                         return prev;
                     }
-                    return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
+                    return {...prev, remainingSeconds: prev.remainingSeconds - 1};
                 });
             }, 1000);
 
@@ -219,23 +224,6 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                     />
                 </div>
             )}
-            {/* Show invite code for non-managers in private groups (read-only, no share) */}
-            {g.inviteCode && g.isPrivate && !canManageMembers && (
-                <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg border border-border/40">
-                    <code className="pl-2 text-sm font-mono flex-1 font-semibold tracking-wide">
-                        {" " + g.inviteCode}
-                    </code>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 hover:bg-primary/10"
-                        onClick={() => handleCopyCode(g.inviteCode!)}
-                    >
-                        {copied ? <Check className="h-3.5 w-3.5 text-primary"/> :
-                            <Copy className="h-3.5 w-3.5"/>}
-                    </Button>
-                </div>
-            )}
 
             {/* Group Settings */}
             {canManageGroup && (
@@ -246,7 +234,8 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
 
                         {/* Rename */}
                         {settingsOpen ? (
-                            <div className="space-y-3 bg-muted/30 border border-border/60 p-3 rounded-xl animate-in slide-in-from-top-2">
+                            <div
+                                className="space-y-3 bg-muted/30 border border-border/60 p-3 rounded-xl animate-in slide-in-from-top-2">
                                 <Field>
                                     <FieldLabel className="text-sm font-medium">
                                         {t("renameGroup")}
@@ -369,7 +358,8 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                         <FieldLabel className="text-xs font-medium">
                                             {t("defaultRole")}
                                         </FieldLabel>
-                                        <div className="flex items-center gap-2 h-9 px-3 rounded-md bg-muted/50 border border-border/40 text-xs text-muted-foreground">
+                                        <div
+                                            className="flex items-center gap-2 h-9 px-3 rounded-md bg-muted/50 border border-border/40 text-xs text-muted-foreground">
                                             <Eye className="h-3.5 w-3.5"/>
                                             {t("roleViewer")}
                                         </div>
@@ -394,6 +384,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                             size="sm"
                             className="h-9 text-xs w-full border-border/60 hover:bg-primary/5 hover:border-primary/40"
                             onClick={handleGenerateOtp}
+                            disabled={generatedOtp != null}
                         >
                             <KeyRound className="h-3.5 w-3.5 mr-1.5"/>
                             {t("generateOtp")}
@@ -490,9 +481,16 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                                             {roleLabel}
                                             {m.hasCustomPermissions && (
-                                                <span title={t("customPermissionsWarning")}>
-                                                    <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0"/>
-                                                </span>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0"/>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="pr-1.5">
+                                                        <div className="flex items-center gap-2">
+                                                            {t("customPermissionsWarning")}
+                                                        </div>
+                                                    </TooltipContent>
+                                                </Tooltip>
                                             )}
                                         </span>
                                     </div>
@@ -546,7 +544,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary rounded-md"
+                                                            className="h-7 w-7 p-0 hover:bg-yellow-500/10 hover:text-yellow-500 rounded-md"
                                                             title={t("transferOwnership")}
                                                         >
                                                             <ShieldCheck className="h-3 w-3"/>
@@ -573,7 +571,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                                    className="h-6 w-6 p-0 hover:text-destructive"
                                                     title={t("kickMember")}
                                                 >
                                                     <UserMinus className="h-3 w-3"/>

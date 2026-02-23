@@ -17,7 +17,9 @@ import {
 } from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {Switch} from "@/components/ui/switch";
-import {RotateCcw, Loader2} from "lucide-react";
+import {RotateCcw, Loader2, Info} from "lucide-react";
+import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
+import {ScrollArea} from "@/components/ui/scroll-area";
 
 const PERMISSION_FLAGS = {
     ViewEntries: 1 << 0,
@@ -58,6 +60,19 @@ const PERMISSION_I18N_MAP: Record<PermissionKey, TranslationKeys> = {
     RateOthers: "permRateOthers",
     ManageMembers: "permManageMembers",
     ManageGroup: "permManageGroup",
+};
+
+const PERMISSION_DETAILED_I18N_MAP: Record<PermissionKey, TranslationKeys | undefined> = {
+    ViewEntries: undefined,
+    CreateEntries: undefined,
+    EditOwnEntries: undefined,
+    EditAllEntries: undefined,
+    DeleteOwnEntries: undefined,
+    DeleteAllEntries: undefined,
+    RateSelf: "permRateSelfDetailed",
+    RateOthers: "permRateOthersDetailed",
+    ManageMembers: undefined,
+    ManageGroup: undefined,
 };
 
 interface PermissionEditorDialogProps {
@@ -164,49 +179,61 @@ export function PermissionEditorDialog({
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground"/>
                     </div>
                 ) : (
-                    <div className="space-y-1 max-h-[60vh] overflow-y-auto">
-                        {PERMISSION_KEYS.map((key) => {
-                            const defaultOn = isRoleDefault(key);
-                            const currentOn = toggles[key] ?? defaultOn;
-                            const isCustom = currentOn !== defaultOn;
-                            const isManageGroup = key === "ManageGroup";
-                            const disabled = isManageGroup && role !== GroupRole.Owner;
+                    <ScrollArea>
+                        <div className="space-y-1 max-h-[60vh]">
+                            {PERMISSION_KEYS.map((key) => {
+                                const defaultOn = isRoleDefault(key);
+                                const currentOn = toggles[key] ?? defaultOn;
+                                const isCustom = currentOn !== defaultOn;
+                                const isManageGroup = key === "ManageGroup";
+                                const disabled = isManageGroup && role !== GroupRole.Owner;
 
-                            return (
-                                <div
-                                    key={key}
-                                    className={`flex items-center justify-between py-2.5 px-3 rounded-lg transition-colors ${
-                                        isCustom ? "bg-amber-500/10 border border-amber-500/30" : "bg-muted/30 border border-border/40"
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                        <div
-                                            className={`h-2 w-2 rounded-full shrink-0 ${
-                                                defaultOn ? "bg-green-500" : "bg-muted-foreground/40"
-                                            }`}
-                                            title={defaultOn ? t("roleDefaultOn") : t("roleDefaultOff")}
-                                        />
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-sm font-medium truncate">
-                                                {t(PERMISSION_I18N_MAP[key])}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">
-                                                {defaultOn ? t("roleDefaultOn") : t("roleDefaultOff")}
-                                            </span>
+                                return (
+                                    <div
+                                        key={key}
+                                        className={`flex items-center justify-between py-2.5 px-3 rounded-lg transition-colors ${
+                                            isCustom ? "bg-amber-500/10 border border-amber-500/30" : "bg-muted/30 border border-border/40"
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                            <div
+                                                className={`h-2 w-2 rounded-full shrink-0 ${
+                                                    defaultOn ? "bg-green-500" : "bg-muted-foreground/40"
+                                                }`}
+                                                title={defaultOn ? t("roleDefaultOn") : t("roleDefaultOff")}
+                                            />
+                                            <div className="flex flex-col min-w-0">
+                                        <span className="flex items-center gap-2 text-sm font-medium truncate">
+                                            {t(PERMISSION_I18N_MAP[key])}
+                                            {PERMISSION_DETAILED_I18N_MAP[key] != undefined && (
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <Info className="text-muted-foreground h-4 w-4" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        {t(PERMISSION_DETAILED_I18N_MAP[key])}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            )}
+                                        </span>
+                                                <span className="text-xs text-muted-foreground">
+                                            {defaultOn ? t("roleDefaultOn") : t("roleDefaultOff")}
+                                        </span>
+                                            </div>
                                         </div>
+                                        <Switch
+                                            size="sm"
+                                            checked={currentOn}
+                                            onCheckedChange={(checked) => {
+                                                setToggles((prev) => ({...prev, [key]: checked}));
+                                            }}
+                                            disabled={disabled}
+                                        />
                                     </div>
-                                    <Switch
-                                        size="sm"
-                                        checked={currentOn}
-                                        onCheckedChange={(checked) => {
-                                            setToggles((prev) => ({...prev, [key]: checked}));
-                                        }}
-                                        disabled={disabled}
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
+                                );
+                            })}
+                        </div>
+                    </ScrollArea>
                 )}
 
                 <DialogFooter className="flex flex-row items-center gap-2">

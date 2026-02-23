@@ -86,6 +86,13 @@ export function SharePopover({groupId, inviteCode, isPublicGroup = false, canMan
         }
     };
 
+
+    const handleSetMaxUses = (value: string) => {
+        if (0 <= Number(value) && Number(value) <= 999999) {
+            setMaxUses(value);
+        }
+    };
+
     const handleCreateLink = async () => {
         try {
             setCreating(true);
@@ -303,17 +310,16 @@ export function SharePopover({groupId, inviteCode, isPublicGroup = false, canMan
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="w-20">
-                                            <Input
-                                                type="number"
-                                                min="1"
-                                                value={maxUses}
-                                                onChange={(e) => setMaxUses(e.target.value)}
-                                                placeholder={t("noLimit")}
-                                                className="h-8 text-xs"
-                                                title={t("maxUses")}
-                                            />
-                                        </div>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            max="999999"
+                                            value={maxUses}
+                                            onChange={(e) => handleSetMaxUses(e.target.value)}
+                                            placeholder={t("noLimit")}
+                                            className="h-8 text-xs"
+                                            title={t("maxUses")}
+                                        />
                                     </div>
                                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                         <Users className="h-3 w-3"/>

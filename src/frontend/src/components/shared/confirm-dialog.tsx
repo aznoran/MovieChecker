@@ -21,7 +21,7 @@ interface ConfirmDialogProps {
     description: string;
     confirmText: string;
     cancelText: string;
-    variant?: "default" | "destructive";
+    variant?: "default" | "destructive" | "outline";
     icon?: React.ReactNode;
 }
 
@@ -38,7 +38,7 @@ export function ConfirmDialog({
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent size="sm">
                 <AlertDialogHeader>
                     {icon && (
                         <AlertDialogMedia
@@ -52,18 +52,12 @@ export function ConfirmDialog({
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel
-                        className={`${variant === "destructive"
-                            ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            : ""}`
-                        }
+                        variant="outline"
                     >
                         {cancelText}
                     </AlertDialogCancel>
                     <AlertDialogAction
-                        className={`${variant === "destructive"
-                            ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            : ""}`
-                        }
+                        variant={variant}
                         onClick={onConfirm}
                     >
                         {confirmText}
