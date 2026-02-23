@@ -89,9 +89,9 @@ export default function LandingPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background-main">
             {/* Header */}
-            <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 shadow-sm">
+            <nav className="border-b bg-background-main/95 backdrop-blur supports-[backdrop-filter]:bg-background-main/60 sticky top-0 z-50 shadow-sm">
                 <div className="container mx-auto px-6 lg:px-8 py-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-primary/10 rounded-lg">
@@ -164,7 +164,7 @@ export default function LandingPage() {
 
             {/* Features Section */}
             <section className="relative py-24 md:py-32">
-                <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-background pointer-events-none"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-background-main pointer-events-none"></div>
                 <div className="container mx-auto px-6 lg:px-8 relative">
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-16">
@@ -200,7 +200,7 @@ export default function LandingPage() {
             </section>
 
             {/* Why Choose Section */}
-            <section className="py-24 md:py-32 bg-background">
+            <section className="py-24 md:py-32 bg-background-main">
                 <div className="container mx-auto px-6 lg:px-8">
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-16">

@@ -92,13 +92,14 @@ export function GenreMultiSelect({value, onChange}: Props) {
                     {selected.map((genre) => (
                         <Badge key={genre} variant="secondary" className="gap-1 pr-1">
                             {getDisplayName(genre)}
-                            <button
-                                type="button"
+                            <Button
+                                variant="ghost"
+                                size="icon-xs"
                                 onClick={() => toggleGenre(genre)}
-                                className="ml-0.5 hover:text-destructive"
+                                className="ml-0.5 h-4 w-4 hover:text-destructive"
                             >
-                                <X className="h-3 w-3"/>
-                            </button>
+                                <X/>
+                            </Button>
                         </Badge>
                     ))}
                 </div>

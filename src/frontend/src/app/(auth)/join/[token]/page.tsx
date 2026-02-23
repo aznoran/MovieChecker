@@ -79,7 +79,7 @@ export default function JoinByTokenPage() {
     // Not logged in — show login prompt
     if (!isAuthenticated) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-background px-4">
+            <div className="flex min-h-screen items-center justify-center bg-background-main px-4">
                 <Card className="w-full max-w-sm">
                     <CardHeader className="text-center">
                         <div className="flex justify-center mb-2">
@@ -112,7 +112,7 @@ export default function JoinByTokenPage() {
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="flex min-h-screen items-center justify-center bg-background-main px-4">
             <Card className="w-full max-w-sm">
                 <CardContent className="pt-4 pb-8">
                     {/* Loading state */}

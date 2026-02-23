@@ -90,32 +90,22 @@ export function CreateGroupForm({setError}: CreateGroupFormProps) {
                         {t("type")}
                     </FieldLabel>
                     <div className="flex rounded-lg border border-border/60 overflow-hidden">
-                        <button
-                            type="button"
-                            className={cn(
-                                "flex-1 flex items-center justify-center gap-2 h-10 text-sm font-medium transition-colors",
-                                !newGroupIsPrivate
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-background text-muted-foreground hover:bg-muted/50"
-                            )}
+                        <Button
+                            variant={!newGroupIsPrivate ? "default" : "secondary"}
+                            className="flex-1 flex items-center justify-center gap-2 h-10 text-sm font-medium transition-colors"
                             onClick={() => setNewGroupIsPrivate(false)}
                         >
                             <LockOpen className="h-3.5 w-3.5"/>
                             {t("publicGroup")}
-                        </button>
-                        <button
-                            type="button"
-                            className={cn(
-                                "flex-1 flex items-center justify-center gap-2 h-10 text-sm font-medium transition-colors",
-                                newGroupIsPrivate
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-background text-muted-foreground hover:bg-muted/50"
-                            )}
+                        </Button>
+                        <Button
+                            variant={newGroupIsPrivate ? "default" : "secondary"}
+                            className="flex-1 flex items-center justify-center gap-2 h-10 text-sm font-medium transition-colors"
                             onClick={() => setNewGroupIsPrivate(true)}
                         >
                             <Lock className="h-3.5 w-3.5"/>
                             {t("privateGroup")}
-                        </button>
+                        </Button>
                     </div>
                 </Field>
 

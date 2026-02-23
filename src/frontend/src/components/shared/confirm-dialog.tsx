@@ -38,7 +38,7 @@ export function ConfirmDialog({
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
-            <AlertDialogContent size="sm">
+            <AlertDialogContent className="bg-card" size="sm">
                 <AlertDialogHeader>
                     {icon && (
                         <AlertDialogMedia

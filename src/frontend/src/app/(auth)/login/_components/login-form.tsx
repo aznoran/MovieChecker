@@ -37,6 +37,7 @@ import {
 import {ThemeToggle} from "@/components/shared/theme-toggle";
 import type {Locale} from "@/lib/i18n";
 import {AxiosError} from "axios";
+import {InputGroup, InputGroupAddon, InputGroupInput} from "@/components/ui/input-group";
 
 export function LoginForm() {
     const {locale, setLocale, t} = useLocale();
@@ -177,7 +178,7 @@ export function LoginForm() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="flex min-h-screen items-center justify-center bg-background-main px-4">
             <div className="absolute top-4 right-4 flex items-center gap-1">
                 <ThemeToggle/>
                 <Button
@@ -226,27 +227,27 @@ export function LoginForm() {
                                             <Lock className="h-3.5 w-3.5"/>
                                             {t("password")}
                                         </FieldLabel>
-                                        <div className="relative">
-                                            <Input
+                                        <InputGroup>
+                                            <InputGroupInput
                                                 {...field}
                                                 id={field.name}
                                                 type={showPassword ? "text" : "password"}
-                                                className="pr-10"
                                                 aria-invalid={fieldState.invalid}
                                             />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                                tabIndex={-1}
-                                            >
-                                                {showPassword ? (
-                                                    <EyeOff className="h-4 w-4"/>
-                                                ) : (
-                                                    <Eye className="h-4 w-4"/>
-                                                )}
-                                            </button>
-                                        </div>
+                                            <InputGroupAddon align="inline-end">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                >
+                                                    {showPassword ? (
+                                                        <EyeOff className="h-4 w-4"/>
+                                                    ) : (
+                                                        <Eye className="h-4 w-4"/>
+                                                    )}
+                                                </Button>
+                                            </InputGroupAddon>
+                                        </InputGroup>
                                         {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
                                     </Field>
                                 )}
