@@ -117,7 +117,7 @@ export default function LandingPage() {
                         >
                             {t("landingSignIn")}
                         </Button>
-                        <Button onClick={() => router.push("/login?register=true")} className="shadow-lg">
+                        <Button onClick={() => router.push("/login")} className="shadow-lg">
                             {t("landingGetStarted")}
                         </Button>
                     </div>
@@ -143,7 +143,7 @@ export default function LandingPage() {
                         <div className="flex gap-4 justify-center flex-wrap">
                             <Button
                                 size="lg"
-                                onClick={() => router.push("/login?register=true")}
+                                onClick={() => router.push("/login")}
                                 className="gap-2 shadow-lg hover:shadow-xl transition-shadow text-base px-8 py-6"
                             >
                                 {t("landingGetStarted")}
@@ -243,7 +243,7 @@ export default function LandingPage() {
                             </p>
                             <Button
                                 size="lg"
-                                onClick={() => router.push("/login?register=true")}
+                                onClick={() => router.push("/login")}
                                 className="gap-2 shadow-xl hover:shadow-2xl transition-shadow text-base px-10 py-7"
                             >
                                 {t("landingCtaButton")}

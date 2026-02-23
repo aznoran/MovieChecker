@@ -4,7 +4,6 @@ import {
     GroupRole,
     CreateMovieRequest,
     UpdateMovieRequest,
-    AuthResponse,
     MovieDto,
     WatchEntryDto,
     GroupDto,
@@ -15,7 +14,7 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-// Create API instance with security worker for JWT / Authentik access tokens
+// Create API instance with security worker for Authentik access tokens
 const apiClient = new Api({
     baseURL: API_URL,
     securityWorker: async () => {
@@ -56,16 +55,6 @@ apiClient.instance.interceptors.response.use(
 );
 
 // Auth
-export const login = async (username: string, password: string): Promise<AuthResponse> => {
-    const response = await apiClient.api.authLoginCreate({username, password});
-    return response.data;
-};
-
-export const register = async (username: string, password: string, displayName: string): Promise<AuthResponse> => {
-    const response = await apiClient.api.authRegisterCreate({username, password, displayName});
-    return response.data;
-};
-
 export const getCurrentUser = async (): Promise<UserDto> => {
     const response = await apiClient.instance.get<UserDto>("/api/auth/me");
     return response.data;

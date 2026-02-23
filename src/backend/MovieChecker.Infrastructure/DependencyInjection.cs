@@ -1,8 +1,5 @@
 ﻿using System.Security.Claims;
-using System.Text;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
@@ -24,9 +21,7 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
-        })
-        .AddScoped<JwtService>()
-        .AddScoped<ValidationService>();
+        });
 
         // Redis and HybridCache
         var redisConnection = configuration.GetConnectionString("Redis");
@@ -49,62 +44,13 @@ public static class DependencyInjection
             };
         });
 
-        // Custom JWT Authentication (login/register form)
-        var jwtKey = configuration["Jwt:Key"] ?? "SuperSecretKey12345678901234567890";
-        
-        // Authentik OIDC Authentication
+        // Authentik OIDC Authentication — single authentication provider
         var authentikAuthority = configuration["Authentik:Authority"]
             ?? "http://localhost:9000/application/o/moviechecker/";
         var authentikClientId = configuration["Authentik:ClientId"] ?? "moviechecker";
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
-            {
-                // Custom JWT validation for login/register form tokens
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = configuration["Jwt:Issuer"] ?? "MovieChecker",
-                    ValidAudience = configuration["Jwt:Audience"] ?? "MovieChecker",
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-                };
-                
-                options.Events = new JwtBearerEvents
-                {
-                    OnTokenValidated = async context =>
-                    {
-                        var userIdClaim = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-                        {
-                            context.Fail("Invalid user identifier in token");
-                            return;
-                        }
-                        
-                        var cache = context.HttpContext.RequestServices.GetRequiredService<HybridCache>();
-                        var scopeFactory = context.HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
-                        var cacheKey = $"user_exists_{userId}";
-                        
-                        var userExists = await cache.GetOrCreateAsync(
-                            cacheKey,
-                            async cancel =>
-                            {
-                                using var scope = scopeFactory.CreateScope();
-                                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                                return await dbContext.Users.AnyAsync(u => u.Id == userId, cancel);
-                            },
-                            cancellationToken: context.HttpContext.RequestAborted);
-                        
-                        if (!userExists)
-                        {
-                            context.Fail("User no longer exists");
-                        }
-                    }
-                };
-            })
-            .AddJwtBearer("Authentik", options =>
             {
                 options.Authority = authentikAuthority;
                 options.Audience = authentikClientId;
@@ -210,18 +156,7 @@ public static class DependencyInjection
                     }
                 };
             });
-        
-        // Accept tokens from either custom JWT or Authentik OIDC
-        services.AddAuthorization(options =>
-        {
-            var defaultPolicy = new AuthorizationPolicyBuilder(
-                    JwtBearerDefaults.AuthenticationScheme,
-                    "Authentik")
-                .RequireAuthenticatedUser()
-                .Build();
-            options.DefaultPolicy = defaultPolicy;
-            options.FallbackPolicy = null;
-        });
+        services.AddAuthorization();
         services.AddScoped<ILocalizationService, LocalizationService>();
 
         return services;

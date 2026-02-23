@@ -135,9 +135,6 @@ services:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
-      Jwt__Key: "${JWT_KEY}"
-      Jwt__Issuer: "MovieChecker"
-      Jwt__Audience: "MovieChecker"
       Authentik__Authority: "http://authentik-server:9000/application/o/moviechecker/"
       Authentik__ClientId: ${AUTHENTIK_CLIENT_ID}
       Cors__Origins__0: "http://localhost:3000"
