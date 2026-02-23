@@ -9,7 +9,12 @@
       "Bash(grep:*)",
       "Bash(head:*)",
       "Bash(cd D:/MovieChecker/src/frontend && npx tsc --noEmit 2>&1)",
-      "Bash(rm -rf D:/MovieChecker/src/frontend/.next/types && cd D:/MovieChecker/src/frontend && npx tsc --noEmit 2>&1)"
+      "Bash(rm -rf D:/MovieChecker/src/frontend/.next/types && cd D:/MovieChecker/src/frontend && npx tsc --noEmit 2>&1)",
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.goauthentik.io)",
+      "WebFetch(domain:api.goauthentik.io)"
     ]
   }
 }

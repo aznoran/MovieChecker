@@ -32,7 +32,6 @@ const ru: Record<TranslationKeys, string> = {
     alreadyHaveAccount: "Уже есть аккаунт?",
     dontHaveAccount: "Нет аккаунта?",
     registrationFailed: "Ошибка регистрации. Возможно, логин уже занят.",
-    loginFailed: "Неверный логин или пароль.",
 
     // Home
     movieDiary: "Кинодневник",
@@ -397,8 +396,9 @@ const ru: Record<TranslationKeys, string> = {
     cardSizeLarge: "Большой",
     displaySettings: "Настройки отображения",
     displaySettingsDescription: "Настройте внешний вид дневника",
-    or: "или",
-    signInWithAuthentik: "Войти через Authentik",
+    optional: "необязательно",
+    email: "Email",
+    registrationSuccess: "Аккаунт создан! Теперь вы можете войти.",
 };
 
 export default ru;

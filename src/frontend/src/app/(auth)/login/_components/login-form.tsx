@@ -20,6 +20,7 @@ import {
     Languages,
 } from "lucide-react";
 import {ThemeToggle} from "@/components/shared/theme-toggle";
+import Link from "next/link";
 import type {Locale} from "@/lib/i18n";
 
 export function LoginForm() {
@@ -76,7 +77,7 @@ export function LoginForm() {
         try {
             await login();
         } catch {
-            setError(t("loginFailed"));
+            setError(t("authError"));
             setLoading(false);
         }
     };
@@ -109,7 +110,7 @@ export function LoginForm() {
                     <div className="space-y-4">
                         {error && (
                             <p className="text-sm text-destructive text-center flex items-center justify-center gap-1.5">
-                                <AlertCircle className="h-4 w-4"/>
+                                <AlertCircle className="h-4 w-4 shrink-0"/>
                                 {error}
                             </p>
                         )}
@@ -131,6 +132,13 @@ export function LoginForm() {
                                 </>
                             )}
                         </Button>
+
+                        <p className="text-sm text-center text-muted-foreground">
+                            {t("dontHaveAccount")}{" "}
+                            <Link href="/register" className="text-primary hover:underline">
+                                {t("register")}
+                            </Link>
+                        </p>
                     </div>
                 </CardContent>
             </Card>

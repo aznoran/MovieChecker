@@ -30,7 +30,6 @@ const en = {
     alreadyHaveAccount: "Already have an account?",
     dontHaveAccount: "Don't have an account?",
     registrationFailed: "Registration failed. Username may already exist.",
-    loginFailed: "Invalid username or password.",
 
     // Home
     movieDiary: "Movie Diary",
@@ -395,8 +394,9 @@ const en = {
     cardSizeLarge: "Large",
     displaySettings: "Display Settings",
     displaySettingsDescription: "Customize how your diary looks",
-    or: "or",
-    signInWithAuthentik: "Sign in with Authentik",
+    optional: "optional",
+    email: "Email",
+    registrationSuccess: "Account created! You can now sign in.",
 } as const;
 
 export type TranslationKeys = keyof typeof en;

@@ -10,6 +10,7 @@ import {
     StatsDto,
     UserDto,
 } from "./generated";
+import { getUserManager } from "@/lib/oidc";
 
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -42,10 +43,9 @@ apiClient.instance.interceptors.response.use(
             localStorage.removeItem("token");
             localStorage.removeItem("user");
             localStorage.removeItem("activeGroupId");
-            // Mark that user was logged in for redirect logic
             localStorage.setItem("wasLoggedIn", new Date().toISOString());
-            // Defer the redirect to allow the promise rejection to be handled first
-            // This prevents the "message channel closed" error
+            // Clear the OIDC session so the login page doesn't auto-redirect back
+            try { getUserManager().removeUser(); } catch { /* ignore */ }
             setTimeout(() => {
                 window.location.href = "/login?sessionExpired=true";
             }, 0);

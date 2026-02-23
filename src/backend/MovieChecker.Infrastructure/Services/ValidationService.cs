@@ -13,9 +13,22 @@ public class ValidationService
         _localizer = localizer;
     }
 
-    public ValidationResult ValidateRegistration(string username, string password, string displayName)
+    public ValidationResult ValidateRegistration(string username, string password, string displayName, string? email = null)
     {
         var errors = new List<ValidationError>();
+
+        // Email validation (optional)
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            if (email.Length > 254)
+            {
+                errors.Add(new ValidationError("Email", _localizer["EmailTooLong"]));
+            }
+            else if (!Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                errors.Add(new ValidationError("Email", _localizer["EmailInvalid"]));
+            }
+        }
 
         // Username validation
         if (string.IsNullOrWhiteSpace(username))

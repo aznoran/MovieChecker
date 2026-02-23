@@ -214,4 +214,16 @@
   <data name="InviteLinkMaxUsesReached" xml:space="preserve">
     <value>This invite link has reached its maximum number of uses</value>
   </data>
+  <data name="EmailInvalid" xml:space="preserve">
+    <value>Invalid email format</value>
+  </data>
+  <data name="EmailTooLong" xml:space="preserve">
+    <value>Email must not exceed 254 characters</value>
+  </data>
+  <data name="RegistrationFailed" xml:space="preserve">
+    <value>Registration failed. Please try again later.</value>
+  </data>
+  <data name="RegistrationSuccess" xml:space="preserve">
+    <value>Account created successfully! You can now sign in.</value>
+  </data>
 </root>

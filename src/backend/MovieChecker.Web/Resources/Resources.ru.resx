@@ -214,4 +214,16 @@
   <data name="InviteLinkMaxUsesReached" xml:space="preserve">
     <value>Ссылка-приглашение достигла максимального количества использований</value>
   </data>
+  <data name="EmailInvalid" xml:space="preserve">
+    <value>Неверный формат email</value>
+  </data>
+  <data name="EmailTooLong" xml:space="preserve">
+    <value>Email не должен превышать 254 символа</value>
+  </data>
+  <data name="RegistrationFailed" xml:space="preserve">
+    <value>Ошибка регистрации. Попробуйте позже.</value>
+  </data>
+  <data name="RegistrationSuccess" xml:space="preserve">
+    <value>Аккаунт создан! Теперь вы можете войти.</value>
+  </data>
 </root>

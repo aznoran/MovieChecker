@@ -1,9 +1,12 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using MovieChecker.Domain.Models.Entities;
 using MovieChecker.Domain.Models.Enums;
@@ -28,7 +31,7 @@ public static class DependencyInjection
         services.AddSingleton<IConnectionMultiplexer>(sp =>
             ConnectionMultiplexer.Connect(redisConnection!));
         services.AddScoped<OtpService>();
-        
+
         // Configure HybridCache with Redis as the distributed cache backing store
         services.AddStackExchangeRedisCache(options =>
         {
@@ -45,32 +48,85 @@ public static class DependencyInjection
         });
 
         // Authentik OIDC Authentication — single authentication provider
-        var authentikAuthority = configuration["Authentik:Authority"]
-            ?? "http://localhost:9000/application/o/moviechecker/";
+        // Authority is the internal Docker URL used to fetch JWKS signing keys directly.
+        // Issuer is the public-facing URL that appears in the token's "iss" claim.
+        // These differ in Docker (authentik-server:9000 vs localhost:9000).
+        var authentikAuthority = (configuration["Authentik:Authority"]
+            ?? "http://localhost:9000/application/o/moviechecker/").TrimEnd('/');
+        var authentikIssuer = configuration["Authentik:Issuer"] ?? authentikAuthority;
         var authentikClientId = configuration["Authentik:ClientId"] ?? "moviechecker";
+
+        // Directly fetch JWKS from the internal Authentik URL, bypassing OIDC discovery.
+        // This avoids the issue where the discovery doc's jwks_uri contains a hostname
+        // (e.g. localhost) that the backend container can't reach.
+        var jwksUrl = $"{authentikAuthority}/jwks/";
+        var jwksHttpClient = new HttpClient();
+        JsonWebKeySet? cachedJwks = null;
+        DateTime lastJwksFetch = DateTime.MinValue;
+        var jwksLock = new object();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.Authority = authentikAuthority;
-                options.Audience = authentikClientId;
+                // Don't set Authority — we handle key resolution manually
                 options.RequireHttpsMetadata = false;
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
+                    ValidIssuer = authentikIssuer,
                     ValidateAudience = true,
+                    ValidAudiences = new[] { authentikClientId, authentikIssuer, authentikAuthority },
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     NameClaimType = "preferred_username",
-                    RoleClaimType = ClaimTypes.Role
+                    RoleClaimType = ClaimTypes.Role,
+                    // Fetch signing keys directly from the internal Authentik JWKS endpoint
+                    IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
+                    {
+                        lock (jwksLock)
+                        {
+                            if (cachedJwks == null || DateTime.UtcNow - lastJwksFetch > TimeSpan.FromMinutes(5))
+                            {
+                                try
+                                {
+                                    var jwksJson = jwksHttpClient.GetStringAsync(jwksUrl).GetAwaiter().GetResult();
+                                    cachedJwks = new JsonWebKeySet(jwksJson);
+                                    lastJwksFetch = DateTime.UtcNow;
+                                }
+                                catch
+                                {
+                                    // Return whatever we have cached, even if stale
+                                }
+                            }
+                        }
+                        return cachedJwks?.GetSigningKeys() ?? [];
+                    }
                 };
-                
+
                 options.Events = new JwtBearerEvents
                 {
+                    OnAuthenticationFailed = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices
+                            .GetRequiredService<ILoggerFactory>()
+                            .CreateLogger("JwtBearerAuth");
+                        logger.LogWarning("JWT authentication failed: {Error}", context.Exception.Message);
+                        if (context.Exception.InnerException != null)
+                            logger.LogWarning("Inner exception: {Inner}", context.Exception.InnerException.Message);
+                        return Task.CompletedTask;
+                    },
                     OnTokenValidated = async context =>
                     {
+                        var logger = context.HttpContext.RequestServices
+                            .GetRequiredService<ILoggerFactory>()
+                            .CreateLogger("JwtBearerAuth");
+
+                        try
+                        {
                         var sub = context.Principal?.FindFirst("sub")?.Value;
+                        logger.LogInformation("Token validated. sub={Sub}", sub ?? "(null)");
+
                         if (string.IsNullOrEmpty(sub))
                         {
                             context.Fail("Missing sub claim in token");
@@ -80,7 +136,7 @@ public static class DependencyInjection
                         var cache = context.HttpContext.RequestServices.GetRequiredService<HybridCache>();
                         var scopeFactory = context.HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
                         var cacheKey = $"authentik_user_{sub}";
-                        
+
                         // Look up or auto-provision user from Authentik claims
                         var localUserId = await cache.GetOrCreateAsync(
                             cacheKey,
@@ -88,10 +144,10 @@ public static class DependencyInjection
                             {
                                 using var scope = scopeFactory.CreateScope();
                                 var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                                
+
                                 var user = await dbContext.Users.FirstOrDefaultAsync(
                                     u => u.AuthentikId == sub, cancel);
-                                
+
                                 if (user != null) return user.Id;
 
                                 // Auto-provision new user from Authentik claims
@@ -134,7 +190,7 @@ public static class DependencyInjection
                                 return user.Id;
                             },
                             cancellationToken: context.HttpContext.RequestAborted);
-                        
+
                         if (localUserId == 0)
                         {
                             context.Fail("Failed to provision user");
@@ -142,22 +198,30 @@ public static class DependencyInjection
                         }
 
                         // Add local user ID as NameIdentifier so existing endpoints work unchanged.
-                        // Authentik tokens may include a 'sub' mapped to NameIdentifier by default,
-                        // so remove any existing NameIdentifier claims first.
                         var identity = context.Principal?.Identity as ClaimsIdentity;
                         if (identity != null)
                         {
                             var existing = identity.FindAll(ClaimTypes.NameIdentifier).ToList();
                             foreach (var claim in existing)
                                 identity.TryRemoveClaim(claim);
-                            
+
                             identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, localUserId.ToString()));
+                        }
+
+                        logger.LogInformation("User provisioned: localUserId={UserId}", localUserId);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "OnTokenValidated handler failed");
+                            context.Fail("Internal error during user provisioning");
                         }
                     }
                 };
             });
         services.AddAuthorization();
         services.AddScoped<ILocalizationService, LocalizationService>();
+        services.AddHttpClient<AuthentikApiService>();
+        services.AddScoped<ValidationService>();
 
         return services;
     }

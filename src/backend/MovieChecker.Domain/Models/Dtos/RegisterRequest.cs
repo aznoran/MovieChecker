@@ -1,3 +1,3 @@
 namespace MovieChecker.Domain.Models.Dtos;
 
-public record RegisterRequest(string Username, string Password, string DisplayName);
+public record RegisterRequest(string Username, string Password, string DisplayName, string? Email = null);
