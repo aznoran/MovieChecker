@@ -1,11 +1,12 @@
 ﻿using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using MovieChecker.Domain.Models.Entities;
+using MovieChecker.Domain.Models.Enums;
 using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
@@ -20,9 +21,7 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
         {
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
-        })
-        .AddScoped<JwtService>()
-        .AddScoped<ValidationService>();
+        });
 
         // Redis and HybridCache
         var redisConnection = configuration.GetConnectionString("Redis");
@@ -45,52 +44,113 @@ public static class DependencyInjection
             };
         });
 
-        // JWT Authentication
-        var jwtKey = configuration["Jwt:Key"] ?? "SuperSecretKey12345678901234567890";
+        // Authentik OIDC JWT Authentication
+        var authentikAuthority = configuration["Authentik:Authority"]
+            ?? "https://auth.xui123qweqwe.org/application/o/moviechecker/";
+        var authentikClientId = configuration["Authentik:ClientId"] ?? "moviechecker";
+
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                options.Authority = authentikAuthority;
+                options.Audience = authentikClientId;
+                options.RequireHttpsMetadata = false;
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = configuration["Jwt:Issuer"] ?? "MovieChecker",
-                    ValidAudience = configuration["Jwt:Audience"] ?? "MovieChecker",
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+                    NameClaimType = "preferred_username",
+                    RoleClaimType = ClaimTypes.Role
                 };
                 
-                // Validate that the user in the JWT actually exists in the database
                 options.Events = new JwtBearerEvents
                 {
                     OnTokenValidated = async context =>
                     {
-                        var userIdClaim = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+                        var sub = context.Principal?.FindFirst("sub")?.Value;
+                        if (string.IsNullOrEmpty(sub))
                         {
-                            context.Fail("Invalid user identifier in token");
+                            context.Fail("Missing sub claim in token");
                             return;
                         }
-                        
-                        // Use HybridCache (with Redis backing) to reduce database hits for user validation
+
                         var cache = context.HttpContext.RequestServices.GetRequiredService<HybridCache>();
                         var scopeFactory = context.HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
-                        var cacheKey = $"user_exists_{userId}";
+                        var cacheKey = $"authentik_user_{sub}";
                         
-                        var userExists = await cache.GetOrCreateAsync(
+                        // Look up or auto-provision user from Authentik claims
+                        var localUserId = await cache.GetOrCreateAsync(
                             cacheKey,
                             async cancel =>
                             {
                                 using var scope = scopeFactory.CreateScope();
                                 var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                                return await dbContext.Users.AnyAsync(u => u.Id == userId, cancel);
+                                
+                                var user = await dbContext.Users.FirstOrDefaultAsync(
+                                    u => u.AuthentikId == sub, cancel);
+                                
+                                if (user != null) return user.Id;
+
+                                // Auto-provision new user from Authentik claims
+                                var username = context.Principal?.FindFirst("preferred_username")?.Value ?? sub;
+                                var displayName = context.Principal?.FindFirst("name")?.Value
+                                    ?? context.Principal?.FindFirst("given_name")?.Value
+                                    ?? username;
+
+                                user = new User
+                                {
+                                    AuthentikId = sub,
+                                    Username = username,
+                                    PasswordHash = null,
+                                    DisplayName = displayName
+                                };
+                                dbContext.Users.Add(user);
+                                await dbContext.SaveChangesAsync(cancel);
+
+                                // Create personal group for the new user
+                                var personalGroup = new Group
+                                {
+                                    Name = "Personal",
+                                    InviteCode = null,
+                                    CreatedByUserId = user.Id,
+                                    IsPrivate = false,
+                                    GroupType = GroupType.Personal,
+                                    DefaultRole = GroupRole.Owner
+                                };
+                                dbContext.Groups.Add(personalGroup);
+                                await dbContext.SaveChangesAsync(cancel);
+
+                                dbContext.GroupMembers.Add(new GroupMember
+                                {
+                                    GroupId = personalGroup.Id,
+                                    UserId = user.Id,
+                                    Role = GroupRole.Owner
+                                });
+                                await dbContext.SaveChangesAsync(cancel);
+
+                                return user.Id;
                             },
                             cancellationToken: context.HttpContext.RequestAborted);
                         
-                        if (!userExists)
+                        if (localUserId == 0)
                         {
-                            context.Fail("User no longer exists");
+                            context.Fail("Failed to provision user");
+                            return;
+                        }
+
+                        // Add local user ID as NameIdentifier so existing endpoints work unchanged
+                        var identity = context.Principal?.Identity as ClaimsIdentity;
+                        if (identity != null)
+                        {
+                            // Remove any existing NameIdentifier claims
+                            var existing = identity.FindAll(ClaimTypes.NameIdentifier).ToList();
+                            foreach (var claim in existing)
+                                identity.TryRemoveClaim(claim);
+                            
+                            identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, localUserId.ToString()));
                         }
                     }
                 };

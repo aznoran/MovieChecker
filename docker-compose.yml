@@ -50,6 +50,81 @@ services:
     networks:
       - backend_network
 
+  # Authentik Identity Provider
+  authentik-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+    volumes:
+      - authentik_db_data:/var/lib/postgresql/data
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authentik"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  authentik-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - authentik_redis_data:/data
+    networks:
+      - backend_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2024.12
+    restart: unless-stopped
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-db
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    expose:
+      - "9000"
+      - "9443"
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    networks:
+      - backend_network
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2024.12
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-db
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    networks:
+      - backend_network
+
   backend:
     build:
       context: ./src/backend
@@ -61,9 +136,8 @@ services:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: MovieChecker
-      Jwt__Audience: MovieChecker
+      Authentik__Authority: ${AUTHENTIK_AUTHORITY}
+      Authentik__ClientId: ${AUTHENTIK_CLIENT_ID}
       Cors__Origins__0: https://xui123qweqwe.org
       Cors__Origins__1: http://xui123qweqwe.org
     depends_on:
@@ -73,6 +147,8 @@ services:
         condition: service_healthy
       flyway:
         condition: service_completed_successfully
+      authentik-server:
+        condition: service_started
     networks:
       - backend_network
 
@@ -82,6 +158,8 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://xui123qweqwe.org
+        NEXT_PUBLIC_AUTHENTIK_URL: https://auth.xui123qweqwe.org
+        NEXT_PUBLIC_AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID}
     restart: unless-stopped
     expose:
       - "3000"
@@ -124,11 +202,14 @@ services:
       - backend
       - frontend
       - pgadmin
+      - authentik-server
 
 volumes:
   postgres_data:
   pgadmin_data:
   redis_data:
+  authentik_db_data:
+  authentik_redis_data:
 
 networks:
   backend_network:

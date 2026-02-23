@@ -4,17 +4,17 @@ import {
     GroupRole,
     CreateMovieRequest,
     UpdateMovieRequest,
-    AuthResponse,
     MovieDto,
     WatchEntryDto,
     GroupDto,
     StatsDto,
+    UserDto,
 } from "./generated";
 
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-// Create API instance with security worker for JWT
+// Create API instance with security worker for Authentik access tokens
 const apiClient = new Api({
     baseURL: API_URL,
     securityWorker: async () => {
@@ -55,14 +55,16 @@ apiClient.instance.interceptors.response.use(
 );
 
 // Auth
-export const login = async (username: string, password: string): Promise<AuthResponse> => {
-    const response = await apiClient.api.authLoginCreate({username, password});
-    return response.data;
-};
-
-export const register = async (username: string, password: string, displayName: string): Promise<AuthResponse> => {
-    const response = await apiClient.api.authRegisterCreate({username, password, displayName});
-    return response.data;
+export const getCurrentUser = async (): Promise<UserDto> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+    const response = await apiClient.instance.get("/api/auth/me", {
+        headers: {
+            ...(token ? {Authorization: `Bearer ${token}`} : {}),
+            "Accept-Language": locale,
+        },
+    });
+    return response.data as UserDto;
 };
 
 export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
