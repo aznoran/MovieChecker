@@ -397,6 +397,8 @@ const ru: Record<TranslationKeys, string> = {
     cardSizeLarge: "Большой",
     displaySettings: "Настройки отображения",
     displaySettingsDescription: "Настройте внешний вид дневника",
+    or: "или",
+    signInWithAuthentik: "Войти через Authentik",
 };
 
 export default ru;

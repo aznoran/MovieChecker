@@ -9,14 +9,21 @@ import {
   type ReactNode,
 } from "react";
 import type { UserDto } from "@/lib/api/generated";
+import { login as apiLogin, register as apiRegister } from "@/lib/api";
 import { getUserManager } from "@/lib/oidc";
 import type { User as OidcUser } from "oidc-client-ts";
 
 interface AuthContextType {
   user: UserDto | null;
   token: string | null;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  register: (
+    username: string,
+    password: string,
+    displayName: string
+  ) => Promise<void>;
+  loginWithAuthentik: () => Promise<void>;
+  logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -24,8 +31,20 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserDto | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<UserDto | null>(() => {
+    if (typeof window === "undefined") return null;
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) return null;
+    try {
+      return JSON.parse(storedUser);
+    } catch {
+      return null;
+    }
+  });
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("token");
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserProfile = useCallback(async (accessToken: string) => {
@@ -44,32 +63,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("user", JSON.stringify(userData));
       }
     } catch {
-      // Profile fetch failed, user will be provisioned on next API call
+      // Profile fetch failed
     }
   }, []);
 
-  const handleOidcUser = useCallback(async (oidcUser: OidcUser | null) => {
-    if (oidcUser && !oidcUser.expired) {
-      setToken(oidcUser.access_token);
-      localStorage.setItem("token", oidcUser.access_token);
-      await fetchUserProfile(oidcUser.access_token);
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem("token", token);
     } else {
-      setToken(null);
-      setUser(null);
       localStorage.removeItem("token");
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    } else {
       localStorage.removeItem("user");
     }
-  }, [fetchUserProfile]);
+  }, [user]);
 
+  // Initialize OIDC: check for existing Authentik session
   useEffect(() => {
     const init = async () => {
       try {
         const mgr = getUserManager();
         const oidcUser = await mgr.getUser();
-        await handleOidcUser(oidcUser);
+        if (oidcUser && !oidcUser.expired) {
+          setToken(oidcUser.access_token);
+          localStorage.setItem("token", oidcUser.access_token);
+          await fetchUserProfile(oidcUser.access_token);
+        }
 
         // Listen for token renewal
-        mgr.events.addUserLoaded(async (updatedUser) => {
+        mgr.events.addUserLoaded(async (updatedUser: OidcUser) => {
           setToken(updatedUser.access_token);
           localStorage.setItem("token", updatedUser.access_token);
         });
@@ -91,35 +118,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem("wasLoggedIn", new Date().toISOString());
         });
       } catch {
-        // OIDC initialization failed
+        // OIDC initialization failed, custom JWT auth still works
       } finally {
         setIsLoading(false);
       }
     };
 
     init();
-  }, [handleOidcUser]);
+  }, [fetchUserProfile]);
 
-  const login = async () => {
+  const login = async (username: string, password: string) => {
+    const response = await apiLogin(username, password);
+    // Save to localStorage synchronously before state update
+    if (response.token && response.user) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("user", JSON.stringify(response.user));
+      }
+      setToken(response.token);
+      setUser(response.user);
+    } else {
+      throw new Error("Invalid authentication response");
+    }
+  };
+
+  const register = async (
+    username: string,
+    password: string,
+    displayName: string
+  ) => {
+    const response = await apiRegister(username, password, displayName);
+    // Save to localStorage synchronously before state update
+    if (response.token && response.user) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("user", JSON.stringify(response.user));
+      }
+      setToken(response.token);
+      setUser(response.user);
+    } else {
+      throw new Error("Invalid authentication response");
+    }
+  };
+
+  const loginWithAuthentik = async () => {
     const mgr = getUserManager();
-    // Store any pending invite token before redirecting
     await mgr.signinRedirect();
   };
 
-  const logout = async () => {
+  const logout = () => {
     if (typeof window !== "undefined") {
+      // Store logout timestamp to remember user was logged in
       localStorage.setItem("wasLoggedIn", new Date().toISOString());
+      // Remove token and user synchronously before state update
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("activeGroupId");
     }
     setToken(null);
     setUser(null);
+
+    // Try OIDC signout if available (non-blocking)
     try {
       const mgr = getUserManager();
-      await mgr.signoutRedirect();
+      mgr.signoutRedirect().catch(() => {});
     } catch {
-      // If signout redirect fails, just clear state
+      // If OIDC signout fails, local logout is already done
     }
   };
 
@@ -129,6 +193,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         token,
         login,
+        register,
+        loginWithAuthentik,
         logout,
         isAuthenticated: !!token,
         isLoading,

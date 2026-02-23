@@ -395,6 +395,8 @@ const en = {
     cardSizeLarge: "Large",
     displaySettings: "Display Settings",
     displaySettingsDescription: "Customize how your diary looks",
+    or: "or",
+    signInWithAuthentik: "Sign in with Authentik",
 } as const;
 
 export type TranslationKeys = keyof typeof en;
