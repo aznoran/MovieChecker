@@ -70,6 +70,9 @@ public static class DependencyInjection
             {
                 // Don't set Authority — we handle key resolution manually
                 options.RequireHttpsMetadata = false;
+                // Keep original JWT claim names (sub, preferred_username, etc.)
+                // instead of remapping them to long .NET ClaimTypes URIs
+                options.MapInboundClaims = false;
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {

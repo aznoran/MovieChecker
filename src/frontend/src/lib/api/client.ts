@@ -10,7 +10,6 @@ import {
     StatsDto,
     UserDto,
 } from "./generated";
-import { getUserManager } from "@/lib/oidc";
 
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -44,8 +43,6 @@ apiClient.instance.interceptors.response.use(
             localStorage.removeItem("user");
             localStorage.removeItem("activeGroupId");
             localStorage.setItem("wasLoggedIn", new Date().toISOString());
-            // Clear the OIDC session so the login page doesn't auto-redirect back
-            try { getUserManager().removeUser(); } catch { /* ignore */ }
             setTimeout(() => {
                 window.location.href = "/login?sessionExpired=true";
             }, 0);
@@ -395,5 +392,18 @@ export const updateMemberPermissions = async (groupId: number, userId: number, g
     return response.data as MemberPermissionDetail;
 };
 
+
+// Add method to set token on apiClient
+export const setToken = (token: string | null) => {
+    // This will be used by the security worker on next request
+    if (typeof window !== "undefined") {
+        if (token) {
+            localStorage.setItem("token", token);
+        } else {
+            localStorage.removeItem("token");
+        }
+    }
+};
 // Export the API client instance for direct access if needed
 export default apiClient;
+export { apiClient };

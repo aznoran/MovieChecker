@@ -99,8 +99,6 @@ services:
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_API_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: admin@moviechecker.local
-      # Enable CORS for local development
-      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000,http://backend:5000"
     ports:
       - "9000:9000"
     volumes:
@@ -147,12 +145,9 @@ services:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
-      # OAuth2 Configuration for local development
       Authentik__Authority: "http://authentik-server:9000/application/o/moviechecker/"
       Authentik__Issuer: "http://localhost:9000/application/o/moviechecker/"
       Authentik__ClientId: ${AUTHENTIK_CLIENT_ID}
-      Authentik__ClientSecret: ${AUTHENTIK_CLIENT_SECRET}
-      Authentik__TokenEndpoint: "http://authentik-server:9000/application/o/token/"
       Authentik__ApiUrl: "http://authentik-server:9000"
       Authentik__ApiToken: ${AUTHENTIK_API_TOKEN}
       Cors__Origins__0: "http://localhost:3000"
@@ -175,8 +170,9 @@ services:
       context: ../src/frontend
       dockerfile: Dockerfile
       args:
-        # Only API URL needed for backend-driven auth
         NEXT_PUBLIC_API_URL: "http://localhost:5000"
+        NEXT_PUBLIC_AUTHENTIK_URL: "http://localhost:9000"
+        NEXT_PUBLIC_AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID}
     restart: unless-stopped
     depends_on:
       - backend
@@ -204,7 +200,6 @@ services:
         condition: service_healthy
     networks:
       - backend_network
-
 volumes:
   postgres_data:
   pgadmin_data:

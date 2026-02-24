@@ -2,22 +2,27 @@
 
 import {useState} from "react"
 import {usePathname} from "next/navigation"
+import Link from "next/link"
 import {SidebarTrigger} from "@/components/ui/sidebar"
 import {Separator} from "@/components/ui/separator"
+import {Button} from "@/components/ui/button"
 import {GroupSwitcher} from "@/components/layout/header/group-switcher"
 import {GroupManagementDialog} from "@/components/layout/header/group-management-dialog"
 import {LocaleToggle} from "@/components/layout/header/locale-toggle"
 import {UserMenu} from "@/components/layout/header/user-menu"
 import {ThemeToggle} from "@/components/shared/theme-toggle"
 import {useNavLinks} from "@/hooks/use-nav-links"
+import {useAuth} from "@/context/auth-context"
+import {LogIn} from "lucide-react"
 
 export function NavBar() {
     const pathname = usePathname()
     const navLinks = useNavLinks()
     const [groupDialogOpen, setGroupDialogOpen] = useState(false)
+    const {user, isLoading} = useAuth()
 
     // Hide navbar on login/landing pages
-    if (pathname === "/login" || pathname === "/landing") {
+    if (pathname === "/login" || pathname === "/landing" || pathname === "/register") {
         return null
     }
 
@@ -36,20 +41,33 @@ export function NavBar() {
                 </div>
                 <Separator orientation="vertical" className="h-4"/>
                 <div className="flex-1 flex items-center gap-2 ml-2">
-                    <GroupSwitcher onOpenGroupDialog={() => setGroupDialogOpen(true)}/>
+                    {user && <GroupSwitcher onOpenGroupDialog={() => setGroupDialogOpen(true)}/>}
                 </div>
                 <div className="flex items-center gap-1">
                     <ThemeToggle/>
                     <LocaleToggle/>
-                    <UserMenu/>
+                    {!isLoading && (
+                        user ? (
+                            <UserMenu/>
+                        ) : (
+                            <Button asChild variant="outline" size="sm">
+                                <Link href="/login">
+                                    <LogIn className="h-4 w-4 mr-2"/>
+                                    Sign In
+                                </Link>
+                            </Button>
+                        )
+                    )}
                 </div>
             </header>
             </div>
 
-            <GroupManagementDialog
-                open={groupDialogOpen}
-                onOpenChange={setGroupDialogOpen}
-            />
+            {user && (
+                <GroupManagementDialog
+                    open={groupDialogOpen}
+                    onOpenChange={setGroupDialogOpen}
+                />
+            )}
         </>
     )
 }

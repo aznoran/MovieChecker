@@ -6,6 +6,8 @@ services:
     volumes:
       - redis_data:/data
       - ./redis/users.acl:/usr/local/etc/redis/users.acl:ro
+    networks:
+      - backend_network
     healthcheck:
       test: [ "CMD", "redis-cli", "--user", "${REDIS_USER}", "--pass", "${REDIS_PASSWORD}", "ping" ]
       interval: 5s
@@ -13,8 +15,6 @@ services:
       retries: 5
     ports:
       - "6379:6379"
-    networks:
-      - backend_network
 
   db:
     image: postgres:17-alpine
@@ -25,15 +25,13 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    networks:
+      - backend_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - backend_network
 
   flyway:
     image: flyway/flyway:11
@@ -41,7 +39,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ../db/migration:/flyway/sql
+      - ./db/migration:/flyway/sql
     environment:
       FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       FLYWAY_USER: ${POSTGRES_USER}
@@ -99,10 +97,9 @@ services:
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_API_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: admin@moviechecker.local
-      # Enable CORS for local development
-      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000,http://backend:5000"
-    ports:
-      - "9000:9000"
+    expose:
+      - "9000"
+      - "9443"
     volumes:
       - ./authentik/blueprints:/blueprints/custom
     depends_on:
@@ -140,22 +137,22 @@ services:
 
   backend:
     build:
-      context: ../src/backend
+      context: ./src/backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    expose:
+      - "5000"
     environment:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
-      # OAuth2 Configuration for local development
       Authentik__Authority: "http://authentik-server:9000/application/o/moviechecker/"
-      Authentik__Issuer: "http://localhost:9000/application/o/moviechecker/"
+      Authentik__Issuer: ${AUTHENTIK_ISSUER}
       Authentik__ClientId: ${AUTHENTIK_CLIENT_ID}
-      Authentik__ClientSecret: ${AUTHENTIK_CLIENT_SECRET}
-      Authentik__TokenEndpoint: "http://authentik-server:9000/application/o/token/"
-      Authentik__ApiUrl: "http://authentik-server:9000"
+      Authentik__ApiUrl: http://authentik-server:9000
       Authentik__ApiToken: ${AUTHENTIK_API_TOKEN}
-      Cors__Origins__0: "http://localhost:3000"
+      Cors__Origins__0: https://xui123qweqwe.org
+      Cors__Origins__1: http://xui123qweqwe.org
     depends_on:
       db:
         condition: service_healthy
@@ -165,32 +162,30 @@ services:
         condition: service_completed_successfully
       authentik-server:
         condition: service_started
-    ports:
-      - "5000:5000"
     networks:
       - backend_network
 
   frontend:
     build:
-      context: ../src/frontend
+      context: ./src/frontend
       dockerfile: Dockerfile
       args:
-        # Only API URL needed for backend-driven auth
-        NEXT_PUBLIC_API_URL: "http://localhost:5000"
+        NEXT_PUBLIC_API_URL: https://xui123qweqwe.org
+        NEXT_PUBLIC_AUTHENTIK_URL: https://auth.xui123qweqwe.org
+        NEXT_PUBLIC_AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID}
     restart: unless-stopped
+    expose:
+      - "3000"
     depends_on:
       - backend
-    ports:
-      - "3000:3000"
     networks:
       - backend_network
-
 
   pgadmin:
     image: dpage/pgadmin4:latest
     restart: unless-stopped
-    ports:
-      - "8888:80"
+    expose:
+      - "80"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
@@ -204,6 +199,23 @@ services:
         condition: service_healthy
     networks:
       - backend_network
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./certs/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - backend_network
+    depends_on:
+      - backend
+      - frontend
+      - pgadmin
+      - authentik-server
 
 volumes:
   postgres_data:

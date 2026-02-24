@@ -1,0 +1,137 @@
+version: 1
+metadata:
+  name: Platform - Brand Configuration
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: >-
+      Brand: русская локаль, заголовок MovieChecker, кастомный CSS, привязка flows.
+      Лого заменено через CSS (branding_logo не поддерживает data URI).
+entries:
+  - model: authentik_brands.brand
+    identifiers:
+      domain: authentik-default
+    state: present
+    attrs:
+      default: true
+      branding_title: "MovieChecker"
+      branding_favicon: /static/dist/assets/icons/icon.png
+      branding_default_flow_background: /static/dist/assets/images/flow_background.jpg
+      branding_custom_css: |
+        /* ── Цветовая схема ── */
+        :host {
+        --ak-dark-foreground: #fcfcfc;
+        --ak-dark-background: #1f1f1f;
+        --ak-accent: #ebebeb;
+        --ak-accent-hover: #d4d4d4;
+        --ak-text-secondary: #b5b5b5;
+        --ak-border: rgba(255, 255, 255, 0.15);
+        --ak-border-hover: rgba(255, 255, 255, 0.3);
+        }
+          
+          html, body {
+        background: var(--ak-dark-background) !important;
+        }
+          
+          .pf-c-login {
+        background: var(--ak-dark-background) !important;
+        }
+          
+          .pf-c-login__main {
+        background: #333333 !important;
+        border: 1px solid var(--ak-border) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4) !important;
+        max-width: 400px !important;
+        }
+          
+          .pf-c-login__main-header,
+          .pf-c-login__main-body,
+          .pf-c-login__main-footer {
+        color: var(--ak-dark-foreground) !important;
+        }
+          
+          /* ── Замена лого на текст ── */
+          .pf-c-brand {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        min-height: 48px;
+        }
+          
+          .pf-c-brand::after {
+        content: "MovieChecker";
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: var(--ak-dark-foreground);
+        letter-spacing: -0.02em;
+        }
+          
+          /* ── Primary button ── */
+          .pf-c-button.pf-m-primary {
+        background-color: var(--ak-accent) !important;
+        color: var(--ak-dark-background) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        }
+          
+          .pf-c-button.pf-m-primary:hover {
+        background-color: var(--ak-accent-hover) !important;
+        }
+          
+          /* ── Input fields ── */
+          .pf-c-form-control {
+        background: #2a2a2a !important;
+        border: 1px solid var(--ak-border) !important;
+        border-radius: 8px !important;
+        color: var(--ak-dark-foreground) !important;
+        }
+          
+          .pf-c-form-control:focus {
+        border-color: var(--ak-border-hover) !important;
+        }
+          
+          /* ── Labels ── */
+          .pf-c-form__label-text {
+        color: var(--ak-text-secondary) !important;
+        }
+          
+          /* ── Links ── */
+          .pf-c-login__main-footer-links a,
+          .pf-c-button.pf-m-link {
+        color: var(--ak-text-secondary) !important;
+        }
+          
+          /* ── Title override ── */
+          .pf-c-login__main-header .pf-c-title {
+        color: var(--ak-text-secondary) !important;
+        font-size: 0.95rem !important;
+        font-weight: 400 !important;
+        }
+          
+          /* ── Footer ── */
+          .pf-c-login__footer {
+        display: none !important;
+        }
+          
+          /* ── Alerts ── */
+          .pf-c-alert {
+        background: #2a2a2a !important;
+        border-radius: 8px !important;
+        }
+          
+          .pf-c-alert__title {
+        color: var(--ak-dark-foreground) !important;
+        }
+      attributes:
+        settings:
+          locale: ru
+          theme:
+            base: automatic
+      flow_authentication:
+        !Find [authentik_flows.flow, [slug, default-authentication-flow]]
+      flow_invalidation:
+        !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
+      flow_user_settings:
+        !Find [authentik_flows.flow, [slug, default-user-settings-flow]]
