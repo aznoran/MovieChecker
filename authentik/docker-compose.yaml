@@ -46,6 +46,7 @@ services:
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
 #      AUTHENTIK_HOST_BROWSER: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
+      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000"
     volumes:
       - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
@@ -75,6 +76,7 @@ services:
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
+      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000"
     volumes:
       - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
