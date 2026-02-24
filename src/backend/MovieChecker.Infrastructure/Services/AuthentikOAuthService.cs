@@ -137,8 +137,9 @@ public class AuthentikOAuthService
     {
         var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
             ?? "http://localhost:9000/application/o/token/";
-        // Derive revoke endpoint from token endpoint
-        var revokeEndpoint = tokenEndpoint.Replace("/token/", "/revoke/");
+        // Derive revoke endpoint from token endpoint by replacing the last path segment
+        var baseUri = new Uri(tokenEndpoint);
+        var revokeEndpoint = new Uri(baseUri, "../revoke/").ToString();
         var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker-client";
         var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-client-secret-change-me";
 

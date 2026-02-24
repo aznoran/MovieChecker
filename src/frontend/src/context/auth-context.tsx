@@ -12,6 +12,11 @@ import {
 import type { UserDto } from "@/lib/api/generated";
 import { login as apiLogin, register as apiRegister, refreshToken as apiRefreshToken, logout as apiLogout } from "@/lib/api";
 
+// Refresh token buffer: refresh this many seconds before expiry
+const TOKEN_REFRESH_BUFFER_SEC = 60;
+// Minimum delay between refresh attempts in ms
+const TOKEN_REFRESH_MIN_DELAY_MS = 10000;
+
 interface AuthContextType {
   user: UserDto | null;
   token: string | null;
@@ -84,8 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(refreshTimerRef.current);
     }
 
-    // Refresh 60 seconds before expiry, minimum 10 seconds
-    const refreshDelay = Math.max((expiresIn - 60) * 1000, 10000);
+    // Refresh TOKEN_REFRESH_BUFFER_SEC seconds before expiry, minimum TOKEN_REFRESH_MIN_DELAY_MS
+    const refreshDelay = Math.max((expiresIn - TOKEN_REFRESH_BUFFER_SEC) * 1000, TOKEN_REFRESH_MIN_DELAY_MS);
 
     refreshTimerRef.current = setTimeout(async () => {
       try {

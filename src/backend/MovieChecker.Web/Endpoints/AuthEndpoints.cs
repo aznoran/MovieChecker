@@ -11,6 +11,8 @@ namespace MovieChecker.Web.Endpoints;
 
 public static class AuthEndpoints
 {
+    private static readonly TimeSpan RefreshTokenExpiry = TimeSpan.FromDays(30);
+
     public static void MapAuthEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/auth");
@@ -143,7 +145,7 @@ public static class AuthEndpoints
                     var redisDb = redis.GetDatabase();
                     var key = $"refresh_tokens:{user.Id}";
                     await redisDb.StringSetAsync(key, authentikResult.RefreshToken,
-                        TimeSpan.FromDays(30));
+                        RefreshTokenExpiry);
                 }
 
                 return Results.Ok(new OAuthTokenResponse(
@@ -209,7 +211,7 @@ public static class AuthEndpoints
             var redisDb = redis.GetDatabase();
             var key = $"refresh_tokens:{user.Id}";
             await redisDb.StringSetAsync(key, result.RefreshToken,
-                TimeSpan.FromDays(30));
+                RefreshTokenExpiry);
         }
 
         return Results.Ok(new OAuthTokenResponse(
