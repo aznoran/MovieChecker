@@ -13,7 +13,7 @@ namespace MovieChecker.Web.Endpoints;
 public static class AuthEndpoints
 {
     private static readonly TimeSpan RefreshTokenExpiry = TimeSpan.FromDays(30);
-    private const int LocalTokenExpirySeconds = 3600;
+    private const int LocalTokenExpirySeconds = 1800;
 
     public static void MapAuthEndpoints(this WebApplication app)
     {

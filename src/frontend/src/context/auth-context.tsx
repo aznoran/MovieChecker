@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem("refreshToken", response.refreshToken);
           }
 
-          const newExpiry = response.expiresIn ?? 3600;
+          const newExpiry = response.expiresIn ?? 1800;
           localStorage.setItem("tokenExpiry", String(Date.now() + newExpiry * 1000));
 
           const nextRefreshToken = response.refreshToken ?? storedRefreshToken;
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (response.refreshToken) {
                 localStorage.setItem("refreshToken", response.refreshToken);
               }
-              const newExpiry = response.expiresIn ?? 3600;
+              const newExpiry = response.expiresIn ?? 1800;
               localStorage.setItem("tokenExpiry", String(Date.now() + newExpiry * 1000));
               scheduleTokenRefresh(newExpiry, response.refreshToken ?? storedRefreshToken);
             }
@@ -162,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (response.accessToken) {
       const accessToken = response.accessToken;
       const refreshTokenValue = response.refreshToken ?? null;
-      const expiresIn = response.expiresIn ?? 3600;
+      const expiresIn = response.expiresIn ?? 1800;
 
       // Decode user info from JWT payload
       let userData: UserDto | null = null;
@@ -207,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (response.accessToken) {
       const accessToken = response.accessToken;
       const refreshTokenValue = response.refreshToken ?? null;
-      const expiresIn = response.expiresIn ?? 3600;
+      const expiresIn = response.expiresIn ?? 1800;
 
       // Decode user info from JWT payload
       let userData: UserDto | null = null;

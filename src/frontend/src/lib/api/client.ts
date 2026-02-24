@@ -51,7 +51,7 @@ apiClient.instance.interceptors.response.use(
                         if (response.refreshToken) {
                             localStorage.setItem("refreshToken", response.refreshToken);
                         }
-                        const expiry = response.expiresIn ?? 3600;
+                        const expiry = response.expiresIn ?? 1800;
                         localStorage.setItem("tokenExpiry", String(Date.now() + expiry * 1000));
                         // Retry the original request with new token
                         error.config.headers.Authorization = `Bearer ${response.accessToken}`;
