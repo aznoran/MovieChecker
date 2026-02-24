@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Web;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +14,8 @@ public class AuthentikOAuthService
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthentikOAuthService> _logger;
 
+    private const string OobRedirectUri = "urn:ietf:wg:oauth:2.0:oob";
+
     public AuthentikOAuthService(HttpClient httpClient, IConfiguration configuration, ILogger<AuthentikOAuthService> logger)
     {
         _httpClient = httpClient;
@@ -21,37 +24,39 @@ public class AuthentikOAuthService
     }
 
     /// <summary>
-    /// Authenticates a user via Authentik's headless flow executor API.
-    /// This walks through the default-authentication-flow stages (identification → password)
-    /// without requiring ROPC/password grant type support.
+    /// Full authentication: flow executor → authorization code → token exchange.
+    /// Returns Authentik access_token + refresh_token or null on failure.
     /// </summary>
-    public async Task<bool> AuthenticateViaFlowAsync(string username, string password)
+    public async Task<AuthentikTokenResult?> AuthenticateAsync(string username, string password)
     {
         var baseUrl = _configuration["Authentik:BaseUrl"] ?? "http://localhost:9000";
         var flowSlug = _configuration["Authentik:AuthenticationFlowSlug"] ?? "default-authentication-flow";
+        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
+        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
+        var appSlug = _configuration["Authentik:AppSlug"] ?? "moviechecker";
 
-        _logger.LogInformation("Authenticating via flow executor: {BaseUrl}, flow: {Flow}", baseUrl, flowSlug);
+        _logger.LogInformation("Authenticating user via flow executor + auth code flow");
 
         var handler = new HttpClientHandler
         {
             CookieContainer = new CookieContainer(),
-            UseCookies = true
+            UseCookies = true,
+            AllowAutoRedirect = false
         };
         using var client = new HttpClient(handler);
-        client.DefaultRequestHeaders.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/json"));
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         try
         {
+            // === Phase 1: Flow executor (identification + password) ===
             var flowUrl = $"{baseUrl}/api/v3/flows/executor/{flowSlug}/";
 
-            // Step 1: GET the flow to get the first challenge (identification stage)
+            // Step 1: GET the flow to get the first challenge
             var response1 = await client.GetAsync(flowUrl);
             if (!response1.IsSuccessStatusCode)
             {
-                var err = await response1.Content.ReadAsStringAsync();
-                _logger.LogWarning("Flow executor GET failed: {Status} {Error}", response1.StatusCode, err);
-                return false;
+                _logger.LogWarning("Flow executor GET failed: {Status}", response1.StatusCode);
+                return null;
             }
 
             var challenge1 = JsonSerializer.Deserialize<JsonElement>(await response1.Content.ReadAsStringAsync());
@@ -61,46 +66,33 @@ public class AuthentikOAuthService
             if (component1 != "ak-stage-identification")
             {
                 _logger.LogWarning("Expected ak-stage-identification, got {Component}", component1);
-                return false;
+                return null;
             }
 
-            // Step 2: POST username (identification)
+            // Step 2: POST username
             var identPayload = new StringContent(
                 JsonSerializer.Serialize(new { uid_field = username }),
                 Encoding.UTF8, "application/json");
             var response2 = await client.PostAsync(flowUrl, identPayload);
             if (!response2.IsSuccessStatusCode)
             {
-                var err = await response2.Content.ReadAsStringAsync();
-                _logger.LogWarning("Flow executor POST (identification) failed: {Status} {Error}",
-                    response2.StatusCode, err);
-                return false;
+                _logger.LogWarning("Flow identification POST failed: {Status}", response2.StatusCode);
+                return null;
             }
 
             var challenge2 = JsonSerializer.Deserialize<JsonElement>(await response2.Content.ReadAsStringAsync());
             var component2 = challenge2.TryGetProperty("component", out var comp2) ? comp2.GetString() : null;
-            var type2 = challenge2.TryGetProperty("type", out var t2) ? t2.GetString() : null;
-            _logger.LogInformation("Flow step 2 component: {Component}, type: {Type}", component2, type2);
 
-            // Check for redirect (auto-login) or error
-            if (type2 == "redirect" || component2 == "xak-flow-redirect")
-            {
-                // Flow completed after identification (unlikely but handle it)
-                return true;
-            }
+            if (component2 == "xak-flow-redirect")
+                return await GetTokensViaAuthCode(client, baseUrl, appSlug, clientId, clientSecret);
 
             if (component2 != "ak-stage-password")
             {
-                // Check for response_errors (invalid username)
                 if (challenge2.TryGetProperty("response_errors", out var errors2))
-                {
-                    _logger.LogWarning("Flow identification failed: {Errors}", errors2.ToString());
-                }
+                    _logger.LogWarning("Flow identification errors: {Errors}", errors2.ToString());
                 else
-                {
                     _logger.LogWarning("Expected ak-stage-password, got {Component}", component2);
-                }
-                return false;
+                return null;
             }
 
             // Step 3: POST password
@@ -110,64 +102,172 @@ public class AuthentikOAuthService
             var response3 = await client.PostAsync(flowUrl, passPayload);
             if (!response3.IsSuccessStatusCode)
             {
-                var err = await response3.Content.ReadAsStringAsync();
-                _logger.LogWarning("Flow executor POST (password) failed: {Status} {Error}",
-                    response3.StatusCode, err);
-                return false;
+                _logger.LogWarning("Flow password POST failed: {Status}", response3.StatusCode);
+                return null;
             }
 
             var result = JsonSerializer.Deserialize<JsonElement>(await response3.Content.ReadAsStringAsync());
             var typeResult = result.TryGetProperty("type", out var tr) ? tr.GetString() : null;
             var componentResult = result.TryGetProperty("component", out var cr) ? cr.GetString() : null;
-            _logger.LogInformation("Flow step 3 type: {Type}, component: {Component}", typeResult, componentResult);
 
-            // Authentik signals success via either type=redirect or component=xak-flow-redirect
-            if (typeResult == "redirect" || componentResult == "xak-flow-redirect")
+            if (typeResult != "redirect" && componentResult != "xak-flow-redirect")
             {
-                _logger.LogInformation("Flow authentication succeeded for user");
-                return true;
+                if (result.TryGetProperty("response_errors", out var errors3))
+                    _logger.LogWarning("Flow authentication errors: {Errors}", errors3.ToString());
+                else
+                    _logger.LogWarning("Flow did not complete: {Response}", result.ToString());
+                return null;
             }
 
-            // Check for errors
-            if (result.TryGetProperty("response_errors", out var errors3))
-            {
-                _logger.LogWarning("Flow authentication failed: {Errors}", errors3.ToString());
-            }
-            else
-            {
-                _logger.LogWarning("Flow authentication did not complete. Response: {Response}",
-                    result.ToString());
-            }
-            return false;
+            _logger.LogInformation("Flow authentication succeeded, proceeding to auth code exchange");
+
+            // === Phase 2: Authorization Code flow using the authenticated session ===
+            return await GetTokensViaAuthCode(client, baseUrl, appSlug, clientId, clientSecret);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during flow executor authentication");
-            return false;
+            _logger.LogError(ex, "Error during authentication");
+            return null;
         }
     }
 
     /// <summary>
-    /// Authenticates a user via Authentik's OAuth2 Resource Owner Password flow (ROPC).
-    /// This is a fallback if the flow executor doesn't work.
+    /// Uses an authenticated session to get an authorization code and exchange it for tokens.
     /// </summary>
-    public async Task<AuthentikTokenResult?> AuthenticateViaRopcAsync(string username, string password)
+    private async Task<AuthentikTokenResult?> GetTokensViaAuthCode(
+        HttpClient sessionClient, string baseUrl, string appSlug, string clientId, string clientSecret)
     {
-        var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
-            ?? "http://localhost:9000/application/o/moviechecker/token/";
+        try
+        {
+            // Step 1: Request authorization code
+            var authorizeUrl = $"{baseUrl}/application/o/authorize/?" +
+                $"response_type=code&client_id={Uri.EscapeDataString(clientId)}" +
+                $"&redirect_uri={Uri.EscapeDataString(OobRedirectUri)}" +
+                $"&scope={Uri.EscapeDataString("openid profile email")}" +
+                $"&state=moviechecker";
+
+            _logger.LogInformation("Requesting authorization code from: {Url}", authorizeUrl);
+
+            var authResponse = await sessionClient.GetAsync(authorizeUrl);
+
+            string? code = null;
+
+            if (authResponse.StatusCode == HttpStatusCode.Redirect ||
+                authResponse.StatusCode == HttpStatusCode.Found ||
+                authResponse.StatusCode == HttpStatusCode.MovedPermanently)
+            {
+                var location = authResponse.Headers.Location?.ToString();
+                _logger.LogInformation("Authorization redirect to: {Location}", location);
+
+                if (location != null)
+                {
+                    // Parse code from redirect URL query string
+                    // Use dummy base for relative URIs so HttpUtility can parse the query
+                    var fullUri = Uri.TryCreate(location, UriKind.Absolute, out var absUri)
+                        ? absUri
+                        : new Uri(new Uri("http://dummy"), location);
+                    var query = HttpUtility.ParseQueryString(fullUri.Query);
+                    code = query["code"];
+                }
+            }
+            else if (authResponse.IsSuccessStatusCode)
+            {
+                // Authentik might return JSON with the code (consent page)
+                var content = await authResponse.Content.ReadAsStringAsync();
+                _logger.LogInformation("Authorization returned 200, body length: {Length}", content.Length);
+
+                // Check if it's a consent page that auto-submits
+                // For implicit consent, try parsing as redirect info
+                try
+                {
+                    var json = JsonSerializer.Deserialize<JsonElement>(content);
+                    if (json.TryGetProperty("code", out var codeProp))
+                        code = codeProp.GetString();
+                }
+                catch
+                {
+                    _logger.LogWarning("Authorization response was not JSON, likely consent page");
+                }
+            }
+            else
+            {
+                var body = await authResponse.Content.ReadAsStringAsync();
+                _logger.LogWarning("Authorization request failed: {Status} {Body}", authResponse.StatusCode, body);
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(code))
+            {
+                _logger.LogWarning("Failed to extract authorization code from response");
+                return null;
+            }
+
+            _logger.LogInformation("Got authorization code, exchanging for tokens");
+
+            // Step 2: Exchange code for tokens
+            var tokenEndpoint = $"{baseUrl}/application/o/{appSlug}/token/";
+            var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = "authorization_code",
+                ["code"] = code,
+                ["redirect_uri"] = OobRedirectUri,
+                ["client_id"] = clientId,
+                ["client_secret"] = clientSecret
+            });
+
+            var tokenResponse = await _httpClient.PostAsync(tokenEndpoint, tokenRequest);
+
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                var err = await tokenResponse.Content.ReadAsStringAsync();
+                _logger.LogWarning("Token exchange failed: {Status} {Error}", tokenResponse.StatusCode, err);
+                return null;
+            }
+
+            var tokenContent = await tokenResponse.Content.ReadAsStringAsync();
+            var tokens = JsonSerializer.Deserialize<AuthentikRawTokenResponse>(tokenContent);
+
+            if (tokens == null || string.IsNullOrEmpty(tokens.AccessToken))
+            {
+                _logger.LogWarning("Token exchange returned empty response");
+                return null;
+            }
+
+            _logger.LogInformation("Successfully obtained Authentik tokens");
+
+            return new AuthentikTokenResult(
+                AccessToken: tokens.AccessToken,
+                RefreshToken: tokens.RefreshToken,
+                ExpiresIn: tokens.ExpiresIn,
+                TokenType: tokens.TokenType ?? "Bearer",
+                IdToken: tokens.IdToken
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during auth code token exchange");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Refreshes tokens using Authentik's token endpoint with grant_type=refresh_token.
+    /// </summary>
+    public async Task<AuthentikTokenResult?> RefreshTokenAsync(string refreshToken)
+    {
+        var baseUrl = _configuration["Authentik:BaseUrl"] ?? "http://localhost:9000";
+        var appSlug = _configuration["Authentik:AppSlug"] ?? "moviechecker";
         var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
         var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
 
-        _logger.LogInformation("Trying ROPC at: {Endpoint}", tokenEndpoint);
+        var tokenEndpoint = $"{baseUrl}/application/o/{appSlug}/token/";
 
         var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["grant_type"] = "password",
+            ["grant_type"] = "refresh_token",
             ["client_id"] = clientId,
             ["client_secret"] = clientSecret,
-            ["username"] = username,
-            ["password"] = password,
-            ["scope"] = "openid profile email"
+            ["refresh_token"] = refreshToken
         });
 
         try
@@ -176,39 +276,65 @@ public class AuthentikOAuthService
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("ROPC token request failed with {Status}: {Error}",
-                    response.StatusCode, errorContent);
+                var err = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Authentik refresh failed: {Status} {Error}", response.StatusCode, err);
                 return null;
             }
 
             var content = await response.Content.ReadAsStringAsync();
-            var tokenResponse = JsonSerializer.Deserialize<AuthentikRawTokenResponse>(content);
+            var tokens = JsonSerializer.Deserialize<AuthentikRawTokenResponse>(content);
 
-            if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
-            {
-                _logger.LogWarning("ROPC returned empty token response");
+            if (tokens == null || string.IsNullOrEmpty(tokens.AccessToken))
                 return null;
-            }
 
             return new AuthentikTokenResult(
-                AccessToken: tokenResponse.AccessToken,
-                RefreshToken: tokenResponse.RefreshToken,
-                ExpiresIn: tokenResponse.ExpiresIn,
-                TokenType: tokenResponse.TokenType ?? "Bearer",
-                IdToken: tokenResponse.IdToken
+                AccessToken: tokens.AccessToken,
+                RefreshToken: tokens.RefreshToken,
+                ExpiresIn: tokens.ExpiresIn,
+                TokenType: tokens.TokenType ?? "Bearer",
+                IdToken: tokens.IdToken
             );
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error communicating with Authentik ROPC endpoint");
+            _logger.LogError(ex, "Error refreshing token with Authentik");
             return null;
         }
     }
 
     /// <summary>
+    /// Revokes a token at Authentik's revocation endpoint.
+    /// </summary>
+    public async Task<bool> RevokeTokenAsync(string token)
+    {
+        var baseUrl = _configuration["Authentik:BaseUrl"] ?? "http://localhost:9000";
+        var appSlug = _configuration["Authentik:AppSlug"] ?? "moviechecker";
+        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
+        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
+
+        var revokeEndpoint = $"{baseUrl}/application/o/{appSlug}/revoke/";
+
+        var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["token"] = token,
+            ["client_id"] = clientId,
+            ["client_secret"] = clientSecret
+        });
+
+        try
+        {
+            var response = await _httpClient.PostAsync(revokeEndpoint, requestBody);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error revoking token at Authentik");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Creates a user in Authentik via the Admin API.
-    /// Returns the Authentik user PK on success, null on failure.
     /// </summary>
     public async Task<int?> CreateUserAsync(string username, string displayName, string? email = null)
     {
@@ -240,8 +366,7 @@ public class AuthentikOAuthService
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to create user in Authentik: {Status} {Error}",
-                    response.StatusCode, error);
+                _logger.LogWarning("Failed to create user in Authentik: {Status} {Error}", response.StatusCode, error);
                 return null;
             }
 
@@ -284,8 +409,7 @@ public class AuthentikOAuthService
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to set password in Authentik: {Status} {Error}",
-                    response.StatusCode, error);
+                _logger.LogWarning("Failed to set password in Authentik: {Status} {Error}", response.StatusCode, error);
                 return false;
             }
 
@@ -300,7 +424,6 @@ public class AuthentikOAuthService
 
     /// <summary>
     /// Checks if a username already exists in Authentik.
-    /// Returns true if exists, false if not, null if the check failed.
     /// </summary>
     public async Task<bool?> UserExistsAsync(string username)
     {
@@ -323,8 +446,7 @@ public class AuthentikOAuthService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to check user existence in Authentik: {Status}",
-                    response.StatusCode);
+                _logger.LogWarning("Failed to check user existence in Authentik: {Status}", response.StatusCode);
                 return null;
             }
 
@@ -341,8 +463,7 @@ public class AuthentikOAuthService
     }
 
     /// <summary>
-    /// Checks if a user is active in Authentik by querying the Admin API.
-    /// Returns true if active, false if inactive or not found, null if the check failed.
+    /// Checks if a user is active in Authentik.
     /// </summary>
     public async Task<bool?> IsUserActiveAsync(string username)
     {
@@ -365,8 +486,7 @@ public class AuthentikOAuthService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to check user active status in Authentik: {Status}",
-                    response.StatusCode);
+                _logger.LogWarning("Failed to check user active status: {Status}", response.StatusCode);
                 return null;
             }
 
@@ -380,99 +500,12 @@ public class AuthentikOAuthService
                 return false;
             }
 
-            var user = results[0];
-            var isActive = user.GetProperty("is_active").GetBoolean();
-            return isActive;
+            return results[0].GetProperty("is_active").GetBoolean();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking user active status in Authentik");
             return null;
-        }
-    }
-
-    /// <summary>
-    /// Refreshes an access token using a refresh token via Authentik's OAuth2 endpoint.
-    /// This is only used if the stored refresh token is an Authentik token (ROPC flow).
-    /// For local refresh tokens, use the local refresh logic in AuthEndpoints.
-    /// </summary>
-    public async Task<AuthentikTokenResult?> RefreshTokenAsync(string refreshToken)
-    {
-        var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
-            ?? "http://localhost:9000/application/o/moviechecker/token/";
-        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
-        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
-
-        var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["grant_type"] = "refresh_token",
-            ["client_id"] = clientId,
-            ["client_secret"] = clientSecret,
-            ["refresh_token"] = refreshToken
-        });
-
-        try
-        {
-            var response = await _httpClient.PostAsync(tokenEndpoint, requestBody);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Authentik refresh failed with {Status}: {Error}",
-                    response.StatusCode, errorContent);
-                return null;
-            }
-
-            var content = await response.Content.ReadAsStringAsync();
-            var tokenResponse = JsonSerializer.Deserialize<AuthentikRawTokenResponse>(content);
-
-            if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
-                return null;
-
-            return new AuthentikTokenResult(
-                AccessToken: tokenResponse.AccessToken,
-                RefreshToken: tokenResponse.RefreshToken,
-                ExpiresIn: tokenResponse.ExpiresIn,
-                TokenType: tokenResponse.TokenType ?? "Bearer",
-                IdToken: tokenResponse.IdToken
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error refreshing token with Authentik");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Revokes a token (access or refresh) at Authentik's revocation endpoint.
-    /// </summary>
-    public async Task<bool> RevokeTokenAsync(string token)
-    {
-        var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
-            ?? "http://localhost:9000/application/o/moviechecker/token/";
-        // Derive revoke endpoint from token endpoint by replacing the last path segment
-        var baseUri = new Uri(tokenEndpoint);
-        var revokeEndpoint = new Uri(baseUri, "../revoke/").ToString();
-        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
-        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
-
-        var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["token"] = token,
-            ["client_id"] = clientId,
-            ["client_secret"] = clientSecret
-        });
-
-        try
-        {
-            var response = await _httpClient.PostAsync(revokeEndpoint, requestBody);
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error revoking token at Authentik");
-            return false;
         }
     }
 }
@@ -486,7 +519,7 @@ public record AuthentikTokenResult(
 );
 
 /// <summary>
-/// Raw JSON response from Authentik's /token/ endpoint using snake_case naming.
+/// Raw JSON response from Authentik's /token/ endpoint.
 /// </summary>
 internal class AuthentikRawTokenResponse
 {

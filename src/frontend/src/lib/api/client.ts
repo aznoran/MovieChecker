@@ -110,11 +110,11 @@ export const refreshToken = async (refreshTokenValue: string): Promise<OAuthToke
     return response.data;
 };
 
-export const logout = async (): Promise<void> => {
+export const logout = async (refreshTokenValue?: string): Promise<void> => {
     try {
         const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
         const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
-        await apiClient.instance.post(`/api/auth/logout`, {}, {
+        await apiClient.instance.post(`/api/auth/logout`, {refreshToken: refreshTokenValue ?? null}, {
             headers: {
                 ...(token ? {Authorization: `Bearer ${token}`} : {}),
                 "Accept-Language": locale,

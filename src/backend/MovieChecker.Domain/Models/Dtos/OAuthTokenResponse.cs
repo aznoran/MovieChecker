@@ -4,5 +4,6 @@ public record OAuthTokenResponse(
     string AccessToken,
     string? RefreshToken,
     int ExpiresIn,
-    string TokenType
+    string TokenType,
+    UserDto? User = null
 );

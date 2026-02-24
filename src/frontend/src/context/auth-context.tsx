@@ -89,7 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(refreshTimerRef.current);
     }
 
-    // Refresh TOKEN_REFRESH_BUFFER_SEC seconds before expiry, minimum TOKEN_REFRESH_MIN_DELAY_MS
     const refreshDelay = Math.max((expiresIn - TOKEN_REFRESH_BUFFER_SEC) * 1000, TOKEN_REFRESH_MIN_DELAY_MS);
 
     refreshTimerRef.current = setTimeout(async () => {
@@ -103,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem("refreshToken", response.refreshToken);
           }
 
-          const newExpiry = response.expiresIn ?? 1800;
+          const newExpiry = response.expiresIn ?? 3600;
           localStorage.setItem("tokenExpiry", String(Date.now() + newExpiry * 1000));
 
           const nextRefreshToken = response.refreshToken ?? storedRefreshToken;
@@ -138,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (response.refreshToken) {
                 localStorage.setItem("refreshToken", response.refreshToken);
               }
-              const newExpiry = response.expiresIn ?? 1800;
+              const newExpiry = response.expiresIn ?? 3600;
               localStorage.setItem("tokenExpiry", String(Date.now() + newExpiry * 1000));
               scheduleTokenRefresh(newExpiry, response.refreshToken ?? storedRefreshToken);
             }
@@ -162,20 +161,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (response.accessToken) {
       const accessToken = response.accessToken;
       const refreshTokenValue = response.refreshToken ?? null;
-      const expiresIn = response.expiresIn ?? 1800;
+      const expiresIn = response.expiresIn ?? 3600;
 
-      // Decode user info from JWT payload
-      let userData: UserDto | null = null;
-      try {
-        const payload = JSON.parse(atob(accessToken.split(".")[1]));
-        userData = {
-          id: parseInt(payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || "0", 10),
-          username: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || username,
-          displayName: payload["displayName"] || username,
-        };
-      } catch {
-        throw new Error("Invalid authentication response");
-      }
+      // Use user info from the response (provided by backend after provisioning)
+      const userData: UserDto = response.user ?? {
+        id: 0,
+        username: username,
+        displayName: username,
+      };
 
       if (typeof window !== "undefined") {
         localStorage.setItem("token", accessToken);
@@ -203,24 +196,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     displayName: string
   ) => {
     const response = await apiRegister(username, password, displayName);
-    // Register now returns OAuthTokenResponse (same as login)
+
     if (response.accessToken) {
       const accessToken = response.accessToken;
       const refreshTokenValue = response.refreshToken ?? null;
-      const expiresIn = response.expiresIn ?? 1800;
+      const expiresIn = response.expiresIn ?? 3600;
 
-      // Decode user info from JWT payload
-      let userData: UserDto | null = null;
-      try {
-        const payload = JSON.parse(atob(accessToken.split(".")[1]));
-        userData = {
-          id: parseInt(payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || "0", 10),
-          username: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || username,
-          displayName: payload["displayName"] || username,
-        };
-      } catch {
-        throw new Error("Invalid authentication response");
-      }
+      // Use user info from the response
+      const userData: UserDto = response.user ?? {
+        id: 0,
+        username: username,
+        displayName: displayName || username,
+      };
 
       if (typeof window !== "undefined") {
         localStorage.setItem("token", accessToken);
@@ -244,7 +231,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await apiLogout();
+      const refreshTokenValue = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
+      await apiLogout(refreshTokenValue ?? undefined);
     } catch {
       // Ignore errors during logout API call
     }

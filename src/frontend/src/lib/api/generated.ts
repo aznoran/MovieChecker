@@ -49,6 +49,7 @@ export interface OAuthTokenResponse {
   /** @format int32 */
   expiresIn?: number;
   tokenType?: string | null;
+  user?: UserDto | null;
 }
 
 export interface RefreshTokenRequest {

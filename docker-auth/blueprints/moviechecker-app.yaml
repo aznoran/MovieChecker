@@ -26,7 +26,7 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
-      redirect_uris: []
+      redirect_uris: "urn:ietf:wg:oauth:2.0:oob"
       sub_mode: hashed_user_id
       issuer_mode: per_provider
 
