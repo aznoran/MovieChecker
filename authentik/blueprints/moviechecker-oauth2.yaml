@@ -15,6 +15,7 @@ entries:
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: public
       client_id: moviechecker
+      include_claims_in_id_token: true
       access_code_validity: minutes=1
       access_token_validity: minutes=5
       refresh_token_validity: days=30
@@ -23,10 +24,11 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
-      redirect_uris:
-        - url: "http://localhost:3000/auth/callback"
-          matching_mode: strict
+      redirect_uris: |-
+        http://localhost:3000/auth/callback
+        https://xui123qweqwe.org/auth/callback
       sub_mode: hashed_user_id
+      issuer_mode: per_provider
 
   # Application linked to the provider
   - model: authentik_core.application
