@@ -90,8 +90,13 @@ export const login = async (username: string, password: string): Promise<OAuthTo
     return response.data;
 };
 
-export const register = async (username: string, password: string, displayName: string): Promise<AuthResponse> => {
-    const response = await apiClient.api.authRegisterCreate({username, password, displayName});
+export const register = async (username: string, password: string, displayName: string): Promise<OAuthTokenResponse> => {
+    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+    const response = await apiClient.instance.post<OAuthTokenResponse>(`/api/auth/register`, {username, password, displayName}, {
+        headers: {
+            "Accept-Language": locale,
+        },
+    });
     return response.data;
 };
 

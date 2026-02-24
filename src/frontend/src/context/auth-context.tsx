@@ -203,14 +203,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     displayName: string
   ) => {
     const response = await apiRegister(username, password, displayName);
-    // Register still returns old AuthResponse format
-    if (response.token && response.user) {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("user", JSON.stringify(response.user));
+    // Register now returns OAuthTokenResponse (same as login)
+    if (response.accessToken) {
+      const accessToken = response.accessToken;
+      const refreshTokenValue = response.refreshToken ?? null;
+      const expiresIn = response.expiresIn ?? 3600;
+
+      // Decode user info from JWT payload
+      let userData: UserDto | null = null;
+      try {
+        const payload = JSON.parse(atob(accessToken.split(".")[1]));
+        userData = {
+          id: parseInt(payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || "0", 10),
+          username: payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || username,
+          displayName: payload["displayName"] || username,
+        };
+      } catch {
+        throw new Error("Invalid authentication response");
       }
-      setToken(response.token);
-      setUser(response.user);
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("token", accessToken);
+        localStorage.setItem("user", JSON.stringify(userData));
+        if (refreshTokenValue) {
+          localStorage.setItem("refreshToken", refreshTokenValue);
+        }
+        localStorage.setItem("tokenExpiry", String(Date.now() + expiresIn * 1000));
+      }
+
+      setToken(accessToken);
+      setUser(userData);
+
+      if (refreshTokenValue) {
+        scheduleTokenRefresh(expiresIn, refreshTokenValue);
+      }
     } else {
       throw new Error("Invalid authentication response");
     }

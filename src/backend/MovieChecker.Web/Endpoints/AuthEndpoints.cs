@@ -18,10 +18,11 @@ public static class AuthEndpoints
         var group = app.MapGroup("/api/auth");
 
         group.MapPost("/register", Register)
-            .Produces<AuthResponse>(StatusCodes.Status200OK)
+            .Produces<OAuthTokenResponse>(StatusCodes.Status200OK)
             .Produces<ValidationErrorResponse>(StatusCodes.Status400BadRequest)
-            .WithSummary("Register a new user")
-            .WithDescription("Creates a new user account and returns a JWT token");
+            .Produces<ErrorResponse>(StatusCodes.Status502BadGateway)
+            .WithSummary("Register a new user via Authentik")
+            .WithDescription("Creates a new user in Authentik, authenticates via OAuth2, and returns tokens");
 
         group.MapPost("/login", Login)
             .Produces<OAuthTokenResponse>(StatusCodes.Status200OK)
@@ -50,10 +51,11 @@ public static class AuthEndpoints
 
     private static async Task<IResult> Register(
         RegisterRequest request,
-        AppDbContext db,
-        JwtService jwtService,
+        AuthentikOAuthService authentikService,
+        TokenService tokenService,
         ValidationService validationService,
-        ILocalizationService localizer)
+        ILocalizationService localizer,
+        IConnectionMultiplexer redis)
     {
         // Validate input
         var validationResult = validationService.ValidateRegistration(
@@ -65,58 +67,75 @@ public static class AuthEndpoints
         if (!validationResult.IsValid)
         {
             return Results.BadRequest(new ValidationErrorResponse(
-                localizer["ValidationFailed"], 
+                localizer["ValidationFailed"],
                 validationResult.Errors
             ));
         }
 
-        if (await db.Users.AnyAsync(u => u.Username == request.Username))
+        // Check if username exists in Authentik
+        var userExists = await authentikService.UserExistsAsync(request.Username);
+        if (userExists)
         {
             return Results.BadRequest(new ErrorResponse(localizer["UsernameAlreadyExists"]));
         }
 
-        var user = new User
+        // Create user in Authentik
+        var displayName = string.IsNullOrEmpty(request.DisplayName) ? request.Username : request.DisplayName;
+        var authentikUserId = await authentikService.CreateUserAsync(request.Username, displayName);
+
+        if (authentikUserId == null)
         {
-            Username = request.Username,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            DisplayName = string.IsNullOrEmpty(request.DisplayName) ? request.Username : request.DisplayName
-        };
+            return Results.Json(new ErrorResponse("Failed to create user — authentication service unavailable"),
+                statusCode: 502);
+        }
 
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
+        // Set password in Authentik
+        var passwordSet = await authentikService.SetUserPasswordAsync(authentikUserId.Value, request.Password);
 
-        // Create personal group for the new user
-        var personalGroup = new Group
+        if (!passwordSet)
         {
-            Name = "Personal",
-            InviteCode = null,
-            CreatedByUserId = user.Id,
-            IsPrivate = false,
-            GroupType = GroupType.Personal,
-            DefaultRole = GroupRole.Owner
-        };
-        db.Groups.Add(personalGroup);
-        await db.SaveChangesAsync();
+            return Results.Json(new ErrorResponse("Failed to set password — authentication service unavailable"),
+                statusCode: 502);
+        }
 
-        db.GroupMembers.Add(new GroupMember
+        // Authenticate the newly created user via Authentik to get tokens
+        var authentikResult = await authentikService.AuthenticateAsync(request.Username, request.Password);
+
+        if (authentikResult == null)
         {
-            GroupId = personalGroup.Id,
-            UserId = user.Id,
-            Role = GroupRole.Owner
-        });
-        await db.SaveChangesAsync();
+            return Results.Json(new ErrorResponse("User created but authentication failed — please try logging in"),
+                statusCode: 502);
+        }
 
-        var token = jwtService.GenerateToken(user);
-        return Results.Ok(new AuthResponse(
-            token,
-            new UserDto(user.Id, user.Username, user.DisplayName)
+        // Parse claims and provision local user
+        var claims = tokenService.ParseAuthentikToken(authentikResult.AccessToken);
+        if (claims == null)
+        {
+            return Results.Json(new ErrorResponse("Failed to parse authentication token"),
+                statusCode: 502);
+        }
+
+        var user = await tokenService.ProvisionUserAsync(claims);
+        var localToken = tokenService.GenerateLocalToken(user);
+
+        // Store refresh token in Redis
+        if (!string.IsNullOrEmpty(authentikResult.RefreshToken))
+        {
+            var redisDb = redis.GetDatabase();
+            var key = $"refresh_tokens:{user.Id}";
+            await redisDb.StringSetAsync(key, authentikResult.RefreshToken, RefreshTokenExpiry);
+        }
+
+        return Results.Ok(new OAuthTokenResponse(
+            localToken,
+            authentikResult.RefreshToken,
+            authentikResult.ExpiresIn > 0 ? authentikResult.ExpiresIn : 3600,
+            "Bearer"
         ));
     }
 
     private static async Task<IResult> Login(
         LoginRequest request,
-        AppDbContext db,
-        JwtService jwtService,
         AuthentikOAuthService authentikService,
         TokenService tokenService,
         IConnectionMultiplexer redis)
@@ -126,51 +145,37 @@ public static class AuthEndpoints
             return Results.BadRequest(new ErrorResponse("Username and password are required"));
         }
 
-        // Try Authentik OAuth2 Resource Owner Password flow first
+        // Authenticate via Authentik — the only source of trust
         var authentikResult = await authentikService.AuthenticateAsync(request.Username, request.Password);
 
-        if (authentikResult != null)
-        {
-            // Parse claims from Authentik token
-            var claims = tokenService.ParseAuthentikToken(authentikResult.AccessToken);
-            if (claims != null)
-            {
-                // Auto-provision user in local DB
-                var user = await tokenService.ProvisionUserAsync(claims);
-                var localToken = tokenService.GenerateLocalToken(user);
-
-                // Store refresh token in Redis
-                if (!string.IsNullOrEmpty(authentikResult.RefreshToken))
-                {
-                    var redisDb = redis.GetDatabase();
-                    var key = $"refresh_tokens:{user.Id}";
-                    await redisDb.StringSetAsync(key, authentikResult.RefreshToken,
-                        RefreshTokenExpiry);
-                }
-
-                return Results.Ok(new OAuthTokenResponse(
-                    localToken,
-                    authentikResult.RefreshToken,
-                    authentikResult.ExpiresIn > 0 ? authentikResult.ExpiresIn : 3600,
-                    "Bearer"
-                ));
-            }
-        }
-
-        // Fallback: local authentication (existing behavior)
-        var localUser = await db.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-
-        if (localUser == null || string.IsNullOrEmpty(localUser.PasswordHash) ||
-            !BCrypt.Net.BCrypt.Verify(request.Password, localUser.PasswordHash))
+        if (authentikResult == null)
         {
             return Results.Json(new ErrorResponse("Invalid credentials"), statusCode: 401);
         }
 
-        var fallbackToken = jwtService.GenerateToken(localUser);
+        // Parse claims from Authentik token
+        var claims = tokenService.ParseAuthentikToken(authentikResult.AccessToken);
+        if (claims == null)
+        {
+            return Results.Json(new ErrorResponse("Failed to parse authentication token"), statusCode: 401);
+        }
+
+        // Auto-provision user in local DB
+        var user = await tokenService.ProvisionUserAsync(claims);
+        var localToken = tokenService.GenerateLocalToken(user);
+
+        // Store refresh token in Redis
+        if (!string.IsNullOrEmpty(authentikResult.RefreshToken))
+        {
+            var redisDb = redis.GetDatabase();
+            var key = $"refresh_tokens:{user.Id}";
+            await redisDb.StringSetAsync(key, authentikResult.RefreshToken, RefreshTokenExpiry);
+        }
+
         return Results.Ok(new OAuthTokenResponse(
-            fallbackToken,
-            null,
-            3600,
+            localToken,
+            authentikResult.RefreshToken,
+            authentikResult.ExpiresIn > 0 ? authentikResult.ExpiresIn : 3600,
             "Bearer"
         ));
     }
@@ -179,7 +184,6 @@ public static class AuthEndpoints
         RefreshTokenRequest request,
         AuthentikOAuthService authentikService,
         TokenService tokenService,
-        AppDbContext db,
         IConnectionMultiplexer redis)
     {
         if (string.IsNullOrWhiteSpace(request.RefreshToken))
@@ -210,8 +214,7 @@ public static class AuthEndpoints
         {
             var redisDb = redis.GetDatabase();
             var key = $"refresh_tokens:{user.Id}";
-            await redisDb.StringSetAsync(key, result.RefreshToken,
-                RefreshTokenExpiry);
+            await redisDb.StringSetAsync(key, result.RefreshToken, RefreshTokenExpiry);
         }
 
         return Results.Ok(new OAuthTokenResponse(
