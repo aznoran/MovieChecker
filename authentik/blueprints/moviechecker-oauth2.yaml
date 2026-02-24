@@ -26,9 +26,7 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
-      redirect_uris: |-
-        http://localhost:3000/auth/callback
-        https://xui123qweqwe.org/auth/callback
+      redirect_uris: "http://localhost:3000/auth/callback"
       sub_mode: hashed_user_id
       issuer_mode: per_provider
 
@@ -43,32 +41,4 @@ entries:
       provider: !KeyOf moviechecker-provider
       policy_engine_mode: any
       meta_launch_url: "blank://blank"
-
-  # Create test users for local development only (DO NOT use in production)
-  - model: authentik_core.user
-    id: test-user
-    state: present
-    identifiers:
-      username: testuser
-    attrs:
-      name: Test User
-      email: testuser@moviechecker.local
-      password: testpassword123
-      is_active: true
-      groups:
-        - !Find [authentik_core.group, [name, authentik Users]]
-
-  - model: authentik_core.user
-    id: test-admin
-    state: present
-    identifiers:
-      username: testadmin
-    attrs:
-      name: Test Admin
-      email: testadmin@moviechecker.local
-      password: testpassword123
-      is_active: true
-      is_superuser: true
-      groups:
-        - !Find [authentik_core.group, [name, authentik Admins]]
 
