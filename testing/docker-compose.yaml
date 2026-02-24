@@ -61,7 +61,12 @@ services:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
-      Jwt__Key: "${JWT_KEY}"
+      Authentik__Authority: http://localhost:9000/application/o/moviechecker/
+      Authentik__MetadataUrl: http://localhost:9000/application/o/moviechecker/.well-known/openid-configuration
+      Authentik__TokenEndpoint: http://localhost:9000/application/o/token/
+      Authentik__UserInfoEndpoint: http://localhost:9000/application/o/userinfo/
+      Authentik__ClientId: moviechecker
+      Authentik__ClientSecret: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
       Jwt__Issuer: "MovieChecker"
       Jwt__Audience: "MovieChecker"
       Cors__Origins__0: "http://localhost:3000"
@@ -83,6 +88,9 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: "http://localhost:5000"
+        NEXT_PUBLIC_AUTHENTIK_URL: "http://localhost:9000"
+        NEXT_PUBLIC_AUTHENTIK_CLIENT_ID: moviechecker
+        NEXT_PUBLIC_AUTHENTIK_REDIRECT_URI: "http://localhost:9000/auth/callback"
     restart: unless-stopped
     depends_on:
       - backend

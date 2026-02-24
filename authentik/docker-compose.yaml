@@ -47,9 +47,9 @@ services:
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
 #      AUTHENTIK_HOST_BROWSER: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
     volumes:
+      - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
       - authentik_templates:/templates
-      - ./blueprints:/blueprints/custom:ro
     ports:
       - "9000:9000"
       - "9443:9443"
@@ -76,9 +76,9 @@ services:
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
     volumes:
+      - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
       - authentik_templates:/templates
-      - ./authentik/blueprints:/blueprints/custom:ro
     depends_on:
       authentik-db:
         condition: service_healthy
