@@ -44,9 +44,8 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_PG_USER}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_PG_PASSWORD}
       AUTHENTIK_REDIS__HOST: authentik-redis
-      AUTHENTIK_BLUEPRINTS_DIR: /blueprints
     volumes:
-      - ./blueprints:/blueprints:ro
+      - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
       - authentik_templates:/templates
     ports:
@@ -74,9 +73,8 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_PG_USER}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_PG_PASSWORD}
       AUTHENTIK_REDIS__HOST: authentik-redis
-      AUTHENTIK_BLUEPRINTS_DIR: /blueprints
     volumes:
-      - ./blueprints:/blueprints:ro
+      - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
       - authentik_templates:/templates
     depends_on:

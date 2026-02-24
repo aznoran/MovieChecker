@@ -40,4 +40,4 @@ entries:
       name: MovieChecker
       provider: !KeyOf moviechecker-provider
       policy_engine_mode: any
-      meta_launch_url: "http://localhost:3000"
+      meta_launch_url: "blank://blank"
