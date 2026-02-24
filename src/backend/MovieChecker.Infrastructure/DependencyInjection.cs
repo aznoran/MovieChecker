@@ -29,6 +29,8 @@ public static class DependencyInjection
         services.AddSingleton<IConnectionMultiplexer>(sp =>
             ConnectionMultiplexer.Connect(redisConnection!));
         services.AddScoped<OtpService>();
+        services.AddScoped<TokenService>();
+        services.AddHttpClient<AuthentikOAuthService>();
         
         // Configure HybridCache with Redis as the distributed cache backing store
         services.AddStackExchangeRedisCache(options =>

@@ -43,6 +43,18 @@ export interface AuthResponse {
   user?: UserDto;
 }
 
+export interface OAuthTokenResponse {
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  /** @format int32 */
+  expiresIn?: number;
+  tokenType?: string | null;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken?: string | null;
+}
+
 export interface CreateGroupRequest {
   name?: string | null;
   isPrivate?: boolean;

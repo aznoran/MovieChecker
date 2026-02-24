@@ -9,6 +9,7 @@ import {
     WatchEntryDto,
     GroupDto,
     StatsDto,
+    OAuthTokenResponse,
 } from "./generated";
 
 
@@ -36,12 +37,36 @@ const apiClient = new Api({
 // Add response interceptor for 401 handling
 apiClient.instance.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
         const isAuthRequest = error.config?.url?.includes("/auth/");
         if (error.response?.status === 401 && typeof window !== "undefined" && !isAuthRequest) {
+            // Try to refresh the token before logging out
+            const storedRefreshToken = localStorage.getItem("refreshToken");
+            if (storedRefreshToken && !error.config?._retry) {
+                error.config._retry = true;
+                try {
+                    const response = await refreshToken(storedRefreshToken);
+                    if (response.accessToken) {
+                        localStorage.setItem("token", response.accessToken);
+                        if (response.refreshToken) {
+                            localStorage.setItem("refreshToken", response.refreshToken);
+                        }
+                        const expiry = response.expiresIn ?? 3600;
+                        localStorage.setItem("tokenExpiry", String(Date.now() + expiry * 1000));
+                        // Retry the original request with new token
+                        error.config.headers.Authorization = `Bearer ${response.accessToken}`;
+                        return apiClient.instance.request(error.config);
+                    }
+                } catch {
+                    // Refresh failed, proceed with logout
+                }
+            }
+
             localStorage.removeItem("token");
             localStorage.removeItem("user");
             localStorage.removeItem("activeGroupId");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("tokenExpiry");
             // Mark that user was logged in for redirect logic
             localStorage.setItem("wasLoggedIn", new Date().toISOString());
             // Defer the redirect to allow the promise rejection to be handled first
@@ -55,14 +80,44 @@ apiClient.instance.interceptors.response.use(
 );
 
 // Auth
-export const login = async (username: string, password: string): Promise<AuthResponse> => {
-    const response = await apiClient.api.authLoginCreate({username, password});
+export const login = async (username: string, password: string): Promise<OAuthTokenResponse> => {
+    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+    const response = await apiClient.instance.post<OAuthTokenResponse>(`/api/auth/login`, {username, password}, {
+        headers: {
+            "Accept-Language": locale,
+        },
+    });
     return response.data;
 };
 
 export const register = async (username: string, password: string, displayName: string): Promise<AuthResponse> => {
     const response = await apiClient.api.authRegisterCreate({username, password, displayName});
     return response.data;
+};
+
+export const refreshToken = async (refreshTokenValue: string): Promise<OAuthTokenResponse> => {
+    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+    const response = await apiClient.instance.post<OAuthTokenResponse>(`/api/auth/refresh`, {refreshToken: refreshTokenValue}, {
+        headers: {
+            "Accept-Language": locale,
+        },
+    });
+    return response.data;
+};
+
+export const logout = async (): Promise<void> => {
+    try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+        await apiClient.instance.post(`/api/auth/logout`, {}, {
+            headers: {
+                ...(token ? {Authorization: `Bearer ${token}`} : {}),
+                "Accept-Language": locale,
+            },
+        });
+    } catch {
+        // Ignore errors during logout
+    }
 };
 
 export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
