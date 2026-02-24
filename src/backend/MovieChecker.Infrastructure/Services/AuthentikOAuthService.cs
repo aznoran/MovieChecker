@@ -170,8 +170,9 @@ public class AuthentikOAuthService
 
     /// <summary>
     /// Checks if a username already exists in Authentik.
+    /// Returns true if exists, false if not, null if the check failed.
     /// </summary>
-    public async Task<bool> UserExistsAsync(string username)
+    public async Task<bool?> UserExistsAsync(string username)
     {
         var baseUrl = _configuration["Authentik:BaseUrl"] ?? "http://localhost:9000";
         var apiToken = _configuration["Authentik:ApiToken"];
@@ -179,7 +180,7 @@ public class AuthentikOAuthService
         if (string.IsNullOrEmpty(apiToken))
         {
             _logger.LogError("Authentik API token is not configured");
-            return false;
+            return null;
         }
 
         var request = new HttpRequestMessage(HttpMethod.Get,
@@ -194,7 +195,7 @@ public class AuthentikOAuthService
             {
                 _logger.LogWarning("Failed to check user existence in Authentik: {Status}",
                     response.StatusCode);
-                return false;
+                return null;
             }
 
             var content = await response.Content.ReadAsStringAsync();
@@ -205,7 +206,7 @@ public class AuthentikOAuthService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking user existence in Authentik");
-            return false;
+            return null;
         }
     }
 

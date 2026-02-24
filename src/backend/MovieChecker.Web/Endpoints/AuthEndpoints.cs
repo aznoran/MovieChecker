@@ -74,7 +74,12 @@ public static class AuthEndpoints
 
         // Check if username exists in Authentik
         var userExists = await authentikService.UserExistsAsync(request.Username);
-        if (userExists)
+        if (userExists == null)
+        {
+            return Results.Json(new ErrorResponse("Authentication service unavailable - cannot verify username"),
+                statusCode: 502);
+        }
+        if (userExists.Value)
         {
             return Results.BadRequest(new ErrorResponse(localizer["UsernameAlreadyExists"]));
         }
