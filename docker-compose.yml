@@ -61,9 +61,12 @@ services:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: MovieChecker
-      Jwt__Audience: MovieChecker
+      Authentik__Authority: https://auth.${APP_DOMAIN:-xui123qweqwe.org}/application/o/moviechecker/
+      Authentik__MetadataUrl: http://authentik-server:9000/application/o/moviechecker/.well-known/openid-configuration
+      Authentik__TokenEndpoint: http://authentik-server:9000/application/o/token/
+      Authentik__UserInfoEndpoint: http://authentik-server:9000/application/o/userinfo/
+      Authentik__ClientId: moviechecker
+      Authentik__ClientSecret: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
       Cors__Origins__0: https://xui123qweqwe.org
       Cors__Origins__1: http://xui123qweqwe.org
     depends_on:
@@ -82,6 +85,9 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://xui123qweqwe.org
+        NEXT_PUBLIC_AUTHENTIK_URL: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
+        NEXT_PUBLIC_AUTHENTIK_CLIENT_ID: moviechecker
+        NEXT_PUBLIC_AUTHENTIK_REDIRECT_URI: https://xui123qweqwe.org/auth/callback
     restart: unless-stopped
     expose:
       - "3000"

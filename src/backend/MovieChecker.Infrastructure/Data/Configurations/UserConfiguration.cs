@@ -9,5 +9,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.HasIndex(u => u.Username).IsUnique();
+        builder.HasIndex(u => u.AuthentikId).IsUnique()
+            .HasFilter("authentik_id IS NOT NULL");
+        builder.Property(u => u.PasswordHash).IsRequired(false);
     }
 }

@@ -1,10 +1,9 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MovieChecker.Domain.Models.Dtos;
 using MovieChecker.Domain.Models.Entities;
 using MovieChecker.Domain.Models.Enums;
-using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
-using MovieChecker.Infrastructure.Services;
 
 namespace MovieChecker.Web.Endpoints;
 
@@ -14,17 +13,12 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth");
 
-        group.MapPost("/register", Register)
+        group.MapPost("/callback", OidcCallback)
             .Produces<AuthResponse>(StatusCodes.Status200OK)
-            .Produces<ValidationErrorResponse>(StatusCodes.Status400BadRequest)
-            .WithSummary("Register a new user")
-            .WithDescription("Creates a new user account and returns a JWT token");
-
-        group.MapPost("/login", Login)
-            .Produces<AuthResponse>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .WithSummary("Login with credentials")
-            .WithDescription("Authenticates a user and returns a JWT token");
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .WithSummary("OIDC callback")
+            .WithDescription(
+                "Exchanges an Authentik authorization code for tokens, provisions the user and personal group if new, and returns the access token with user info");
 
         group.MapPost("/language", SetLanguage)
             .Produces<LanguageResponse>(StatusCodes.Status200OK)
@@ -32,86 +26,147 @@ public static class AuthEndpoints
             .WithDescription("Sets the user's preferred language (en or ru)");
     }
 
-    private static async Task<IResult> Register(
-        RegisterRequest request,
+    private static async Task<IResult> OidcCallback(
+        OidcCallbackRequest request,
         AppDbContext db,
-        JwtService jwtService,
-        ValidationService validationService,
-        ILocalizationService localizer)
+        IConfiguration configuration,
+        IHttpClientFactory httpClientFactory)
     {
-        // Validate input
-        var validationResult = validationService.ValidateRegistration(
-            request.Username,
-            request.Password,
-            request.DisplayName
-        );
+        var tokenEndpoint = configuration["Authentik:TokenEndpoint"];
+        var clientId = configuration["Authentik:ClientId"] ?? "moviechecker";
+        var clientSecret = configuration["Authentik:ClientSecret"];
 
-        if (!validationResult.IsValid)
+        if (string.IsNullOrEmpty(tokenEndpoint))
         {
-            return Results.BadRequest(new ValidationErrorResponse(
-                localizer["ValidationFailed"], 
-                validationResult.Errors
-            ));
+            return Results.BadRequest(new ErrorResponse("Authentik is not configured"));
         }
 
-        if (await db.Users.AnyAsync(u => u.Username == request.Username))
+        // Exchange authorization code for tokens
+        var httpClient = httpClientFactory.CreateClient("Authentik");
+        var tokenRequest = new Dictionary<string, string>
         {
-            return Results.BadRequest(new ErrorResponse(localizer["UsernameAlreadyExists"]));
-        }
-
-        var user = new User
-        {
-            Username = request.Username,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            DisplayName = string.IsNullOrEmpty(request.DisplayName) ? request.Username : request.DisplayName
+            ["grant_type"] = "authorization_code",
+            ["code"] = request.Code,
+            ["redirect_uri"] = request.RedirectUri,
+            ["client_id"] = clientId,
         };
 
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
-
-        // Create personal group for the new user
-        var personalGroup = new Group
+        if (!string.IsNullOrEmpty(clientSecret))
         {
-            Name = "Personal",
-            InviteCode = null,
-            CreatedByUserId = user.Id,
-            IsPrivate = false,
-            GroupType = GroupType.Personal,
-            DefaultRole = GroupRole.Owner
-        };
-        db.Groups.Add(personalGroup);
-        await db.SaveChangesAsync();
-
-        db.GroupMembers.Add(new GroupMember
-        {
-            GroupId = personalGroup.Id,
-            UserId = user.Id,
-            Role = GroupRole.Owner
-        });
-        await db.SaveChangesAsync();
-
-        var token = jwtService.GenerateToken(user);
-        return Results.Ok(new AuthResponse(
-            token,
-            new UserDto(user.Id, user.Username, user.DisplayName)
-        ));
-    }
-
-    private static async Task<IResult> Login(
-        LoginRequest request,
-        AppDbContext db,
-        JwtService jwtService)
-    {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-
-        if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-        {
-            return Results.Unauthorized();
+            tokenRequest["client_secret"] = clientSecret;
         }
 
-        var token = jwtService.GenerateToken(user);
+        if (!string.IsNullOrEmpty(request.CodeVerifier))
+        {
+            tokenRequest["code_verifier"] = request.CodeVerifier;
+        }
+
+        var tokenResponse = await httpClient.PostAsync(
+            tokenEndpoint,
+            new FormUrlEncodedContent(tokenRequest));
+
+        if (!tokenResponse.IsSuccessStatusCode)
+        {
+            var errorBody = await tokenResponse.Content.ReadAsStringAsync();
+            return Results.BadRequest(new ErrorResponse($"Token exchange failed: {errorBody}"));
+        }
+
+        var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+        var tokenData = JsonSerializer.Deserialize<JsonElement>(tokenJson);
+
+        var accessToken = tokenData.GetProperty("access_token").GetString();
+        var idToken = tokenData.TryGetProperty("id_token", out var idTokenProp)
+            ? idTokenProp.GetString()
+            : null;
+
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            return Results.BadRequest(new ErrorResponse("No access token in response"));
+        }
+
+        // Fetch user info from Authentik
+        var userInfoEndpoint = configuration["Authentik:UserInfoEndpoint"];
+        if (string.IsNullOrEmpty(userInfoEndpoint))
+        {
+            return Results.BadRequest(new ErrorResponse("UserInfo endpoint not configured"));
+        }
+
+        var userInfoRequest = new HttpRequestMessage(HttpMethod.Get, userInfoEndpoint);
+        userInfoRequest.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+        var userInfoResponse = await httpClient.SendAsync(userInfoRequest);
+        if (!userInfoResponse.IsSuccessStatusCode)
+        {
+            return Results.BadRequest(new ErrorResponse("Failed to fetch user info from Authentik"));
+        }
+
+        var userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
+        var userInfo = JsonSerializer.Deserialize<JsonElement>(userInfoJson);
+
+        var authentikId = userInfo.GetProperty("sub").GetString();
+        var username = userInfo.TryGetProperty("preferred_username", out var usernameProp)
+            ? usernameProp.GetString()
+            : authentikId;
+        var displayName = userInfo.TryGetProperty("name", out var nameProp)
+            ? nameProp.GetString()
+            : username;
+
+        if (string.IsNullOrEmpty(authentikId))
+        {
+            return Results.BadRequest(new ErrorResponse("Missing sub claim in user info"));
+        }
+
+        // Find or create local user
+        var user = await db.Users.FirstOrDefaultAsync(u => u.AuthentikId == authentikId);
+
+        if (user == null)
+        {
+            // Provision new user
+            user = new User
+            {
+                Username = username ?? authentikId,
+                PasswordHash = null,
+                DisplayName = displayName ?? username ?? authentikId,
+                AuthentikId = authentikId
+            };
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+
+            // Create personal group for the new user
+            var personalGroup = new Group
+            {
+                Name = "Personal",
+                InviteCode = null,
+                CreatedByUserId = user.Id,
+                IsPrivate = false,
+                GroupType = GroupType.Personal,
+                DefaultRole = GroupRole.Owner
+            };
+            db.Groups.Add(personalGroup);
+            await db.SaveChangesAsync();
+
+            db.GroupMembers.Add(new GroupMember
+            {
+                GroupId = personalGroup.Id,
+                UserId = user.Id,
+                Role = GroupRole.Owner
+            });
+            await db.SaveChangesAsync();
+        }
+        else
+        {
+            // Update display name if changed in Authentik
+            var newDisplayName = displayName ?? username ?? authentikId;
+            if (user.DisplayName != newDisplayName)
+            {
+                user.DisplayName = newDisplayName;
+                await db.SaveChangesAsync();
+            }
+        }
+
         return Results.Ok(new AuthResponse(
-            token,
+            accessToken,
             new UserDto(user.Id, user.Username, user.DisplayName)
         ));
     }
@@ -142,3 +197,4 @@ public static class AuthEndpoints
 }
 
 public record SetLanguageRequest(string Language);
+public record OidcCallbackRequest(string Code, string RedirectUri, string? CodeVerifier);

@@ -5,26 +5,24 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   type ReactNode,
 } from "react";
 import type { UserDto } from "@/lib/api/generated";
-import { login as apiLogin, register as apiRegister } from "@/lib/api";
+import { oidcCallback } from "@/lib/api";
 
 interface AuthContextType {
   user: UserDto | null;
   token: string | null;
-  login: (username: string, password: string) => Promise<void>;
-  register: (
-    username: string,
-    password: string,
-    displayName: string
-  ) => Promise<void>;
+  handleOidcCallback: (code: string, redirectUri: string, codeVerifier?: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const AUTHENTIK_URL = process.env.NEXT_PUBLIC_AUTHENTIK_URL || "http://localhost:9000";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserDto | null>(() => {
@@ -59,51 +57,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  const login = async (username: string, password: string) => {
-    const response = await apiLogin(username, password);
-    // Save to localStorage synchronously before state update
-    if (response.token && response.user) {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("user", JSON.stringify(response.user));
+  const handleOidcCallback = useCallback(async (code: string, redirectUri: string, codeVerifier?: string) => {
+    setIsLoading(true);
+    try {
+      const response = await oidcCallback(code, redirectUri, codeVerifier);
+      if (response.token && response.user) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("token", response.token);
+          localStorage.setItem("user", JSON.stringify(response.user));
+        }
+        setToken(response.token);
+        setUser(response.user);
+      } else {
+        throw new Error("Invalid authentication response");
       }
-      setToken(response.token);
-      setUser(response.user);
-    } else {
-      throw new Error("Invalid authentication response");
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const register = async (
-    username: string,
-    password: string,
-    displayName: string
-  ) => {
-    const response = await apiRegister(username, password, displayName);
-    // Save to localStorage synchronously before state update
-    if (response.token && response.user) {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("user", JSON.stringify(response.user));
-      }
-      setToken(response.token);
-      setUser(response.user);
-    } else {
-      throw new Error("Invalid authentication response");
-    }
-  };
+  }, []);
 
   const logout = () => {
     if (typeof window !== "undefined") {
-      // Store logout timestamp to remember user was logged in
       localStorage.setItem("wasLoggedIn", new Date().toISOString());
-      // Remove token and user synchronously before state update
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("activeGroupId");
     }
     setToken(null);
     setUser(null);
+
+    // Redirect to Authentik logout then back to login
+    const postLogoutRedirect = encodeURIComponent(window.location.origin + "/login");
+    window.location.href = `${AUTHENTIK_URL}/application/o/moviechecker/end-session/?post_logout_redirect_uri=${postLogoutRedirect}`;
   };
 
   return (
@@ -111,8 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         token,
-        login,
-        register,
+        handleOidcCallback,
         logout,
         isAuthenticated: !!token,
         isLoading,

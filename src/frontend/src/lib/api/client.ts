@@ -55,13 +55,12 @@ apiClient.instance.interceptors.response.use(
 );
 
 // Auth
-export const login = async (username: string, password: string): Promise<AuthResponse> => {
-    const response = await apiClient.api.authLoginCreate({username, password});
-    return response.data;
-};
-
-export const register = async (username: string, password: string, displayName: string): Promise<AuthResponse> => {
-    const response = await apiClient.api.authRegisterCreate({username, password, displayName});
+export const oidcCallback = async (code: string, redirectUri: string, codeVerifier?: string): Promise<AuthResponse> => {
+    const response = await apiClient.instance.post("/api/auth/callback", {
+        code,
+        redirectUri,
+        codeVerifier: codeVerifier ?? null,
+    });
     return response.data;
 };
 

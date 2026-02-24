@@ -1,0 +1,17 @@
+version: 1
+metadata:
+  name: MovieChecker Brand
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+entries:
+  - model: authentik_brands.brand
+    identifiers:
+      domain: auth.xui123qweqwe.org
+    attrs:
+      branding_title: MovieChecker
+      branding_favicon: /static/dist/assets/icons/icon.png
+      branding_logo: /static/dist/assets/icons/icon_left_brand.svg
+      flow_authentication: !Find [authentik_flows.flow, [slug, default-authentication-flow]]
+      flow_invalidation: !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
+      default_application: !Find [authentik_core.application, [slug, moviechecker]]
+      web_certificate: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
