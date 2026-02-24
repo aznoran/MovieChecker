@@ -57,6 +57,7 @@ public static class DependencyInjection
             .AddJwtBearer(options =>
             {
                 options.Authority = authentikAuthority;
+                // HTTPS not required for internal Docker communication (Authentik accessed via internal network)
                 options.RequireHttpsMetadata = false;
 
                 if (!string.IsNullOrEmpty(authentikMetadataUrl))

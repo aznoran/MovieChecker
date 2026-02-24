@@ -75,9 +75,6 @@ public static class AuthEndpoints
         var tokenData = JsonSerializer.Deserialize<JsonElement>(tokenJson);
 
         var accessToken = tokenData.GetProperty("access_token").GetString();
-        var idToken = tokenData.TryGetProperty("id_token", out var idTokenProp)
-            ? idTokenProp.GetString()
-            : null;
 
         if (string.IsNullOrEmpty(accessToken))
         {
@@ -104,7 +101,11 @@ public static class AuthEndpoints
         var userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
         var userInfo = JsonSerializer.Deserialize<JsonElement>(userInfoJson);
 
-        var authentikId = userInfo.GetProperty("sub").GetString();
+        if (!userInfo.TryGetProperty("sub", out var subProp))
+        {
+            return Results.BadRequest(new ErrorResponse("Missing sub claim in user info"));
+        }
+        var authentikId = subProp.GetString();
         var username = userInfo.TryGetProperty("preferred_username", out var usernameProp)
             ? usernameProp.GetString()
             : authentikId;
@@ -114,7 +115,7 @@ public static class AuthEndpoints
 
         if (string.IsNullOrEmpty(authentikId))
         {
-            return Results.BadRequest(new ErrorResponse("Missing sub claim in user info"));
+            return Results.BadRequest(new ErrorResponse("Invalid sub claim in user info"));
         }
 
         // Find or create local user

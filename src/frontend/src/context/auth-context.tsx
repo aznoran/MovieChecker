@@ -87,8 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
 
     // Redirect to Authentik logout then back to login
-    const postLogoutRedirect = encodeURIComponent(window.location.origin + "/login");
-    window.location.href = `${AUTHENTIK_URL}/application/o/moviechecker/end-session/?post_logout_redirect_uri=${postLogoutRedirect}`;
+    if (typeof window !== "undefined") {
+      const postLogoutRedirect = encodeURIComponent(window.location.origin + "/login");
+      window.location.href = `${AUTHENTIK_URL}/application/o/moviechecker/end-session/?post_logout_redirect_uri=${postLogoutRedirect}`;
+    }
   };
 
   return (

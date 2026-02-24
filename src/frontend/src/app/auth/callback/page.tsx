@@ -10,6 +10,8 @@ import {useAuth} from "@/context/auth-context";
 const AUTHENTIK_REDIRECT_URI =
     process.env.NEXT_PUBLIC_AUTHENTIK_REDIRECT_URI || "http://localhost:3000/auth/callback";
 
+const INVITE_TOKEN_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
 function CallbackHandler() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -61,7 +63,7 @@ function CallbackHandler() {
                     localStorage.removeItem("pendingInviteToken");
                     try {
                         const parsed = JSON.parse(raw);
-                        if (parsed.token && Date.now() - parsed.ts < 5 * 60 * 1000) {
+                        if (parsed.token && Date.now() - parsed.ts < INVITE_TOKEN_EXPIRY_MS) {
                             redirectTo = `/join/${parsed.token}`;
                         }
                     } catch {
