@@ -31,7 +31,7 @@ services:
       retries: 5
 
   authentik-server:
-    image: ghcr.io/goauthentik/server:2025.12.4
+    image: ghcr.io/goauthentik/server:2025.2.1
     restart: unless-stopped
     command: server
     environment:
@@ -62,7 +62,7 @@ services:
       - authentik_network
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2025.12.4
+    image: ghcr.io/goauthentik/server:2025.2.1
     restart: unless-stopped
     command: worker
     environment:
