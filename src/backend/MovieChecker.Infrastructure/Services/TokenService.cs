@@ -116,6 +116,60 @@ public class TokenService
     }
 
     /// <summary>
+    /// Provisions a local user from a username (used when authenticating via flow executor
+    /// where we don't have Authentik JWT claims). Creates the user and a personal group
+    /// if they don't exist yet. Returns the local user entity.
+    /// </summary>
+    public async Task<User> ProvisionUserFromUsernameAsync(string username, string? displayName = null)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+        if (user != null)
+        {
+            if (displayName != null && user.DisplayName != displayName)
+            {
+                user.DisplayName = displayName;
+                await _db.SaveChangesAsync();
+            }
+            return user;
+        }
+
+        user = new User
+        {
+            Username = username,
+            PasswordHash = string.Empty,
+            DisplayName = displayName ?? username
+        };
+
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+
+        var personalGroup = new Group
+        {
+            Name = "Personal",
+            InviteCode = null,
+            CreatedByUserId = user.Id,
+            IsPrivate = false,
+            GroupType = GroupType.Personal,
+            DefaultRole = GroupRole.Owner
+        };
+        _db.Groups.Add(personalGroup);
+        await _db.SaveChangesAsync();
+
+        _db.GroupMembers.Add(new GroupMember
+        {
+            GroupId = personalGroup.Id,
+            UserId = user.Id,
+            Role = GroupRole.Owner
+        });
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Provisioned user {Username} (ID: {UserId}) from flow executor",
+            user.Username, user.Id);
+
+        return user;
+    }
+
+    /// <summary>
     /// Generates a local JWT for the provisioned user (used as the access token returned to frontend).
     /// </summary>
     public string GenerateLocalToken(User user)

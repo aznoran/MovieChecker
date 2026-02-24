@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using MovieChecker.Domain.Models.Dtos;
 using MovieChecker.Domain.Models.Entities;
@@ -12,6 +13,7 @@ namespace MovieChecker.Web.Endpoints;
 public static class AuthEndpoints
 {
     private static readonly TimeSpan RefreshTokenExpiry = TimeSpan.FromDays(30);
+    private const int LocalTokenExpirySeconds = 3600;
 
     public static void MapAuthEndpoints(this WebApplication app)
     {
@@ -29,7 +31,7 @@ public static class AuthEndpoints
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .WithSummary("Login with credentials via Authentik")
-            .WithDescription("Authenticates a user via Authentik OAuth2 Resource Owner Password flow and returns tokens");
+            .WithDescription("Authenticates a user via Authentik and returns tokens");
 
         group.MapPost("/refresh", Refresh)
             .Produces<OAuthTokenResponse>(StatusCodes.Status200OK)
@@ -47,6 +49,29 @@ public static class AuthEndpoints
             .Produces<LanguageResponse>(StatusCodes.Status200OK)
             .WithSummary("Set preferred language")
             .WithDescription("Sets the user's preferred language (en or ru)");
+    }
+
+    private static string GenerateRefreshToken()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    }
+
+    private static async Task StoreRefreshToken(IDatabase redisDb, int userId, string refreshToken)
+    {
+        // Store forward: user_id → token
+        await redisDb.StringSetAsync($"refresh_tokens:{userId}", refreshToken, RefreshTokenExpiry);
+        // Store reverse: token → user_id (for lookup during refresh)
+        await redisDb.StringSetAsync($"refresh_tokens_lookup:{refreshToken}", userId.ToString(), RefreshTokenExpiry);
+    }
+
+    private static async Task ClearRefreshToken(IDatabase redisDb, int userId)
+    {
+        var existingToken = await redisDb.StringGetAsync($"refresh_tokens:{userId}");
+        if (existingToken.HasValue)
+        {
+            await redisDb.KeyDeleteAsync($"refresh_tokens_lookup:{existingToken}");
+        }
+        await redisDb.KeyDeleteAsync($"refresh_tokens:{userId}");
     }
 
     private static async Task<IResult> Register(
@@ -103,38 +128,26 @@ public static class AuthEndpoints
                 statusCode: 502);
         }
 
-        // Authenticate the newly created user via Authentik to get tokens
-        var authentikResult = await authentikService.AuthenticateAsync(request.Username, request.Password);
-
-        if (authentikResult == null)
+        // Authenticate the newly created user to verify everything works
+        var authenticated = await authentikService.AuthenticateViaFlowAsync(request.Username, request.Password);
+        if (!authenticated)
         {
-            return Results.Json(new ErrorResponse("User created but authentication failed — please try logging in"),
-                statusCode: 502);
+            // Flow executor failed, try ROPC as fallback (don't block registration if both fail)
+            await authentikService.AuthenticateViaRopcAsync(request.Username, request.Password);
         }
 
-        // Parse claims and provision local user
-        var claims = tokenService.ParseAuthentikToken(authentikResult.AccessToken);
-        if (claims == null)
-        {
-            return Results.Json(new ErrorResponse("Failed to parse authentication token"),
-                statusCode: 502);
-        }
-
-        var user = await tokenService.ProvisionUserAsync(claims);
+        // Provision local user and generate tokens
+        var user = await tokenService.ProvisionUserFromUsernameAsync(request.Username, displayName);
         var localToken = tokenService.GenerateLocalToken(user);
+        var refreshToken = GenerateRefreshToken();
 
-        // Store refresh token in Redis
-        if (!string.IsNullOrEmpty(authentikResult.RefreshToken))
-        {
-            var redisDb = redis.GetDatabase();
-            var key = $"refresh_tokens:{user.Id}";
-            await redisDb.StringSetAsync(key, authentikResult.RefreshToken, RefreshTokenExpiry);
-        }
+        var redisDb = redis.GetDatabase();
+        await StoreRefreshToken(redisDb, user.Id, refreshToken);
 
         return Results.Ok(new OAuthTokenResponse(
             localToken,
-            authentikResult.RefreshToken,
-            authentikResult.ExpiresIn > 0 ? authentikResult.ExpiresIn : 3600,
+            refreshToken,
+            LocalTokenExpirySeconds,
             "Bearer"
         ));
     }
@@ -150,45 +163,58 @@ public static class AuthEndpoints
             return Results.BadRequest(new ErrorResponse("Username and password are required"));
         }
 
-        // Authenticate via Authentik — the only source of trust
-        var authentikResult = await authentikService.AuthenticateAsync(request.Username, request.Password);
+        // Primary: authenticate via Authentik flow executor (headless)
+        var authenticated = await authentikService.AuthenticateViaFlowAsync(request.Username, request.Password);
 
-        if (authentikResult == null)
+        if (!authenticated)
         {
+            // Fallback: try ROPC token endpoint
+            var ropcResult = await authentikService.AuthenticateViaRopcAsync(request.Username, request.Password);
+            if (ropcResult != null)
+            {
+                // ROPC worked — use Authentik JWT to provision user
+                var claims = tokenService.ParseAuthentikToken(ropcResult.AccessToken);
+                if (claims != null)
+                {
+                    var ropcUser = await tokenService.ProvisionUserAsync(claims);
+                    var ropcLocalToken = tokenService.GenerateLocalToken(ropcUser);
+                    var ropcRefreshToken = GenerateRefreshToken();
+
+                    var redisDb2 = redis.GetDatabase();
+                    await StoreRefreshToken(redisDb2, ropcUser.Id, ropcRefreshToken);
+
+                    return Results.Ok(new OAuthTokenResponse(
+                        ropcLocalToken,
+                        ropcRefreshToken,
+                        ropcResult.ExpiresIn > 0 ? ropcResult.ExpiresIn : LocalTokenExpirySeconds,
+                        "Bearer"
+                    ));
+                }
+            }
+
             return Results.Json(new ErrorResponse("Invalid credentials"), statusCode: 401);
         }
 
-        // Parse claims from Authentik token
-        var claims = tokenService.ParseAuthentikToken(authentikResult.AccessToken);
-        if (claims == null)
-        {
-            return Results.Json(new ErrorResponse("Failed to parse authentication token"), statusCode: 401);
-        }
-
-        // Auto-provision user in local DB
-        var user = await tokenService.ProvisionUserAsync(claims);
+        // Flow executor succeeded — provision user from username
+        var user = await tokenService.ProvisionUserFromUsernameAsync(request.Username);
         var localToken = tokenService.GenerateLocalToken(user);
+        var refreshToken = GenerateRefreshToken();
 
-        // Store refresh token in Redis
-        if (!string.IsNullOrEmpty(authentikResult.RefreshToken))
-        {
-            var redisDb = redis.GetDatabase();
-            var key = $"refresh_tokens:{user.Id}";
-            await redisDb.StringSetAsync(key, authentikResult.RefreshToken, RefreshTokenExpiry);
-        }
+        var redisDb = redis.GetDatabase();
+        await StoreRefreshToken(redisDb, user.Id, refreshToken);
 
         return Results.Ok(new OAuthTokenResponse(
             localToken,
-            authentikResult.RefreshToken,
-            authentikResult.ExpiresIn > 0 ? authentikResult.ExpiresIn : 3600,
+            refreshToken,
+            LocalTokenExpirySeconds,
             "Bearer"
         ));
     }
 
     private static async Task<IResult> Refresh(
         RefreshTokenRequest request,
-        AuthentikOAuthService authentikService,
         TokenService tokenService,
+        AppDbContext db,
         IConnectionMultiplexer redis)
     {
         if (string.IsNullOrWhiteSpace(request.RefreshToken))
@@ -196,59 +222,55 @@ public static class AuthEndpoints
             return Results.Json(new ErrorResponse("Refresh token is required"), statusCode: 401);
         }
 
-        // Refresh via Authentik
-        var result = await authentikService.RefreshTokenAsync(request.RefreshToken);
+        var redisDb = redis.GetDatabase();
 
-        if (result == null)
+        // Look up user by refresh token
+        var userIdStr = await redisDb.StringGetAsync($"refresh_tokens_lookup:{request.RefreshToken}");
+        if (!userIdStr.HasValue || !int.TryParse(userIdStr.ToString(), out var userId))
         {
             return Results.Json(new ErrorResponse("Invalid or expired refresh token"), statusCode: 401);
         }
 
-        // Parse claims and re-provision if needed
-        var claims = tokenService.ParseAuthentikToken(result.AccessToken);
-        if (claims == null)
+        // Verify the token matches what's stored for this user
+        var storedToken = await redisDb.StringGetAsync($"refresh_tokens:{userId}");
+        if (!storedToken.HasValue || storedToken.ToString() != request.RefreshToken)
         {
-            return Results.Json(new ErrorResponse("Failed to parse refreshed token"), statusCode: 401);
+            return Results.Json(new ErrorResponse("Invalid or expired refresh token"), statusCode: 401);
         }
 
-        var user = await tokenService.ProvisionUserAsync(claims);
+        // Get user from DB
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+        {
+            return Results.Json(new ErrorResponse("User not found"), statusCode: 401);
+        }
+
+        // Generate new tokens and rotate refresh token
         var localToken = tokenService.GenerateLocalToken(user);
+        var newRefreshToken = GenerateRefreshToken();
 
-        // Update refresh token in Redis
-        if (!string.IsNullOrEmpty(result.RefreshToken))
-        {
-            var redisDb = redis.GetDatabase();
-            var key = $"refresh_tokens:{user.Id}";
-            await redisDb.StringSetAsync(key, result.RefreshToken, RefreshTokenExpiry);
-        }
+        // Clear old and store new
+        await ClearRefreshToken(redisDb, userId);
+        await StoreRefreshToken(redisDb, userId, newRefreshToken);
 
         return Results.Ok(new OAuthTokenResponse(
             localToken,
-            result.RefreshToken,
-            result.ExpiresIn > 0 ? result.ExpiresIn : 3600,
+            newRefreshToken,
+            LocalTokenExpirySeconds,
             "Bearer"
         ));
     }
 
     private static async Task<IResult> Logout(
         HttpContext context,
-        AuthentikOAuthService authentikService,
         IConnectionMultiplexer redis)
     {
         var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        if (!string.IsNullOrEmpty(userId))
+        if (!string.IsNullOrEmpty(userId) && int.TryParse(userId, out var uid))
         {
             var redisDb = redis.GetDatabase();
-            var key = $"refresh_tokens:{userId}";
-            var refreshToken = await redisDb.StringGetAsync(key);
-
-            // Revoke at Authentik if we have a stored refresh token
-            if (refreshToken.HasValue)
-            {
-                await authentikService.RevokeTokenAsync(refreshToken.ToString());
-                await redisDb.KeyDeleteAsync(key);
-            }
+            await ClearRefreshToken(redisDb, uid);
         }
 
         return Results.Ok(new SuccessResponse("Logged out successfully"));

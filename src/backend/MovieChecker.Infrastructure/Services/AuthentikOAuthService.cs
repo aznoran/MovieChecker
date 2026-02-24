@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -20,17 +21,142 @@ public class AuthentikOAuthService
     }
 
     /// <summary>
-    /// Authenticates a user via Authentik's OAuth2 Resource Owner Password flow.
-    /// Sends credentials to Authentik's /token/ endpoint and returns the token response.
+    /// Authenticates a user via Authentik's headless flow executor API.
+    /// This walks through the default-authentication-flow stages (identification → password)
+    /// without requiring ROPC/password grant type support.
     /// </summary>
-    public async Task<AuthentikTokenResult?> AuthenticateAsync(string username, string password)
+    public async Task<bool> AuthenticateViaFlowAsync(string username, string password)
+    {
+        var baseUrl = _configuration["Authentik:BaseUrl"] ?? "http://localhost:9000";
+        var flowSlug = _configuration["Authentik:AuthenticationFlowSlug"] ?? "default-authentication-flow";
+
+        _logger.LogInformation("Authenticating via flow executor: {BaseUrl}, flow: {Flow}", baseUrl, flowSlug);
+
+        var handler = new HttpClientHandler
+        {
+            CookieContainer = new CookieContainer(),
+            UseCookies = true
+        };
+        using var client = new HttpClient(handler);
+        client.DefaultRequestHeaders.Accept.Add(
+            new MediaTypeWithQualityHeaderValue("application/json"));
+
+        try
+        {
+            var flowUrl = $"{baseUrl}/api/v3/flows/executor/{flowSlug}/";
+
+            // Step 1: GET the flow to get the first challenge (identification stage)
+            var response1 = await client.GetAsync(flowUrl);
+            if (!response1.IsSuccessStatusCode)
+            {
+                var err = await response1.Content.ReadAsStringAsync();
+                _logger.LogWarning("Flow executor GET failed: {Status} {Error}", response1.StatusCode, err);
+                return false;
+            }
+
+            var challenge1 = JsonSerializer.Deserialize<JsonElement>(await response1.Content.ReadAsStringAsync());
+            var component1 = challenge1.TryGetProperty("component", out var comp1) ? comp1.GetString() : null;
+            _logger.LogInformation("Flow step 1 component: {Component}", component1);
+
+            if (component1 != "ak-stage-identification")
+            {
+                _logger.LogWarning("Expected ak-stage-identification, got {Component}", component1);
+                return false;
+            }
+
+            // Step 2: POST username (identification)
+            var identPayload = new StringContent(
+                JsonSerializer.Serialize(new { uid_field = username }),
+                Encoding.UTF8, "application/json");
+            var response2 = await client.PostAsync(flowUrl, identPayload);
+            if (!response2.IsSuccessStatusCode)
+            {
+                var err = await response2.Content.ReadAsStringAsync();
+                _logger.LogWarning("Flow executor POST (identification) failed: {Status} {Error}",
+                    response2.StatusCode, err);
+                return false;
+            }
+
+            var challenge2 = JsonSerializer.Deserialize<JsonElement>(await response2.Content.ReadAsStringAsync());
+            var component2 = challenge2.TryGetProperty("component", out var comp2) ? comp2.GetString() : null;
+            var type2 = challenge2.TryGetProperty("type", out var t2) ? t2.GetString() : null;
+            _logger.LogInformation("Flow step 2 component: {Component}, type: {Type}", component2, type2);
+
+            // Check for redirect (auto-login) or error
+            if (type2 == "redirect")
+            {
+                // Flow completed after identification (unlikely but handle it)
+                return true;
+            }
+
+            if (component2 != "ak-stage-password")
+            {
+                // Check for response_errors (invalid username)
+                if (challenge2.TryGetProperty("response_errors", out var errors2))
+                {
+                    _logger.LogWarning("Flow identification failed: {Errors}", errors2.ToString());
+                }
+                else
+                {
+                    _logger.LogWarning("Expected ak-stage-password, got {Component}", component2);
+                }
+                return false;
+            }
+
+            // Step 3: POST password
+            var passPayload = new StringContent(
+                JsonSerializer.Serialize(new { password }),
+                Encoding.UTF8, "application/json");
+            var response3 = await client.PostAsync(flowUrl, passPayload);
+            if (!response3.IsSuccessStatusCode)
+            {
+                var err = await response3.Content.ReadAsStringAsync();
+                _logger.LogWarning("Flow executor POST (password) failed: {Status} {Error}",
+                    response3.StatusCode, err);
+                return false;
+            }
+
+            var result = JsonSerializer.Deserialize<JsonElement>(await response3.Content.ReadAsStringAsync());
+            var typeResult = result.TryGetProperty("type", out var tr) ? tr.GetString() : null;
+            _logger.LogInformation("Flow step 3 type: {Type}", typeResult);
+
+            if (typeResult == "redirect")
+            {
+                // Authentication succeeded
+                return true;
+            }
+
+            // Check for errors
+            if (result.TryGetProperty("response_errors", out var errors3))
+            {
+                _logger.LogWarning("Flow authentication failed: {Errors}", errors3.ToString());
+            }
+            else
+            {
+                _logger.LogWarning("Flow authentication did not complete. Response: {Response}",
+                    result.ToString());
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during flow executor authentication");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Authenticates a user via Authentik's OAuth2 Resource Owner Password flow (ROPC).
+    /// This is a fallback if the flow executor doesn't work.
+    /// </summary>
+    public async Task<AuthentikTokenResult?> AuthenticateViaRopcAsync(string username, string password)
     {
         var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
             ?? "http://localhost:9000/application/o/moviechecker/token/";
         var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
         var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
 
-        _logger.LogInformation("Authentik token endpoint: {Endpoint}, client_id: {ClientId}", tokenEndpoint, clientId);
+        _logger.LogInformation("Trying ROPC at: {Endpoint}", tokenEndpoint);
 
         var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -49,7 +175,7 @@ public class AuthentikOAuthService
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Authentik token request failed with status {Status}: {Error}",
+                _logger.LogWarning("ROPC token request failed with {Status}: {Error}",
                     response.StatusCode, errorContent);
                 return null;
             }
@@ -59,7 +185,7 @@ public class AuthentikOAuthService
 
             if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
             {
-                _logger.LogWarning("Authentik returned empty or invalid token response");
+                _logger.LogWarning("ROPC returned empty token response");
                 return null;
             }
 
@@ -73,7 +199,7 @@ public class AuthentikOAuthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error communicating with Authentik token endpoint");
+            _logger.LogError(ex, "Error communicating with Authentik ROPC endpoint");
             return null;
         }
     }
@@ -214,6 +340,8 @@ public class AuthentikOAuthService
 
     /// <summary>
     /// Refreshes an access token using a refresh token via Authentik's OAuth2 endpoint.
+    /// This is only used if the stored refresh token is an Authentik token (ROPC flow).
+    /// For local refresh tokens, use the local refresh logic in AuthEndpoints.
     /// </summary>
     public async Task<AuthentikTokenResult?> RefreshTokenAsync(string refreshToken)
     {
@@ -237,7 +365,7 @@ public class AuthentikOAuthService
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Authentik refresh token request failed with status {Status}: {Error}",
+                _logger.LogWarning("Authentik refresh failed with {Status}: {Error}",
                     response.StatusCode, errorContent);
                 return null;
             }
@@ -246,10 +374,7 @@ public class AuthentikOAuthService
             var tokenResponse = JsonSerializer.Deserialize<AuthentikRawTokenResponse>(content);
 
             if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
-            {
-                _logger.LogWarning("Authentik returned empty or invalid refresh token response");
                 return null;
-            }
 
             return new AuthentikTokenResult(
                 AccessToken: tokenResponse.AccessToken,
