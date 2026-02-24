@@ -30,6 +30,8 @@ public class AuthentikOAuthService
         var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
         var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
 
+        _logger.LogInformation("Authentik token endpoint: {Endpoint}, client_id: {ClientId}", tokenEndpoint, clientId);
+
         var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["grant_type"] = "password",
