@@ -66,7 +66,7 @@ services:
       Jwt__Audience: "MovieChecker"
       Cors__Origins__0: "http://localhost:3000"
       Authentik__BaseUrl: "${AUTHENTIK_BASE_URL:-http://host.docker.internal:9000}"
-      Authentik__TokenEndpoint: "${AUTHENTIK_TOKEN_ENDPOINT:-http://host.docker.internal:9000/application/o/token/}"
+      Authentik__TokenEndpoint: "${AUTHENTIK_TOKEN_ENDPOINT:-http://host.docker.internal:9000/application/o/moviechecker/token/}"
       Authentik__ClientId: "${AUTHENTIK_CLIENT_ID:-moviechecker}"
       Authentik__ClientSecret: "${AUTHENTIK_CLIENT_SECRET:-moviechecker-secret-change-me}"
       Authentik__ApiToken: "${AUTHENTIK_API_TOKEN:-api-token-change-me}"

@@ -26,7 +26,7 @@ public class AuthentikOAuthService
     public async Task<AuthentikTokenResult?> AuthenticateAsync(string username, string password)
     {
         var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
-            ?? "http://localhost:9000/application/o/token/";
+            ?? "http://localhost:9000/application/o/moviechecker/token/";
         var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
         var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
 
@@ -216,7 +216,7 @@ public class AuthentikOAuthService
     public async Task<AuthentikTokenResult?> RefreshTokenAsync(string refreshToken)
     {
         var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
-            ?? "http://localhost:9000/application/o/token/";
+            ?? "http://localhost:9000/application/o/moviechecker/token/";
         var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
         var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
 
@@ -270,7 +270,7 @@ public class AuthentikOAuthService
     public async Task<bool> RevokeTokenAsync(string token)
     {
         var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
-            ?? "http://localhost:9000/application/o/token/";
+            ?? "http://localhost:9000/application/o/moviechecker/token/";
         // Derive revoke endpoint from token endpoint by replacing the last path segment
         var baseUri = new Uri(tokenEndpoint);
         var revokeEndpoint = new Uri(baseUri, "../revoke/").ToString();
