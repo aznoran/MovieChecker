@@ -68,8 +68,8 @@ services:
       Cors__Origins__1: http://xui123qweqwe.org
       Authentik__BaseUrl: ${AUTHENTIK_BASE_URL:-http://authentik-server:9000}
       Authentik__TokenEndpoint: ${AUTHENTIK_TOKEN_ENDPOINT:-http://authentik-server:9000/application/o/token/}
-      Authentik__ClientId: ${AUTHENTIK_CLIENT_ID:-moviechecker-client}
-      Authentik__ClientSecret: ${AUTHENTIK_CLIENT_SECRET:-moviechecker-client-secret-change-me}
+      Authentik__ClientId: ${AUTHENTIK_CLIENT_ID:-moviechecker}
+      Authentik__ClientSecret: ${AUTHENTIK_CLIENT_SECRET:-moviechecker-secret-change-me}
       Authentik__ApiToken: ${AUTHENTIK_API_TOKEN:-api-token-change-me}
       Authentik__Issuer: ${AUTHENTIK_ISSUER:-https://xui123qweqwe.org/application/o/moviechecker/}
     depends_on:

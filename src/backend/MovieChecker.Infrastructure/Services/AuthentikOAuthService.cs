@@ -27,8 +27,8 @@ public class AuthentikOAuthService
     {
         var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
             ?? "http://localhost:9000/application/o/token/";
-        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker-client";
-        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-client-secret-change-me";
+        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
+        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
 
         var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -95,7 +95,7 @@ public class AuthentikOAuthService
         {
             username,
             name = displayName,
-            email = email ?? $"{username}@moviechecker.local",
+            email = email ?? $"{username}@example.com",
             is_active = true
         });
 
@@ -217,8 +217,8 @@ public class AuthentikOAuthService
     {
         var tokenEndpoint = _configuration["Authentik:TokenEndpoint"]
             ?? "http://localhost:9000/application/o/token/";
-        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker-client";
-        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-client-secret-change-me";
+        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
+        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
 
         var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -274,8 +274,8 @@ public class AuthentikOAuthService
         // Derive revoke endpoint from token endpoint by replacing the last path segment
         var baseUri = new Uri(tokenEndpoint);
         var revokeEndpoint = new Uri(baseUri, "../revoke/").ToString();
-        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker-client";
-        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-client-secret-change-me";
+        var clientId = _configuration["Authentik:ClientId"] ?? "moviechecker";
+        var clientSecret = _configuration["Authentik:ClientSecret"] ?? "moviechecker-secret-change-me";
 
         var requestBody = new FormUrlEncodedContent(new Dictionary<string, string>
         {

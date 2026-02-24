@@ -31,7 +31,7 @@ services:
       - authentik_network
 
   authentik-server:
-    image: ghcr.io/goauthentik/server:2024.12
+    image: ghcr.io/goauthentik/server:2025.12.4
     restart: unless-stopped
     command: server
     environment:
@@ -44,8 +44,9 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_PG_USER}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_PG_PASSWORD}
       AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_BLUEPRINTS_DIR: /blueprints
     volumes:
-      - ./blueprints:/blueprints/custom:ro
+      - ./blueprints:/blueprints:ro
       - authentik_media:/media
       - authentik_templates:/templates
     ports:
@@ -60,7 +61,7 @@ services:
       - authentik_network
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2024.12
+    image: ghcr.io/goauthentik/server:2025.12.4
     restart: unless-stopped
     command: worker
     environment:
@@ -73,8 +74,9 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_PG_USER}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_PG_PASSWORD}
       AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_BLUEPRINTS_DIR: /blueprints
     volumes:
-      - ./blueprints:/blueprints/custom:ro
+      - ./blueprints:/blueprints:ro
       - authentik_media:/media
       - authentik_templates:/templates
     depends_on:

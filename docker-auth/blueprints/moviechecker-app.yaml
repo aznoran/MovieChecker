@@ -1,44 +1,43 @@
 version: 1
 metadata:
-  name: MovieChecker OAuth2 Application
+  name: MovieChecker Setup
   labels:
-    blueprints.goauthentik.io/description: "OAuth2 application for MovieChecker with Resource Owner Password flow"
+    blueprints.goauthentik.io/instantiate: "true"
 entries:
-  # ──────────────────────────────────────────────
-  # 1. OAuth2 Provider (Resource Owner Password flow)
-  #    References built-in scope mappings by scope_name — do NOT redefine them.
-  # ──────────────────────────────────────────────
+  # OAuth2 Provider for MovieChecker with Password Flow
   - model: authentik_providers_oauth2.oauth2provider
     id: moviechecker-provider
+    state: present
     identifiers:
-      name: MovieChecker OAuth2 Provider
+      name: MovieChecker Provider
     attrs:
-      name: MovieChecker OAuth2 Provider
+      name: MovieChecker Provider
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
-      client_id: moviechecker-client
-      client_secret: moviechecker-client-secret-change-me
+      client_id: moviechecker
+      client_secret: moviechecker-secret-change-me
+      access_code_validity: minutes=1
       include_claims_in_id_token: true
-      access_token_validity: hours=1
+      access_token_validity: minutes=60
       refresh_token_validity: days=30
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
       property_mappings:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
-        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
-      redirect_uris: |-
-        http://localhost:3000/callback
-        http://localhost:5000/callback
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
+      redirect_uris: []
+      sub_mode: hashed_user_id
+      issuer_mode: per_provider
 
-  # ──────────────────────────────────────────────
-  # 2. Application
-  # ──────────────────────────────────────────────
+  # Application linked to the provider
   - model: authentik_core.application
     id: moviechecker-app
+    state: present
     identifiers:
       slug: moviechecker
     attrs:
       name: MovieChecker
-      slug: moviechecker
       provider: !KeyOf moviechecker-provider
+      policy_engine_mode: any
       meta_launch_url: "http://localhost:3000"
-      open_in_new_tab: false
