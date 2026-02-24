@@ -83,7 +83,7 @@ public class AuthentikOAuthService
             _logger.LogInformation("Flow step 2 component: {Component}, type: {Type}", component2, type2);
 
             // Check for redirect (auto-login) or error
-            if (type2 == "redirect")
+            if (type2 == "redirect" || component2 == "xak-flow-redirect")
             {
                 // Flow completed after identification (unlikely but handle it)
                 return true;
@@ -118,11 +118,13 @@ public class AuthentikOAuthService
 
             var result = JsonSerializer.Deserialize<JsonElement>(await response3.Content.ReadAsStringAsync());
             var typeResult = result.TryGetProperty("type", out var tr) ? tr.GetString() : null;
-            _logger.LogInformation("Flow step 3 type: {Type}", typeResult);
+            var componentResult = result.TryGetProperty("component", out var cr) ? cr.GetString() : null;
+            _logger.LogInformation("Flow step 3 type: {Type}, component: {Component}", typeResult, componentResult);
 
-            if (typeResult == "redirect")
+            // Authentik signals success via either type=redirect or component=xak-flow-redirect
+            if (typeResult == "redirect" || componentResult == "xak-flow-redirect")
             {
-                // Authentication succeeded
+                _logger.LogInformation("Flow authentication succeeded for user");
                 return true;
             }
 
