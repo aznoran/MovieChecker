@@ -214,6 +214,7 @@ public static class AuthEndpoints
     private static async Task<IResult> Refresh(
         RefreshTokenRequest request,
         TokenService tokenService,
+        AuthentikOAuthService authentikService,
         AppDbContext db,
         IConnectionMultiplexer redis)
     {
@@ -243,6 +244,15 @@ public static class AuthEndpoints
         if (user == null)
         {
             return Results.Json(new ErrorResponse("User not found"), statusCode: 401);
+        }
+
+        // Check if user is still active in Authentik before issuing new tokens
+        var isActive = await authentikService.IsUserActiveAsync(user.Username);
+        if (isActive == false)
+        {
+            // User was deactivated — clear their refresh token and deny
+            await ClearRefreshToken(redisDb, userId);
+            return Results.Json(new ErrorResponse("User account is deactivated"), statusCode: 401);
         }
 
         // Generate new tokens and rotate refresh token

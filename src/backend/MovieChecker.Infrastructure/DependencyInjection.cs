@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
@@ -63,7 +64,7 @@ public static class DependencyInjection
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
                 };
                 
-                // Validate that the user in the JWT actually exists in the database
+                // Validate that the user in the JWT actually exists and is active
                 options.Events = new JwtBearerEvents
                 {
                     OnTokenValidated = async context =>
@@ -93,6 +94,43 @@ public static class DependencyInjection
                         if (!userExists)
                         {
                             context.Fail("User no longer exists");
+                            return;
+                        }
+
+                        // Check if user is still active in Authentik (cached for 30s)
+                        var username = context.Principal?.FindFirst(ClaimTypes.Name)?.Value;
+                        if (!string.IsNullOrEmpty(username))
+                        {
+                            var activeCacheKey = $"user_active_{username}";
+                            var isActive = await cache.GetOrCreateAsync(
+                                activeCacheKey,
+                                async cancel =>
+                                {
+                                    using var scope = scopeFactory.CreateScope();
+                                    var authentikService = scope.ServiceProvider.GetRequiredService<AuthentikOAuthService>();
+                                    var result = await authentikService.IsUserActiveAsync(username);
+                                    if (result == null)
+                                    {
+                                        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
+                                            .CreateLogger("AuthValidation");
+                                        logger.LogWarning(
+                                            "Authentik active check failed for user {Username}, assuming active (fail-open)",
+                                            username);
+                                    }
+                                    // If the check fails (null), assume active to avoid locking everyone out
+                                    return result ?? true;
+                                },
+                                new HybridCacheEntryOptions
+                                {
+                                    Expiration = TimeSpan.FromSeconds(30),
+                                    LocalCacheExpiration = TimeSpan.FromSeconds(30)
+                                },
+                                cancellationToken: context.HttpContext.RequestAborted);
+
+                            if (!isActive)
+                            {
+                                context.Fail("User account is deactivated");
+                            }
                         }
                     }
                 };

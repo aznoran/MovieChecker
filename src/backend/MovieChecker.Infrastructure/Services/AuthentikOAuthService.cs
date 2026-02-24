@@ -341,6 +341,57 @@ public class AuthentikOAuthService
     }
 
     /// <summary>
+    /// Checks if a user is active in Authentik by querying the Admin API.
+    /// Returns true if active, false if inactive or not found, null if the check failed.
+    /// </summary>
+    public async Task<bool?> IsUserActiveAsync(string username)
+    {
+        var baseUrl = _configuration["Authentik:BaseUrl"] ?? "http://localhost:9000";
+        var apiToken = _configuration["Authentik:ApiToken"];
+
+        if (string.IsNullOrEmpty(apiToken))
+        {
+            _logger.LogWarning("Authentik API token is not configured, skipping active check");
+            return null;
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Get,
+            $"{baseUrl}/api/v3/core/users/?username={Uri.EscapeDataString(username)}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to check user active status in Authentik: {Status}",
+                    response.StatusCode);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<JsonElement>(content);
+            var results = result.GetProperty("results");
+
+            if (results.GetArrayLength() == 0)
+            {
+                _logger.LogWarning("User {Username} not found in Authentik", username);
+                return false;
+            }
+
+            var user = results[0];
+            var isActive = user.GetProperty("is_active").GetBoolean();
+            return isActive;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking user active status in Authentik");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Refreshes an access token using a refresh token via Authentik's OAuth2 endpoint.
     /// This is only used if the stored refresh token is an Authentik token (ROPC flow).
     /// For local refresh tokens, use the local refresh logic in AuthEndpoints.
