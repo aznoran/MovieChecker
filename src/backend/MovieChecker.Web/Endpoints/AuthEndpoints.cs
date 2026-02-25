@@ -61,17 +61,9 @@ public static class AuthEndpoints
             tokenRequest["code_verifier"] = request.CodeVerifier;
         }
 
-        HttpResponseMessage tokenResponse;
-        try
-        {
-            tokenResponse = await httpClient.PostAsync(
-                tokenEndpoint,
-                new FormUrlEncodedContent(tokenRequest));
-        }
-        catch (HttpRequestException ex)
-        {
-            return Results.BadRequest(new ErrorResponse($"Cannot reach Authentik token endpoint: {ex.Message}"));
-        }
+        var tokenResponse = await httpClient.PostAsync(
+            tokenEndpoint,
+            new FormUrlEncodedContent(tokenRequest));
 
         if (!tokenResponse.IsSuccessStatusCode)
         {
@@ -82,11 +74,7 @@ public static class AuthEndpoints
         var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
         var tokenData = JsonSerializer.Deserialize<JsonElement>(tokenJson);
 
-        if (!tokenData.TryGetProperty("access_token", out var accessTokenProp))
-        {
-            return Results.BadRequest(new ErrorResponse("No access_token field in token response"));
-        }
-        var accessToken = accessTokenProp.GetString();
+        var accessToken = tokenData.GetProperty("access_token").GetString();
 
         if (string.IsNullOrEmpty(accessToken))
         {
@@ -104,16 +92,7 @@ public static class AuthEndpoints
         userInfoRequest.Headers.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
-        HttpResponseMessage userInfoResponse;
-        try
-        {
-            userInfoResponse = await httpClient.SendAsync(userInfoRequest);
-        }
-        catch (HttpRequestException ex)
-        {
-            return Results.BadRequest(new ErrorResponse($"Cannot reach Authentik userinfo endpoint: {ex.Message}"));
-        }
-
+        var userInfoResponse = await httpClient.SendAsync(userInfoRequest);
         if (!userInfoResponse.IsSuccessStatusCode)
         {
             return Results.BadRequest(new ErrorResponse("Failed to fetch user info from Authentik"));
