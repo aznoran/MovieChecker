@@ -11,14 +11,14 @@ import {
 import { useLocale } from "@/context/locale-context";
 
 interface GroupMember {
-    userId?: number;
+    userId?: string;
     displayName?: string | null;
 }
 
 interface MemberSelectProps {
     members: GroupMember[];
-    selectedMembers: number[];
-    onToggleMember: (userId: number) => void;
+    selectedMembers: string[];
+    onToggleMember: (userId: string) => void;
     disabled?: boolean;
 }
 

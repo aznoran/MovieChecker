@@ -62,8 +62,8 @@ public static class WatchEntryEndpoints
             .WithDescription("Adds or updates a rating for a watch entry");
     }
 
-    private static int GetUserId(ClaimsPrincipal user) =>
-        int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+    private static Guid GetUserId(ClaimsPrincipal user) =>
+        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
 
 
     private static WatchEntryDto ToDto(WatchEntry w) => new(
@@ -611,4 +611,4 @@ public static class WatchEntryEndpoints
     }
 }
 
-public record RateRequest(int Rating, int? TargetUserId = null);
+public record RateRequest(int Rating, Guid? TargetUserId = null);

@@ -2,7 +2,7 @@
 
 import {useQuery} from "@tanstack/react-query";
 import {useRouter} from "next/navigation";
-import {useAuth} from "@/context/auth-context";
+import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getStats} from "@/lib/api";
@@ -37,7 +37,7 @@ import {StarRating} from "./_components/star-rating";
 export const dynamic = "force-dynamic";
 
 export default function StatsPage() {
-    const {isAuthenticated, isLoading: authLoading} = useAuth();
+    const { data: session, status: authStatus } = useSession();
     const {locale, t} = useLocale();
     const {activeGroupId, activeGroup} = useGroup();
     const router = useRouter();
@@ -46,7 +46,7 @@ export default function StatsPage() {
     const {data: stats, isLoading, error, refetch} = useQuery({
         queryKey: ["stats", activeGroupId],
         queryFn: () => getStats(activeGroupId),
-        enabled: isAuthenticated,
+        enabled: !!session,
         retry: false,
     });
 
@@ -57,7 +57,7 @@ export default function StatsPage() {
         }
     }, [error, t]);
 
-    if (authLoading) {
+    if (authStatus === "loading") {
         return (
             <div className="flex min-h-screen items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
@@ -65,7 +65,7 @@ export default function StatsPage() {
         );
     }
 
-    if (!isAuthenticated) {
+    if (!session) {
         router.push("/login");
         return null;
     }

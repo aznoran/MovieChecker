@@ -54,7 +54,7 @@ public static class GroupEndpoints
             .WithSummary("Leave a group")
             .WithDescription("Leaves a group");
 
-        group.MapDelete("/{id:int}/members/{userId:int}", DeleteUser)
+        group.MapDelete("/{id:int}/members/{userId:guid}", DeleteUser)
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
@@ -68,7 +68,7 @@ public static class GroupEndpoints
             .WithSummary("Transfer group ownership")
             .WithDescription("Transfers group ownership to another member (Owner only)");
 
-        group.MapPut("/{id:int}/members/{userId:int}/role", UpdateMemberRole)
+        group.MapPut("/{id:int}/members/{userId:guid}/role", UpdateMemberRole)
             .Produces<GroupDto>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
@@ -95,14 +95,14 @@ public static class GroupEndpoints
             .WithSummary("Get my permissions for a group")
             .WithDescription("Returns the effective permissions for the current user in a specific group");
 
-        group.MapGet("/{id:int}/members/{userId:int}/permissions", GetMemberPermissions)
+        group.MapGet("/{id:int}/members/{userId:guid}/permissions", GetMemberPermissions)
             .Produces<MemberPermissionDetailResponse>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
             .WithSummary("Get member permissions")
             .WithDescription("Returns detailed permission info for a group member");
 
-        group.MapPut("/{id:int}/members/{userId:int}/permissions", UpdateMemberPermissions)
+        group.MapPut("/{id:int}/members/{userId:guid}/permissions", UpdateMemberPermissions)
             .Produces<MemberPermissionDetailResponse>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
@@ -129,8 +129,8 @@ public static class GroupEndpoints
             .WithDescription("Revokes an invite link (Owner/Admin only)");
     }
 
-    private static int GetUserId(ClaimsPrincipal user) =>
-        int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+    private static Guid GetUserId(ClaimsPrincipal user) =>
+        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
 
     private static string InviteLinkCacheKey(string token) => $"invite_link:{token}";
 
@@ -457,7 +457,7 @@ public static class GroupEndpoints
     }
 
     private static async Task<IResult> DeleteUser(
-        int id, int userId, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
+        int id, Guid userId, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var currentUserId = GetUserId(user);
 
@@ -567,7 +567,7 @@ public static class GroupEndpoints
 
     private static async Task<IResult> UpdateMemberRole(
         int id,
-        int userId,
+        Guid userId,
         UpdateMemberRoleRequest request,
         ClaimsPrincipal user,
         AppDbContext db,
@@ -835,7 +835,7 @@ public static class GroupEndpoints
 
     private static async Task<IResult> GetMemberPermissions(
         int id,
-        int userId,
+        Guid userId,
         ClaimsPrincipal user,
         AppDbContext db)
     {
@@ -870,7 +870,7 @@ public static class GroupEndpoints
 
     private static async Task<IResult> UpdateMemberPermissions(
         int id,
-        int userId,
+        Guid userId,
         UpdateMemberPermissionsRequest request,
         ClaimsPrincipal user,
         AppDbContext db)

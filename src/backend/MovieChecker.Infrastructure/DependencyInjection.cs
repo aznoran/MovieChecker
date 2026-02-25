@@ -1,12 +1,10 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using MovieChecker.Domain.Models.Entities;
-using MovieChecker.Domain.Models.Enums;
 using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Infrastructure.Services;
@@ -29,7 +27,7 @@ public static class DependencyInjection
         services.AddSingleton<IConnectionMultiplexer>(sp =>
             ConnectionMultiplexer.Connect(redisConnection!));
         services.AddScoped<OtpService>();
-        
+
         // Configure HybridCache with Redis as the distributed cache backing store
         services.AddStackExchangeRedisCache(options =>
         {
@@ -45,13 +43,11 @@ public static class DependencyInjection
             };
         });
 
-        // HttpClient for Authentik token exchange
-        services.AddHttpClient("Authentik");
-
         // Authentik OIDC JWT Authentication
         var authentikAuthority = configuration["Authentik:Authority"];
         var authentikMetadataUrl = configuration["Authentik:MetadataUrl"];
-        var authentikClientId = configuration["Authentik:ClientId"] ?? "moviechecker";
+        var authentikClientId = configuration["Authentik:ClientId"];
+        var authentikIssuer = configuration["Authentik:Issuer"];
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -70,56 +66,42 @@ public static class DependencyInjection
                     ValidateIssuer = true,
                     ValidateAudience = true,
                     ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
                     ValidAudience = authentikClientId,
-                    NameClaimType = "preferred_username",
+                    ValidIssuer = authentikIssuer,
                 };
-                
+
                 options.Events = new JwtBearerEvents
                 {
                     OnTokenValidated = async context =>
                     {
-                        var authentikId = context.Principal?.FindFirst("sub")?.Value;
-                        if (string.IsNullOrEmpty(authentikId))
+                        var sub = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                        if (string.IsNullOrEmpty(sub) || !Guid.TryParse(sub, out var userId))
                         {
-                            context.Fail("Missing sub claim in token");
-                            return;
-                        }
-                        
-                        var cache = context.HttpContext.RequestServices.GetRequiredService<HybridCache>();
-                        var scopeFactory = context.HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
-                        var cacheKey = $"authentik_user_{authentikId}";
-                        
-                        var localUserId = await cache.GetOrCreateAsync(
-                            cacheKey,
-                            async cancel =>
-                            {
-                                using var scope = scopeFactory.CreateScope();
-                                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                                var user = await dbContext.Users
-                                    .FirstOrDefaultAsync(u => u.AuthentikId == authentikId, cancel);
-                                return user?.Id ?? 0;
-                            },
-                            cancellationToken: context.HttpContext.RequestAborted);
-                        
-                        if (localUserId == 0)
-                        {
-                            context.Fail("User not provisioned. Call /api/auth/callback first.");
+                            context.Fail("Missing or invalid sub claim");
                             return;
                         }
 
-                        // Add local integer user ID as NameIdentifier claim so existing endpoints work unchanged
-                        var identity = context.Principal?.Identity as ClaimsIdentity;
-                        if (identity != null)
+                        // Verify user is provisioned — no creation here, just lookup
+                        var cache = context.HttpContext.RequestServices.GetRequiredService<HybridCache>();
+                        var scopeFactory = context.HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
+                        var exists = await cache.GetOrCreateAsync($"user_exists_{sub}", async cancel =>
                         {
-                            // Remove any existing NameIdentifier claims
-                            var existingClaims = identity.FindAll(ClaimTypes.NameIdentifier).ToList();
-                            foreach (var claim in existingClaims)
-                            {
-                                identity.RemoveClaim(claim);
-                            }
-                            identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, localUserId.ToString()));
+                            using var scope = scopeFactory.CreateScope();
+                            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                            return await db.Users.AnyAsync(u => u.Id == userId, cancel);
+                        });
+
+                        if (!exists)
+                        {
+                            context.Fail("User not provisioned. Call POST /api/auth/provision first.");
+                            return;
                         }
+
+                        // Add Authentik group memberships as ClaimTypes.Role for [Authorize(Roles = ...)]
+                        var groups = context.Principal!.FindAll("groups").Select(c => c.Value).ToList();
+                        var identity = context.Principal.Identity as ClaimsIdentity;
+                        foreach (var group in groups)
+                            identity?.AddClaim(new Claim(ClaimTypes.Role, group));
                     }
                 };
             });

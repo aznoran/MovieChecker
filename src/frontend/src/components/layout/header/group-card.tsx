@@ -2,7 +2,7 @@
 
 import {useState} from "react";
 import {useQuery} from "@tanstack/react-query";
-import {useAuth} from "@/context/auth-context";
+import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {getMyPermissions} from "@/lib/api/client";
@@ -51,16 +51,17 @@ import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 
 interface GroupCardProps {
     group: GroupDto;
-    onChangeRole: (groupId: number, userId: number, currentRole: GroupRole) => void;
+    onChangeRole: (groupId: number, userId: string, currentRole: GroupRole) => void;
     setError: (error: string) => void;
 }
 
 export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
-    const {user} = useAuth();
+    const { data: session } = useSession();
+    const userId = session?.user?.id;
     const {t} = useLocale();
     const {leaveGroup, kickMember, transferOwnership, generateOtp, updateGroupSettings} = useGroup();
 
-    const isOwner = user?.id === g.createdByUserId;
+    const isOwner = userId === g.createdByUserId;
     const {data: permissions} = useQuery({
         queryKey: ["permissions", g.id],
         queryFn: () => getMyPermissions(g.id!),
@@ -79,7 +80,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
     } | null>(null);
     const [copied, setCopied] = useState(false);
     const [permissionEditorTarget, setPermissionEditorTarget] = useState<{
-        userId: number;
+        userId: string;
         displayName: string;
         role: GroupRole;
     } | null>(null);
@@ -443,7 +444,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                 <div className="space-y-1.5">
                     {(g.members ?? []).map((m) => {
                         const isMemberOwner = m.userId === g.createdByUserId;
-                        const isSelf = m.userId === user?.id;
+                        const isSelf = m.userId === userId;
 
                         let roleIcon = <User className="h-3.5 w-3.5 text-muted-foreground shrink-0"/>;
                         let roleLabel = t("roleMember");

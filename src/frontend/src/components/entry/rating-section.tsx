@@ -12,21 +12,21 @@ import {
 import { useLocale } from "@/context/locale-context";
 
 interface GroupMember {
-    userId?: number;
+    userId?: string;
     displayName?: string | null;
 }
 
 interface RatingSectionProps {
     isGroupMode: boolean;
     members: GroupMember[];
-    selectedMembers: number[];
-    memberRatings: Record<number, number>;
-    onMemberRatingChange: (uid: number, value: number) => void;
+    selectedMembers: string[];
+    memberRatings: Record<string, number>;
+    onMemberRatingChange: (uid: string, value: number) => void;
     myRating: number;
     onMyRatingChange: (value: number) => void;
     canRateOthers: boolean;
     canRateSelf: boolean;
-    currentUserId?: number;
+    currentUserId?: string;
 }
 
 export function RatingSection({

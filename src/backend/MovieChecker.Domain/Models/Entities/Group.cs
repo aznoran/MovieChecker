@@ -7,7 +7,7 @@ public class Group
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? InviteCode { get; set; }
-    public int CreatedByUserId { get; set; }
+    public Guid CreatedByUserId { get; set; }
     public bool IsPrivate { get; set; } = false;
     public GroupType GroupType { get; set; } = GroupType.Public;
     public GroupRole DefaultRole { get; set; } = GroupRole.Member;

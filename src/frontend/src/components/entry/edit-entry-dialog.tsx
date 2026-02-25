@@ -7,7 +7,7 @@ import {zodResolver} from "@hookform/resolvers/zod";
 import {z} from "zod";
 import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
-import {useAuth} from "@/context/auth-context";
+import {useSession} from "next-auth/react";
 import {useGroup} from "@/context/group-context";
 import {usePermissions} from "@/context/permissions-context";
 import {
@@ -100,7 +100,8 @@ interface Props {
 
 export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     const {locale, t} = useLocale();
-    const {user} = useAuth();
+    const { data: session } = useSession();
+    const user = session?.user;
     const {activeGroup} = useGroup();
     const {permissions, isLoading: isPermissionsLoading} = usePermissions();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
@@ -114,12 +115,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
     // Non-form state
     const [myRating, setMyRating] = useState((myExistingRating?.rating ?? 0) / 2);
-    const [selectedMembers, setSelectedMembers] = useState<number[]>(
+    const [selectedMembers, setSelectedMembers] = useState<string[]>(
         () => entry.ratings?.map((r) => r.userId!) ?? []
     );
-    const [memberRatings, setMemberRatings] = useState<Record<number, number>>(
+    const [memberRatings, setMemberRatings] = useState<Record<string, number>>(
         () => {
-            const map: Record<number, number> = {};
+            const map: Record<string, number> = {};
             entry.ratings?.forEach((r) => {
                 map[r.userId!] = (r.rating ?? 0) / 2;
             });
@@ -165,7 +166,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             });
             setMyRating((myRat?.rating ?? 0) / 2);
             setSelectedMembers(entry.ratings?.map((r) => r.userId!) ?? []);
-            const map: Record<number, number> = {};
+            const map: Record<string, number> = {};
             entry.ratings?.forEach((r) => {
                 map[r.userId!] = (r.rating ?? 0) / 2;
             });
@@ -188,8 +189,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         if (values.status !== entry.status) return true;
         if ((values.comment || "") !== (entry.comment || "")) return true;
         if (isGroupMode) {
-            const origViewers = (entry.ratings?.map((r) => r.userId!) ?? []).slice().sort((a, b) => a - b);
-            const curViewers = selectedMembers.slice().sort((a, b) => a - b);
+            const origViewers = (entry.ratings?.map((r) => r.userId!) ?? []).slice().sort();
+            const curViewers = selectedMembers.slice().sort();
             if (origViewers.length !== curViewers.length || origViewers.some((v, i) => v !== curViewers[i])) return true;
         }
         if (values.status === WatchStatus.Watching &&
@@ -209,7 +210,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
     const hasRatingsChanged = useCallback((): boolean => {
         if (isGroupMode) {
-            const origMap: Record<number, number> = {};
+            const origMap: Record<string, number> = {};
             entry.ratings?.forEach((r) => {
                 origMap[r.userId!] = r.rating ?? 0;
             });
@@ -239,7 +240,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if (isRateOnlyMode) {
                 if (ratingsChanged && user?.id) {
                     if (isGroupMode && canRateOthers) {
-                        const origMap: Record<number, number> = {};
+                        const origMap: Record<string, number> = {};
                         entry.ratings?.forEach((r) => {
                             origMap[r.userId!] = r.rating ?? 0;
                         });
@@ -292,7 +293,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
             if (ratingsChanged && (values.status === WatchStatus.Completed || values.status === WatchStatus.Dropped) && user?.id) {
                 if (isGroupMode && canRateOthers) {
-                    const origMap: Record<number, number> = {};
+                    const origMap: Record<string, number> = {};
                     entry.ratings?.forEach((r) => {
                         origMap[r.userId!] = r.rating ?? 0;
                     });
@@ -322,7 +323,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         },
     });
 
-    const handleToggleMember = (userId: number) => {
+    const handleToggleMember = (userId: string) => {
         if (selectedMembers.includes(userId)) {
             setSelectedMembers((prev) => prev.filter((id) => id !== userId));
             setMemberRatings((prev) => {
@@ -335,11 +336,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         }
     };
 
-    const handleMemberRatingChange = (uid: number, value: number) => {
+    const handleMemberRatingChange = (uid: string, value: number) => {
         setMemberRatings((prev) => ({...prev, [uid]: value}));
     };
 
-    const handleRateOnlyMemberRatingChange = (uid: number, value: number) => {
+    const handleRateOnlyMemberRatingChange = (uid: string, value: number) => {
         setMemberRatings((prev) => ({...prev, [uid]: value}));
         if (!selectedMembers.includes(uid)) {
             setSelectedMembers((prev) => [...prev, uid]);
@@ -519,7 +520,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         </FieldLabel>
                                         <div className="flex items-center gap-4">
                                             <Rating
-                                                value={isGroupMode ? (memberRatings[user?.id ?? 0] || 0) : myRating}
+                                                value={isGroupMode ? (memberRatings[user?.id ?? ""] || 0) : myRating}
                                                 onValueChange={handleRateOnlySelfRatingChange}
                                                 max={10}
                                                 step={0.5}
@@ -530,7 +531,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                 ))}
                                             </Rating>
                                             <div className="opacity-50">
-                                                {isGroupMode ? (memberRatings[user?.id ?? 0] || 0) : myRating}/10
+                                                {isGroupMode ? (memberRatings[user?.id ?? ""] || 0) : myRating}/10
                                             </div>
                                         </div>
                                     </Field>

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/context/auth-context";
+import { useSession } from "next-auth/react";
 import {
     getMyGroups,
     createGroup as apiCreateGroup,
@@ -28,9 +28,9 @@ interface GroupContextValue {
     createGroup: (name: string, isPrivate?: boolean, defaultRole?: GroupRole) => Promise<GroupDto>;
     joinGroup: (code: string, otp?: string, inviteLinkToken?: string) => Promise<GroupDto>;
     leaveGroup: (id: number) => Promise<void>;
-    kickMember: (groupId: number, userId: number) => Promise<void>;
-    transferOwnership: (groupId: number, newOwnerId: number) => Promise<void>;
-    updateMemberRole: (groupId: number, userId: number, role: GroupRole) => Promise<void>;
+    kickMember: (groupId: number, userId: string) => Promise<void>;
+    transferOwnership: (groupId: number, newOwnerId: string) => Promise<void>;
+    updateMemberRole: (groupId: number, userId: string, role: GroupRole) => Promise<void>;
     generateOtp: (groupId: number) => Promise<{ code: string; expiresAt: string }>;
     updateGroupSettings: (groupId: number, settings: { name?: string; isPrivate?: boolean; defaultRole?: GroupRole }) => Promise<GroupDto>;
     isLoading: boolean;
@@ -39,7 +39,7 @@ interface GroupContextValue {
 const GroupContext = createContext<GroupContextValue | null>(null);
 
 export function GroupProvider({children}: { children: React.ReactNode }) {
-    const {isAuthenticated} = useAuth();
+    const { data: session, status } = useSession();
     const queryClient = useQueryClient();
     const {t} = useLocale();
 
@@ -52,7 +52,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     const {data: groups = [], isLoading} = useQuery({
         queryKey: ["groups"],
         queryFn: getMyGroups,
-        enabled: isAuthenticated,
+        enabled: !!session,
     });
 
     const setActiveGroupId = useCallback((id: number | undefined) => {
@@ -70,31 +70,31 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
         queryClient.invalidateQueries({queryKey: ["permissions"]});
     }, [queryClient]);
 
-    // Track previous auth state to detect actual logout (not initial false state)
+    // Track previous auth state to detect actual logout (not initial loading state)
     const wasAuthenticatedRef = useRef(false);
 
     // Reset on logout: clear active group and all cached query data
     useEffect(() => {
-        if (isAuthenticated) {
+        if (session) {
             wasAuthenticatedRef.current = true;
-        } else if (wasAuthenticatedRef.current) {
-            // Only clear when transitioning from authenticated to not authenticated (actual logout)
+        } else if (status === "unauthenticated" && wasAuthenticatedRef.current) {
+            // Only clear when transitioning from authenticated to unauthenticated (actual logout)
             wasAuthenticatedRef.current = false;
             setActiveGroupId(undefined);
             queryClient.clear();
         }
-    }, [isAuthenticated, setActiveGroupId, queryClient]);
+    }, [session, status, setActiveGroupId, queryClient]);
 
     const personalGroup = useMemo(() => groups.find((g) => g.groupType === GroupType.Personal), [groups]);
 
     // Derive activeGroupId: use raw value if valid, otherwise fall back to personal group
     const activeGroupId = useMemo(() => {
-        if (!isAuthenticated || isLoading) return rawActiveGroupId;
+        if (!session || isLoading) return rawActiveGroupId;
         if (rawActiveGroupId !== undefined && groups.find((g) => g.id === rawActiveGroupId)) {
             return rawActiveGroupId;
         }
         return personalGroup?.id;
-    }, [rawActiveGroupId, isAuthenticated, isLoading, groups, personalGroup]);
+    }, [rawActiveGroupId, session, isLoading, groups, personalGroup]);
 
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 
@@ -137,7 +137,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     });
 
     const kickMutation = useMutation({
-        mutationFn: ({groupId, userId}: { groupId: number; userId: number }) =>
+        mutationFn: ({groupId, userId}: { groupId: number; userId: string }) =>
             apiKickMember(groupId, userId),
         onSuccess: () => {
             toast.success(t("kickSuccess"), { position: "top-center" })
@@ -149,7 +149,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     });
 
     const transferMutation = useMutation({
-        mutationFn: ({groupId, newOwnerId}: { groupId: number; newOwnerId: number }) =>
+        mutationFn: ({groupId, newOwnerId}: { groupId: number; newOwnerId: string }) =>
             apiTransferOwnership(groupId, newOwnerId),
         onSuccess: () => {
             toast.success(t("transferSuccess"), { position: "top-center" })
@@ -161,7 +161,7 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
     });
 
     const updateRoleMutation = useMutation({
-        mutationFn: ({groupId, userId, role}: { groupId: number; userId: number; role: GroupRole }) =>
+        mutationFn: ({groupId, userId, role}: { groupId: number; userId: string; role: GroupRole }) =>
             apiUpdateMemberRole(groupId, userId, role),
         onSuccess: () => {
             toast.success(t("roleUpdateSuccess"), { position: "top-center" })

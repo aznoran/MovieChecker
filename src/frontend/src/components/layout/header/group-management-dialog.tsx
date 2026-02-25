@@ -28,10 +28,10 @@ export function GroupManagementDialog({open, onOpenChange}: GroupManagementDialo
     const {groups, updateMemberRole} = useGroup();
 
     const [error, setError] = useState("");
-    const [roleChangeDialog, setRoleChangeDialog] = useState<{ groupId: number; userId: number; currentRole: GroupRole } | null>(null);
+    const [roleChangeDialog, setRoleChangeDialog] = useState<{ groupId: number; userId: string; currentRole: GroupRole } | null>(null);
     const [selectedNewRole, setSelectedNewRole] = useState<GroupRole | null>(null);
 
-    const handleChangeRole = async (groupId: number, userId: number, currentRole: GroupRole) => {
+    const handleChangeRole = async (groupId: number, userId: string, currentRole: GroupRole) => {
         setRoleChangeDialog({ groupId, userId, currentRole });
         setSelectedNewRole(currentRole);
     };

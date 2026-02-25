@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/auth-context";
+import { useSession } from "next-auth/react";
 import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
 import { usePermissions } from "@/context/permissions-context";
@@ -152,7 +152,7 @@ function PosterImage({src, alt}: {src: string; alt?: string}) {
 export const dynamic = "force-dynamic";
 
 export default function HomePage() {
-    const {isAuthenticated, isLoading: authLoading, user} = useAuth();
+    const { data: session, status: authStatus } = useSession();
     const {locale, t} = useLocale();
     const {activeGroupId} = useGroup();
     const {permissions} = usePermissions();
@@ -165,7 +165,7 @@ export default function HomePage() {
     // Check if user can delete an entry based on permissions
     const canDeleteEntry = (entry: WatchEntryDto): boolean => {
         if (permissions.canDeleteAllEntries) return true;
-        if (permissions.canDeleteOwnEntries) return entry.userId === user?.id || false;
+        if (permissions.canDeleteOwnEntries) return entry.userId === session?.user?.id || false;
         return false;
     };
 
@@ -193,7 +193,7 @@ export default function HomePage() {
         queryKey: ["watchEntries", statusFilter, activeGroupId],
         queryFn: () =>
             getWatchEntries(statusFilter !== null ? statusFilter : undefined, activeGroupId),
-        enabled: isAuthenticated,
+        enabled: !!session,
         retry: false,
         placeholderData: keepPreviousData,
     });
@@ -217,7 +217,7 @@ export default function HomePage() {
         }
     }, [error, t]);
 
-    if (authLoading) {
+    if (authStatus === "loading") {
         return (
             <div className="flex min-h-screen items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
@@ -225,7 +225,7 @@ export default function HomePage() {
         );
     }
 
-    if (!isAuthenticated) {
+    if (!session) {
         // Check if user was recently logged in (within last 30 days)
         if (typeof window !== "undefined") {
             const RECENT_LOGIN_WINDOW_DAYS = 30;

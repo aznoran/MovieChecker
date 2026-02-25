@@ -3,7 +3,7 @@
 import {useState, useEffect, useCallback} from "react";
 import {useLocale} from "@/context/locale-context";
 import {createInviteLink, getInviteLinks, deleteInviteLink} from "@/lib/api/client";
-import type {InviteLinkDto} from "@/lib/api/client";
+import type {InviteLinkDto} from "@/lib/api/generated";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {
@@ -115,7 +115,7 @@ export function SharePopover({groupId, inviteCode, isPublicGroup = false, canMan
             setCreating(true);
             // Delete all existing links
             for (const link of links) {
-                await deleteInviteLink(groupId, link.id);
+                await deleteInviteLink(groupId, link.id!);
             }
             // Create a new permanent link
             await createInviteLink(groupId);
@@ -365,7 +365,7 @@ export function SharePopover({groupId, inviteCode, isPublicGroup = false, canMan
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="text-muted-foreground">
-                                                            {formatExpiry(link.expiresAt)}
+                                                            {formatExpiry(link.expiresAt ?? null)}
                                                         </span>
                                                         <span className="text-muted-foreground">
                                                             {link.useCount}{link.maxUses ? `/${link.maxUses}` : ""} {t("uses")}
@@ -394,7 +394,7 @@ export function SharePopover({groupId, inviteCode, isPublicGroup = false, canMan
                                                             <Trash2 className="h-3 w-3"/>
                                                         </Button>
                                                     }
-                                                    onConfirm={() => handleRevokeLink(link.id)}
+                                                    onConfirm={() => handleRevokeLink(link.id!)}
                                                     title={t("revokeLink")}
                                                     description={t("revokeLinkConfirm")}
                                                     confirmText={t("revokeLink")}

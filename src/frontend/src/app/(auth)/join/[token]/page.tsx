@@ -2,7 +2,7 @@
 
 import {useEffect, useState, useRef} from "react";
 import {useParams, useRouter} from "next/navigation";
-import {useAuth} from "@/context/auth-context";
+import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {joinGroup as apiJoinGroup} from "@/lib/api";
@@ -29,7 +29,7 @@ export default function JoinByTokenPage() {
     const params = useParams();
     const router = useRouter();
     const {t} = useLocale();
-    const {isAuthenticated} = useAuth();
+    const { data: session, status: authStatus } = useSession();
     const {setActiveGroupId} = useGroup();
     const queryClient = useQueryClient();
     const token = params.token as string;
@@ -42,7 +42,7 @@ export default function JoinByTokenPage() {
 
     useEffect(() => {
         // Don't attempt join if not authenticated
-        if (!isAuthenticated) return;
+        if (!session) return;
         if (!token || hasAttempted.current) return;
         hasAttempted.current = true;
 
@@ -74,10 +74,13 @@ export default function JoinByTokenPage() {
 
         doJoin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [token, isAuthenticated]);
+    }, [token, session]);
+
+    // Still determining auth state — show nothing to avoid flash
+    if (authStatus === "loading") return null;
 
     // Not logged in — show login prompt
-    if (!isAuthenticated) {
+    if (!session) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-background-main px-4">
                 <Card className="w-full max-w-sm">

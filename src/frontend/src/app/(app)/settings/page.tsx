@@ -2,7 +2,7 @@
 
 import {useState, useEffect} from "react";
 import {useRouter} from "next/navigation";
-import {useAuth} from "@/context/auth-context";
+import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
 import {getUserSettings, updateUserSettings} from "@/lib/api";
 import {Button} from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {ArrowLeft} from "lucide-react";
 
 export default function SettingsPage() {
     const router = useRouter();
-    const {isAuthenticated} = useAuth();
+    const { data: session } = useSession();
     const {t} = useLocale();
     const [preventOthersAdding, setPreventOthersAdding] = useState(false);
     const [preventMeAdding, setPreventMeAdding] = useState(false);
@@ -20,7 +20,7 @@ export default function SettingsPage() {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        if (!isAuthenticated) {
+        if (!session) {
             router.push("/login");
             return;
         }
@@ -38,7 +38,7 @@ export default function SettingsPage() {
         };
 
         loadSettings();
-    }, [isAuthenticated, router]);
+    }, [session, router]);
 
     const handleToggleOthers = async (checked: boolean) => {
         setSaving(true);

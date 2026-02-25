@@ -1,66 +1,62 @@
+import { getSession, signIn } from "next-auth/react";
 import {
     Api,
     WatchStatus,
     GroupRole,
     CreateMovieRequest,
     UpdateMovieRequest,
-    AuthResponse,
     MovieDto,
     WatchEntryDto,
     GroupDto,
     StatsDto,
+    UserDto,
+    InviteLinkDto,
 } from "./generated";
 
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-// Create API instance with security worker for JWT
+// Create API instance
 const apiClient = new Api({
     baseURL: API_URL,
-    securityWorker: async () => {
-        if (typeof window !== "undefined") {
-            const token = localStorage.getItem("token");
-            const locale = localStorage.getItem("locale") || "en";
-            return {
-                headers: {
-                    ...(token ? {Authorization: `Bearer ${token}`} : {}),
-                    "Accept-Language": locale,
-                },
-            };
-        }
-        return {};
-    },
     secure: true,
 });
 
-// Add response interceptor for 401 handling
+// Inject Bearer token and locale on every request
+apiClient.instance.interceptors.request.use(async (config) => {
+    if (typeof window !== "undefined") {
+        const session = await getSession();
+
+        if (session?.error === "RefreshTokenError") {
+            signIn("authentik");
+            return config;
+        }
+
+        if (session?.accessToken) {
+            config.headers.Authorization = `Bearer ${session.accessToken}`;
+        }
+
+        const locale = localStorage.getItem("locale") || "en";
+        config.headers["Accept-Language"] = locale;
+    }
+    return config;
+});
+
+// 401 handler — trigger re-authentication
 apiClient.instance.interceptors.response.use(
     (response) => response,
     (error) => {
         const isAuthRequest = error.config?.url?.includes("/auth/");
         if (error.response?.status === 401 && typeof window !== "undefined" && !isAuthRequest) {
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            localStorage.removeItem("activeGroupId");
-            // Mark that user was logged in for redirect logic
-            localStorage.setItem("wasLoggedIn", new Date().toISOString());
-            // Defer the redirect to allow the promise rejection to be handled first
-            // This prevents the "message channel closed" error
-            setTimeout(() => {
-                window.location.href = "/login?sessionExpired=true";
-            }, 0);
+            signIn("authentik");
         }
         return Promise.reject(error);
     }
 );
 
 // Auth
-export const oidcCallback = async (code: string, redirectUri: string, codeVerifier?: string): Promise<AuthResponse> => {
-    const response = await apiClient.instance.post("/api/auth/callback", {
-        code,
-        redirectUri,
-        codeVerifier: codeVerifier ?? null,
-    });
+export const getMe = async (): Promise<UserDto> => {
+    const response = await apiClient.instance.get("/api/auth/me");
     return response.data;
 };
 
@@ -115,8 +111,8 @@ export const createWatchEntry = async (entry: {
     comment?: string;
     groupId?: number;
     rating?: number;
-    ratings?: { userId: number; rating: number }[];
-    viewers?: number[];
+    ratings?: { userId: string; rating: number }[];
+    viewers?: string[];
 }): Promise<WatchEntryDto> => {
     const response = await apiClient.api.watchEntriesCreate(entry);
     return response.data;
@@ -137,15 +133,8 @@ export const updateWatchEntry = async (
     return response.data;
 };
 
-export const rateEntry = async (entryId: number, rating: number, targetUserId?: number): Promise<void> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
-    await apiClient.instance.post(`/api/watch-entries/${entryId}/rate`, {rating, targetUserId}, {
-        headers: {
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
-            "Accept-Language": locale,
-        },
-    });
+export const rateEntry = async (entryId: number, rating: number, targetUserId?: string): Promise<void> => {
+    await apiClient.instance.post(`/api/watch-entries/${entryId}/rate`, {rating, targetUserId});
 };
 
 export const deleteWatchEntry = async (id: number): Promise<void> => {
@@ -199,15 +188,15 @@ export const leaveGroup = async (id: number): Promise<void> => {
     await apiClient.api.groupsLeaveDelete(id);
 };
 
-export const kickMember = async (groupId: number, userId: number): Promise<void> => {
+export const kickMember = async (groupId: number, userId: string): Promise<void> => {
     await apiClient.api.groupsMembersDelete(groupId, userId);
 };
 
-export const transferOwnership = async (groupId: number, newOwnerId: number): Promise<void> => {
+export const transferOwnership = async (groupId: number, newOwnerId: string): Promise<void> => {
     await apiClient.api.groupsTransferUpdate(groupId, {newOwnerId});
 };
 
-export const updateMemberRole = async (groupId: number, userId: number, role: GroupRole): Promise<void> => {
+export const updateMemberRole = async (groupId: number, userId: string, role: GroupRole): Promise<void> => {
     await apiClient.api.groupsMembersRoleUpdate(groupId, userId, {role});
 };
 
@@ -224,64 +213,26 @@ export const updateGroupSettings = async (groupId: number, settings: {
     isPrivate?: boolean;
     defaultRole?: GroupRole;
 }): Promise<GroupDto> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
-    const response = await apiClient.instance.put(`/api/groups/${groupId}/settings`, settings, {
-        headers: {
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
-            "Accept-Language": locale,
-        },
-    });
+    const response = await apiClient.instance.put(`/api/groups/${groupId}/settings`, settings);
     return response.data;
 };
 
 // Invite Links
-export interface InviteLinkDto {
-    id: number;
-    token: string;
-    url: string;
-    expiresAt: string | null;
-    maxUses: number | null;
-    useCount: number;
-    createdAt: string;
-}
-
 export const createInviteLink = async (groupId: number, expiresInMinutes?: number, maxUses?: number): Promise<InviteLinkDto> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
     const response = await apiClient.instance.post(`/api/groups/${groupId}/invite-links`, {
         expiresInMinutes: expiresInMinutes ?? null,
         maxUses: maxUses ?? null,
-    }, {
-        headers: {
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
-            "Accept-Language": locale,
-        },
     });
     return response.data as InviteLinkDto;
 };
 
 export const getInviteLinks = async (groupId: number): Promise<InviteLinkDto[]> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
-    const response = await apiClient.instance.get(`/api/groups/${groupId}/invite-links`, {
-        headers: {
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
-            "Accept-Language": locale,
-        },
-    });
+    const response = await apiClient.instance.get(`/api/groups/${groupId}/invite-links`);
     return response.data as InviteLinkDto[];
 };
 
 export const deleteInviteLink = async (groupId: number, linkId: number): Promise<void> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
-    await apiClient.instance.delete(`/api/groups/${groupId}/invite-links/${linkId}`, {
-        headers: {
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
-            "Accept-Language": locale,
-        },
-    });
+    await apiClient.instance.delete(`/api/groups/${groupId}/invite-links/${linkId}`);
 };
 
 // Permissions
@@ -300,14 +251,7 @@ export interface UserPermissions {
 }
 
 export const getMyPermissions = async (groupId: number): Promise<UserPermissions> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
-    const response = await apiClient.instance.get(`/api/groups/${groupId}/my-permissions`, {
-        headers: {
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
-            "Accept-Language": locale,
-        },
-    });
+    const response = await apiClient.instance.get(`/api/groups/${groupId}/my-permissions`);
     return response.data as UserPermissions;
 };
 
@@ -372,29 +316,15 @@ export interface MemberPermissionDetail {
     hasCustomPermissions: boolean;
 }
 
-export const getMemberPermissions = async (groupId: number, userId: number): Promise<MemberPermissionDetail> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
-    const response = await apiClient.instance.get(`/api/groups/${groupId}/members/${userId}/permissions`, {
-        headers: {
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
-            "Accept-Language": locale,
-        },
-    });
+export const getMemberPermissions = async (groupId: number, userId: string): Promise<MemberPermissionDetail> => {
+    const response = await apiClient.instance.get(`/api/groups/${groupId}/members/${userId}/permissions`);
     return response.data as MemberPermissionDetail;
 };
 
-export const updateMemberPermissions = async (groupId: number, userId: number, granted: number, revoked: number): Promise<MemberPermissionDetail> => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const locale = typeof window !== "undefined" ? (localStorage.getItem("locale") || "en") : "en";
+export const updateMemberPermissions = async (groupId: number, userId: string, granted: number, revoked: number): Promise<MemberPermissionDetail> => {
     const response = await apiClient.instance.put(`/api/groups/${groupId}/members/${userId}/permissions`, {
         grantedPermissions: granted,
         revokedPermissions: revoked,
-    }, {
-        headers: {
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
-            "Accept-Language": locale,
-        },
     });
     return response.data as MemberPermissionDetail;
 };

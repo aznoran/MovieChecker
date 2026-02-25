@@ -56,7 +56,7 @@ import {
     FieldGroup,
 } from "@/components/ui/field";
 import {usePermissions} from "@/context/permissions-context";
-import {useAuth} from "@/context/auth-context";
+import {useSession} from "next-auth/react";
 import {useImageCropper} from "@/hooks/use-image-cropper";
 import {PosterUploadSection} from "@/components/entry/poster-upload-section";
 import {SeriesTrackingSection} from "@/components/entry/series-tracking-section";
@@ -108,15 +108,16 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const {locale, t} = useLocale();
     const {activeGroupId, activeGroup} = useGroup();
     const {permissions} = usePermissions();
-    const {user: currentUser} = useAuth();
+    const { data: session } = useSession();
+    const currentUserId = session?.user?.id;
 
     const canRateOthers = permissions.canRateOthers;
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     // Non-form state (binary/complex data not suited for RHF)
     const [myRating, setMyRating] = useState(0);
-    const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
-    const [memberRatings, setMemberRatings] = useState<Record<number, number>>({});
+    const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+    const [memberRatings, setMemberRatings] = useState<Record<string, number>>({});
     const [error, setError] = useState("");
 
     const cropper = useImageCropper();
@@ -221,7 +222,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         },
     });
 
-    const handleToggleMember = (userId: number) => {
+    const handleToggleMember = (userId: string) => {
         if (selectedMembers.includes(userId)) {
             setSelectedMembers((prev) => prev.filter((id) => id !== userId));
             setMemberRatings((prev) => {
@@ -234,7 +235,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         }
     };
 
-    const handleMemberRatingChange = (uid: number, value: number) => {
+    const handleMemberRatingChange = (uid: string, value: number) => {
         setMemberRatings((prev) => ({...prev, [uid]: value}));
     };
 
@@ -439,7 +440,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                 onMyRatingChange={setMyRating}
                                                 canRateOthers={canRateOthers}
                                                 canRateSelf
-                                                currentUserId={currentUser?.id}
+                                                currentUserId={currentUserId}
                                             />
                                         )}
 
@@ -476,7 +477,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                 onMyRatingChange={setMyRating}
                                                 canRateOthers={false}
                                                 canRateSelf
-                                                currentUserId={currentUser?.id}
+                                                currentUserId={currentUserId}
                                             />
                                         )}
 
