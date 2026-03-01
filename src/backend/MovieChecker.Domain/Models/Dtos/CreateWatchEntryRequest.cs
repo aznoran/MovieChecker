@@ -7,7 +7,6 @@ public record CreateWatchEntryRequest(
     WatchStatus Status,
     int? MyRating,
     int? PartnerRating,
-    Emotion? Emotion,
     string? Comment,
     string? PrivateComment,
     DateTime? StartedAt,
@@ -19,5 +18,5 @@ public record CreateWatchEntryRequest(
     int? TotalEpisodes,
     int? WatchingTime,
     List<UserRatingInput>? Ratings,
-    List<int>? Viewers
+    List<Guid>? Viewers
 );

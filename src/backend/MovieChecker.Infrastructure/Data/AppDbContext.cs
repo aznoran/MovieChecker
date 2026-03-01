@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
     public DbSet<WatchEntryGroup> WatchEntryGroups => Set<WatchEntryGroup>();
     public DbSet<MemberPermission> MemberPermissions => Set<MemberPermission>();
+    public DbSet<InviteLink> InviteLinks => Set<InviteLink>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

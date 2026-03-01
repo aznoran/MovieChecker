@@ -1,4 +1,82 @@
 services:
+  authentik-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${AUTHENTIK_POSTGRES_DB:-authentik}
+      POSTGRES_USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
+      POSTGRES_PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD}
+    volumes:
+      - authentik_postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${AUTHENTIK_POSTGRES_USER:-authentik}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2025.12.4
+    restart: unless-stopped
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-db
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      #     AUTHENTIK_HOST: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+      AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
+      #      AUTHENTIK_HOST_BROWSER: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
+      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000"
+      AUTHENTIK_MOVIECHECKER_CLIENT_SECRET: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
+      # Fix issuer URL: ensures discovery docs and JWT `iss` always use the public hostname,
+      # regardless of the incoming Host header (critical for Docker internal requests).
+      AUTHENTIK_HOST: http://localhost:9000
+    volumes:
+      - ../authentik/blueprints:/blueprints/custom:ro
+      - authentik_media:/media
+      - authentik_templates:/templates
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+    networks:
+      - backend_network
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2025.12.4
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-db
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+      AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
+      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000"
+      AUTHENTIK_MOVIECHECKER_CLIENT_SECRET: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
+      AUTHENTIK_HOST: http://localhost:9000
+    volumes:
+      - ../authentik/blueprints:/blueprints/custom:ro
+      - authentik_media:/media
+      - authentik_templates:/templates
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+    networks:
+      - backend_network
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -61,9 +139,11 @@ services:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
-      Jwt__Key: "${JWT_KEY}"
-      Jwt__Issuer: "MovieChecker"
-      Jwt__Audience: "MovieChecker"
+      Authentik__Authority: http://localhost:9000/application/o/moviechecker/
+      # MetadataUrl is fetched by the backend *container* at startup — must use Docker service name.
+      Authentik__MetadataUrl: http://authentik-server:9000/application/o/moviechecker/.well-known/openid-configuration
+      Authentik__ClientId: moviechecker
+      Authentik__Issuer: http://authentik-server:9000/application/o/moviechecker/
       Cors__Origins__0: "http://localhost:3000"
     depends_on:
       db:
@@ -83,6 +163,24 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: "http://localhost:5000"
+        NEXT_PUBLIC_AUTHENTIK_LOGOUT_URL: "http://localhost:9000/if/flow/platform-provider-logout/"
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_AUTHENTIK_ID: "moviechecker"
+      AUTH_AUTHENTIK_SECRET: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
+      # NextAuth runs server-side inside the container, so it must reach Authentik via internal Docker hostname.
+      # The issuer URL must match the `iss` claim in Authentik JWTs (which uses the public hostname).
+      # Set AUTH_AUTHENTIK_ISSUER to the public URL and AUTH_AUTHENTIK_INTERNAL_ISSUER to the internal URL
+      # so token exchange and JWKS fetch work within the Docker network.
+      # AUTH_AUTHENTIK_ISSUER must match the JWT `iss` claim Authentik generates.
+      # Authentik sets `iss` from the Host header of the token request.
+      # Token exchange is server-side (container → authentik-server:9000), so iss = internal URL.
+      AUTH_AUTHENTIK_ISSUER: "http://authentik-server:9000/application/o/moviechecker/"
+      # AUTH_AUTHENTIK_BROWSER_ORIGIN: browser-accessible URL for the authorization redirect.
+      AUTH_AUTHENTIK_BROWSER_ORIGIN: "http://localhost:9000"
+      AUTH_URL: "http://localhost:3000"
+      # Server-side API calls from auth.ts (provisioning): must use Docker service name.
+      API_URL: "http://backend:5000"
     restart: unless-stopped
     depends_on:
       - backend
@@ -114,6 +212,9 @@ volumes:
   postgres_data:
   pgadmin_data:
   redis_data:
+  authentik_postgres_data:
+  authentik_media:
+  authentik_templates:
 
 networks:
   backend_network:

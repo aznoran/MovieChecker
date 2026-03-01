@@ -1,12 +1,12 @@
 "use client";
 
-import {createContext, useContext} from "react";
-import {useQuery} from "@tanstack/react-query";
-import {useAuth} from "@/context/auth-context";
-import {useGroup} from "@/context/group-context";
-import {getMyPermissions} from "@/lib/api";
-import type {UserPermissions} from "@/lib/api";
-import {GroupType} from "@/lib/api.generated";
+import { createContext, useContext } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { useGroup } from "@/context/group-context";
+import { getMyPermissions } from "@/lib/api";
+import type { UserPermissions } from "@/lib/api";
+import { GroupType } from "@/lib/api/generated";
 
 /** All permissions default to true (personal/owner mode) */
 const ALL_PERMISSIONS: UserPermissions = {
@@ -49,14 +49,14 @@ const PermissionsContext = createContext<PermissionsContextValue>({
 });
 
 export function PermissionsProvider({children}: { children: React.ReactNode }) {
-    const {isAuthenticated} = useAuth();
+    const { data: session } = useSession();
     const {activeGroup} = useGroup();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
     const {data, isLoading} = useQuery({
         queryKey: ["permissions", activeGroup?.id],
         queryFn: () => getMyPermissions(activeGroup!.id!),
-        enabled: isAuthenticated && isGroupMode && !!activeGroup?.id,
+        enabled: !!session && isGroupMode && !!activeGroup?.id,
     });
 
     // Personal mode → full permissions; group mode → API permissions or none while loading

@@ -5,11 +5,10 @@ namespace MovieChecker.Domain.Models.Dtos;
 public record WatchEntryDto(
     int Id,
     int MovieId,
-    int UserId,
+    Guid UserId,
     MovieDto Movie,
     WatchStatus Status,
     int? GroupId,
-    Emotion? Emotion,
     string? Comment,
     List<EntryRatingDto> Ratings,
     DateTime? StartedAt,
