@@ -48,6 +48,7 @@ public static class DependencyInjection
         var authentikMetadataUrl = configuration["Authentik:MetadataUrl"];
         var authentikClientId = configuration["Authentik:ClientId"];
         var authentikIssuer = configuration["Authentik:Issuer"];
+        var authentikSecret = configuration["Authentik:Secret"];
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -68,41 +69,7 @@ public static class DependencyInjection
                     ValidateLifetime = true,
                     ValidAudience = authentikClientId,
                     ValidIssuer = authentikIssuer,
-                };
-
-                options.Events = new JwtBearerEvents
-                {
-                    OnTokenValidated = async context =>
-                    {
-                        var sub = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                        if (string.IsNullOrEmpty(sub) || !Guid.TryParse(sub, out var userId))
-                        {
-                            context.Fail("Missing or invalid sub claim");
-                            return;
-                        }
-
-                        // Verify user is provisioned — no creation here, just lookup
-                        var cache = context.HttpContext.RequestServices.GetRequiredService<HybridCache>();
-                        var scopeFactory = context.HttpContext.RequestServices.GetRequiredService<IServiceScopeFactory>();
-                        var exists = await cache.GetOrCreateAsync($"user_exists_{sub}", async cancel =>
-                        {
-                            using var scope = scopeFactory.CreateScope();
-                            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                            return await db.Users.AnyAsync(u => u.Id == userId, cancel);
-                        });
-
-                        if (!exists)
-                        {
-                            context.Fail("User not provisioned. Call POST /api/auth/provision first.");
-                            return;
-                        }
-
-                        // Add Authentik group memberships as ClaimTypes.Role for [Authorize(Roles = ...)]
-                        var groups = context.Principal!.FindAll("groups").Select(c => c.Value).ToList();
-                        var identity = context.Principal.Identity as ClaimsIdentity;
-                        foreach (var group in groups)
-                            identity?.AddClaim(new Claim(ClaimTypes.Role, group));
-                    }
+                    NameClaimType = "preferred_username",
                 };
             });
         services.AddAuthorization();

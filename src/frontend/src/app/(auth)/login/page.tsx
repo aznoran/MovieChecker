@@ -7,29 +7,14 @@ import { signIn } from "next-auth/react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-const INVITE_TOKEN_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
-
 function LoginRedirect() {
     const searchParams = useSearchParams();
 
     useEffect(() => {
-        // Determine where to redirect after successful login
-        let callbackUrl = searchParams.get("callbackUrl") ?? "/";
+        // NextAuth validates callbackUrl server-side (same-origin only)
+        const callbackUrl = searchParams.get("callbackUrl") ?? "/";
 
-        // Check for a pending invite token stored before the login redirect
-        if (typeof window !== "undefined") {
-            const raw = localStorage.getItem("pendingInviteToken");
-            if (raw) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    if (parsed.token && Date.now() - parsed.ts < INVITE_TOKEN_EXPIRY_MS) {
-                        callbackUrl = `/join/${parsed.token}`;
-                    }
-                } catch { /* ignore malformed */ }
-            }
-        }
-
-        signIn("authentik", { callbackUrl });
+        signIn("authentik", { redirectTo: callbackUrl });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

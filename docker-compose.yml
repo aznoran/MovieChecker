@@ -62,9 +62,9 @@ services:
       ConnectionStrings__Redis: "redis:6379,defaultDatabase=0,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "0"
       Authentik__Authority: https://auth.${APP_DOMAIN:-xui123qweqwe.org}/application/o/moviechecker/
-      Authentik__MetadataUrl: http://authentik-server:9000/application/o/moviechecker/.well-known/openid-configuration
-      Authentik__TokenEndpoint: http://authentik-server:9000/application/o/token/
-      Authentik__UserInfoEndpoint: http://authentik-server:9000/application/o/userinfo/
+      Authentik__MetadataUrl: https://auth.${APP_DOMAIN:-xui123qweqwe.org}/application/o/moviechecker/.well-known/openid-configuration
+      Authentik__TokenEndpoint: https://auth.${APP_DOMAIN:-xui123qweqwe.org}/application/o/token/
+      Authentik__UserInfoEndpoint: https://auth.${APP_DOMAIN:-xui123qweqwe.org}/application/o/userinfo/
       Authentik__ClientId: moviechecker
       Authentik__ClientSecret: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
       Cors__Origins__0: https://xui123qweqwe.org
@@ -88,6 +88,7 @@ services:
         NEXT_PUBLIC_AUTHENTIK_URL: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
         NEXT_PUBLIC_AUTHENTIK_CLIENT_ID: moviechecker
         NEXT_PUBLIC_AUTHENTIK_REDIRECT_URI: https://xui123qweqwe.org/auth/callback
+        NEXT_PUBLIC_AUTHENTIK_LOGOUT_URL: https://auth.${APP_DOMAIN:-xui123qweqwe.org}/if/flow/platform-provider-logout/
     restart: unless-stopped
     expose:
       - "3000"

@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using MovieChecker.Infrastructure;
 using MovieChecker.Infrastructure.Data;
 using MovieChecker.Web.Endpoints;
+using MovieChecker.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -76,6 +76,7 @@ app.UseCors();
 app.UseRequestLocalization();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<UserProvisioningMiddleware>();
 
 // Map endpoints
 app.MapAuthEndpoints();

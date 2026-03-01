@@ -155,6 +155,29 @@ public static class GroupEndpoints
             .OrderByDescending(g => g.CreatedAt)
             .ToListAsync();
 
+        if (!groups.Any(g => g.GroupType == GroupType.Personal))
+        {
+            var personalGroup = new Group
+            {
+                Name = "Personal",
+                InviteCode = null,
+                CreatedByUserId = userId,
+                IsPrivate = false,
+                GroupType = GroupType.Personal,
+                DefaultRole = GroupRole.Owner,
+                Members = [new GroupMember { UserId = userId, Role = GroupRole.Owner }]
+            };
+            db.Groups.Add(personalGroup);
+            await db.SaveChangesAsync();
+
+            // Reload with navigation properties for DTO mapping
+            await db.Entry(personalGroup).Collection(g => g.Members).LoadAsync();
+            foreach (var m in personalGroup.Members)
+                await db.Entry(m).Reference(x => x.User).LoadAsync();
+
+            groups.Insert(0, personalGroup);
+        }
+
         var dtos = groups.Select(g => new GroupDto(
             g.Id,
             g.Name,

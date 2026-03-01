@@ -98,11 +98,7 @@ export default function JoinByTokenPage() {
                         <Button
                             className="w-full"
                             onClick={() => {
-                                // Persist the invite token so we can resume after login
-                                if (typeof window !== "undefined") {
-                                    localStorage.setItem("pendingInviteToken", JSON.stringify({token, ts: Date.now()}));
-                                }
-                                router.push("/login");
+                                router.push(`/login?callbackUrl=${encodeURIComponent(`/join/${token}`)}`);
                             }}
                         >
                             <LogIn className="h-4 w-4 mr-1.5"/>

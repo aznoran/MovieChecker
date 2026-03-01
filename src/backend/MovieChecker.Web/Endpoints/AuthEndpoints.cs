@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using MovieChecker.Domain.Models.Dtos;
 using MovieChecker.Domain.Models.Entities;
-using MovieChecker.Domain.Models.Enums;
 using MovieChecker.Infrastructure.Data;
 
 namespace MovieChecker.Web.Endpoints;
@@ -16,7 +15,7 @@ public static class AuthEndpoints
         var group = app.MapGroup("/api/auth");
 
         group.MapPost("/provision", Provision)
-            .AllowAnonymous()
+            .RequireAuthorization()
             .Produces<ProvisionResponse>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -51,16 +50,12 @@ public static class AuthEndpoints
         if (!handler.CanReadToken(token)) return Results.Unauthorized();
         var jwt = handler.ReadJwtToken(token);
 
-        // Basic issuer check — full signature verification is done by JWT middleware on subsequent calls
-        var expectedAuthority = configuration["Authentik:Authority"]?.TrimEnd('/');
-        if (jwt.Issuer?.TrimEnd('/') != expectedAuthority) return Results.Unauthorized();
-
-        var sub = jwt.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+        var sub = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(sub) || !Guid.TryParse(sub, out var userId))
             return Results.BadRequest(new ErrorResponse("Invalid sub claim"));
 
         var username = jwt.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value ?? sub;
-        var displayName = jwt.Claims.FirstOrDefault(c => c.Type == "name")?.Value ?? username;
+        var displayName = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? username;
 
         var user = await db.Users.FindAsync(userId);
         bool isNewUser = user is null;
@@ -70,21 +65,7 @@ public static class AuthEndpoints
             user = new User { Id = userId, Username = username, DisplayName = displayName };
             db.Users.Add(user);
             await db.SaveChangesAsync();
-
-            var personalGroup = new Group
-            {
-                Name = "Personal",
-                InviteCode = null,
-                CreatedByUserId = userId,
-                IsPrivate = false,
-                GroupType = GroupType.Personal,
-                DefaultRole = GroupRole.Owner
-            };
-            db.Groups.Add(personalGroup);
-            await db.SaveChangesAsync();
-
-            db.GroupMembers.Add(new GroupMember { GroupId = personalGroup.Id, UserId = userId, Role = GroupRole.Owner });
-            await db.SaveChangesAsync();
+            // Personal group is created lazily on first GET /api/groups request
         }
         else if (user.DisplayName != displayName)
         {

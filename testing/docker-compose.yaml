@@ -163,7 +163,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: "http://localhost:5000"
-        NEXT_PUBLIC_AUTHENTIK_LOGOUT_URL: "http://localhost:9000/if/flow/moviechecker-logout/"
+        NEXT_PUBLIC_AUTHENTIK_LOGOUT_URL: "http://localhost:9000/if/flow/platform-provider-logout/"
     environment:
       AUTH_SECRET: ${AUTH_SECRET}
       AUTH_AUTHENTIK_ID: "moviechecker"
