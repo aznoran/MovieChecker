@@ -252,7 +252,7 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
         - !KeyOf scope-groups
       redirect_uris:
-        - url: "http://localhost:3000/api/auth/callback/authentik"
+        - url: !Format ["https://%s/api/auth/callback/authentik", !Env APP_DOMAIN]
           matching_mode: strict
       sub_mode: user_uuid
       issuer_mode: per_provider

@@ -22,8 +22,10 @@ entries:
         # Защита от Open Redirect: без валидации злоумышленник может
         # подставить фишинговый URL в параметр и перенаправить пользователя.
         # При деплое на production — добавить реальный домен.
+        import os
+        app_domain = os.environ.get("APP_DOMAIN", "localhost:3000")
         ALLOWED_ORIGINS = [
-            "http://localhost:3000",
+            f"https://{app_domain}",
         ]
 
         plan = request.context.get("flow_plan")
@@ -48,7 +50,7 @@ entries:
                 return False
 
         # Fallback: если URI невалиден или отсутствует
-        plan.redirect("http://localhost:3000/")
+        plan.redirect(f"https://{app_domain}/")
         return False
 
   # ── Redirect Stage (target не важен — policy перенаправит через plan.redirect) ──

@@ -47,6 +47,7 @@ services:
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
       AUTHENTIK_WEB__ALLOWED_ORIGINS: "https://${APP_DOMAIN:-xui123qweqwe.org}"
+      APP_DOMAIN: ${APP_DOMAIN:-xui123qweqwe.org}
     volumes:
       - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
@@ -76,6 +77,7 @@ services:
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
+      APP_DOMAIN: ${APP_DOMAIN:-xui123qweqwe.org}
     volumes:
       - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
@@ -96,7 +98,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./etc/letsencrypt:/etc/letsencrypt:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - authentik_network
     depends_on:
