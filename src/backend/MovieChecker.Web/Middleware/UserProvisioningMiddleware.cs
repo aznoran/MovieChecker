@@ -28,9 +28,16 @@ public class UserProvisioningMiddleware(RequestDelegate next)
                     var username = context.User.FindFirstValue("preferred_username") ?? sub;
                     var displayName = context.User.FindFirstValue(ClaimTypes.Name) ?? username;
 
-                    if (!await db.Users.AnyAsync(u => u.Id == userId))
+                    var existing = await db.Users.FirstOrDefaultAsync(u => u.Id == userId || u.Username == username);
+                    if (existing is null)
                     {
                         db.Users.Add(new User { Id = userId, Username = username, DisplayName = displayName });
+                        await db.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        existing.Username = username;
+                        existing.DisplayName = displayName;
                         await db.SaveChangesAsync();
                     }
 
