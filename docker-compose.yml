@@ -92,6 +92,14 @@ services:
     restart: unless-stopped
     expose:
       - "3000"
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_AUTHENTIK_ID: moviechecker
+      AUTH_AUTHENTIK_SECRET: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
+      AUTH_AUTHENTIK_ISSUER: https://auth.${APP_DOMAIN:-xui123qweqwe.org}/application/o/moviechecker/
+      AUTH_AUTHENTIK_BROWSER_ORIGIN: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
+      AUTH_TRUST_HOST: "true"
+      API_URL: http://backend:5000
     depends_on:
       - backend
     networks:
