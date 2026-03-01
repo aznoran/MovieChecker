@@ -23,8 +23,8 @@ public static class UserSettingsEndpoints
             .WithDescription("Updates current user's settings");
     }
 
-    private static int GetUserId(ClaimsPrincipal user) =>
-        int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+    private static Guid GetUserId(ClaimsPrincipal user) =>
+        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
 
     private static async Task<IResult> GetSettings(ClaimsPrincipal user, AppDbContext db)
     {

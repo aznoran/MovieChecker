@@ -1,5 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace MovieChecker.Domain.Models.Enums;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum GroupRole
 {
     Viewer = 0,   // Can only view

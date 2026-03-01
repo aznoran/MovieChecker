@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Localization;
 using MovieChecker.Domain.Models.Dtos;
 using MovieChecker.Domain.Models.Entities;
 using MovieChecker.Domain.Models.Enums;
@@ -63,13 +62,14 @@ public static class WatchEntryEndpoints
             .WithDescription("Adds or updates a rating for a watch entry");
     }
 
-    private static int GetUserId(ClaimsPrincipal user) =>
-        int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+    private static Guid GetUserId(ClaimsPrincipal user) =>
+        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
 
 
     private static WatchEntryDto ToDto(WatchEntry w) => new(
         w.Id,
         w.MovieId,
+        w.UserId,
         new MovieDto(
             w.Movie.Id,
             w.Movie.Title,
@@ -82,7 +82,6 @@ public static class WatchEntryEndpoints
         ),
         w.Status,
         w.GroupId,
-        w.Emotion,
         w.Comment,
         w.Ratings.Select(r => new EntryRatingDto(
             r.Id,
@@ -142,7 +141,8 @@ public static class WatchEntryEndpoints
         return Results.Ok(entries.Select(ToDto).ToList());
     }
 
-    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
+    private static async Task<IResult> GetById(int id, ClaimsPrincipal user, AppDbContext db,
+        ILocalizationService localizer)
     {
         var userId = GetUserId(user);
         var entry = await db.WatchEntries
@@ -175,10 +175,10 @@ public static class WatchEntryEndpoints
     }
 
     private static async Task<IResult> Create(
-        CreateWatchEntryRequest request,
-        ClaimsPrincipal user,
-        AppDbContext db,
-        ILocalizationService localizer)
+            CreateWatchEntryRequest request,
+            ClaimsPrincipal user,
+            AppDbContext db,
+            ILocalizationService localizer)
     {
         var userId = GetUserId(user);
 
@@ -186,33 +186,24 @@ public static class WatchEntryEndpoints
         if (request.Comment != null && request.Comment.Length > 1000)
             return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
 
-        // Validate emotion - cannot set emotion for Planned or Watching status
-        if (request.Emotion.HasValue && (request.Status == WatchStatus.Planned || request.Status == WatchStatus.Watching))
-            return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
-
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
             return Results.BadRequest(new ErrorResponse(localizer["MovieNotFound"]));
 
-        // Validate group membership if group specified
-        if (request.GroupId.HasValue)
-        {
-            // Check if user can create in this group
-            if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
-                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsCreate"]));
+        var group = await db.Groups.FirstOrDefaultAsync(g => g.Id == request.GroupId);
 
-            // Check duplicate within group (via junction table or legacy GroupId)
-            if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId
-                    && (w.GroupId == request.GroupId.Value
-                        || w.WatchEntryGroups.Any(weg => weg.GroupId == request.GroupId.Value))))
-                return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExistsGroup"]));
-        }
-        else
-        {
-            // Check duplicate for personal entries (legacy entries with GroupId == null)
-            if (await db.WatchEntries.AnyAsync(w =>
-                    w.MovieId == request.MovieId && w.UserId == userId && w.GroupId == null))
-                return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExists"]));
-        }
+        if (group is null)
+            return Results.BadRequest(new ErrorResponse(localizer["GroupNotFound"]));
+        
+        // Check if user can create in this group
+        if (!await PermissionService.CanCreateInGroup(db, userId, request.GroupId.Value))
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsCreate"]));
+
+        // Check duplicate within group (via junction table or legacy GroupId)
+        if (await db.WatchEntries.AnyAsync(w => w.MovieId == request.MovieId
+                && (w.GroupId == request.GroupId.Value
+                    || w.WatchEntryGroups.Any(weg =>
+                        weg.GroupId == request.GroupId.Value))))
+            return Results.BadRequest(new ErrorResponse(localizer["EntryAlreadyExistsGroup"]));
 
         var entry = new WatchEntry
         {
@@ -222,7 +213,6 @@ public static class WatchEntryEndpoints
             Status = request.Status,
             MyRating = request.MyRating.HasValue ? request.MyRating.Value : null,
             PartnerRating = request.PartnerRating.HasValue ? request.PartnerRating.Value : null,
-            Emotion = request.Emotion,
             Comment = request.Comment,
             PrivateComment = request.PrivateComment,
             StartedAt = request.StartedAt,
@@ -247,7 +237,7 @@ public static class WatchEntryEndpoints
         }
 
         // Link entry to personal groups of viewers via junction table (instead of duplicating)
-        if (request.GroupId.HasValue && request.Viewers is { Count: > 0 })
+        if (group.GroupType != GroupType.Personal && request.Viewers is { Count: > 0 })
         {
             var viewerUserIds = request.Viewers.Distinct().ToList();
 
@@ -301,32 +291,53 @@ public static class WatchEntryEndpoints
         // Add bulk ratings if provided (group mode)
         if (request.Ratings is { Count: > 0 })
         {
-            // Get valid group member user IDs
-            var validUserIds = request.GroupId.HasValue
-                ? await db.GroupMembers
-                    .Where(m => m.GroupId == request.GroupId.Value)
-                    .Select(m => m.UserId)
-                    .ToListAsync()
-                : new List<int> { userId };
+            // Only allow bulk ratings when creating inside a group (otherwise you could rate "others" on a personal entry)
+            if (!request.GroupId.HasValue)
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
 
+            var groupId = request.GroupId.Value;
+
+            // Preload group member ids once
+            var groupMemberUserIds = await db.GroupMembers
+                .Where(m => m.GroupId == groupId)
+                .Select(m => m.UserId)
+                .ToHashSetAsync();
+
+            // Enforce "self vs others" permission per requested rating (same logic as POST /{id}/rate)
             foreach (var ri in request.Ratings)
             {
-                if (validUserIds.Contains(ri.UserId))
+                var targetUserId = ri.UserId;
+                var isRatingSelf = targetUserId == userId;
+
+                if (!groupMemberUserIds.Contains(targetUserId))
+                    return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+
+                var allowed = isRatingSelf
+                    ? await PermissionService.CanRateSelf(db, userId, groupId)
+                    : await PermissionService.CanRateOthers(db, userId, groupId);
+
+                if (!allowed)
+                    return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+
+                db.EntryRatings.Add(new EntryRating
                 {
-                    db.EntryRatings.Add(new EntryRating
-                    {
-                        WatchEntryId = entry.Id,
-                        UserId = ri.UserId,
-                        Rating = ri.Rating
-                    });
-                }
+                    WatchEntryId = entry.Id,
+                    UserId = targetUserId,
+                    Rating = ri.Rating
+                });
             }
 
             await db.SaveChangesAsync();
         }
         else if (request.Rating.HasValue)
         {
-            // Single own rating (backward compat)
+            // Single own rating (backward compat) - always self
+            if (request.GroupId.HasValue)
+            {
+                if (!await PermissionService.CanRateSelf(db, userId, request.GroupId.Value))
+                    return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+            }
+
             db.EntryRatings.Add(new EntryRating
             {
                 WatchEntryId = entry.Id,
@@ -370,15 +381,7 @@ public static class WatchEntryEndpoints
         if (request.Comment != null && request.Comment.Length > 1000)
             return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
 
-        // Validate emotion - cannot set emotion for Planned or Watching status
-        var effectiveStatus = request.Status ?? entry.Status;
-        if (request.Emotion.HasValue && (effectiveStatus == WatchStatus.Planned || effectiveStatus == WatchStatus.Watching))
-            return Results.BadRequest(new ErrorResponse("Emotion can only be set for Completed or Dropped status"));
-
         if (request.Status.HasValue) entry.Status = request.Status.Value;
-        if (request.MyRating.HasValue) entry.MyRating = request.MyRating.Value;
-        if (request.PartnerRating.HasValue) entry.PartnerRating = Math.Clamp(request.PartnerRating.Value, 1, 10);
-        if (request.Emotion.HasValue) entry.Emotion = request.Emotion.Value;
         if (request.Comment != null) entry.Comment = request.Comment;
         if (request.PrivateComment != null) entry.PrivateComment = request.PrivateComment;
         if (request.StartedAt.HasValue) entry.StartedAt = request.StartedAt.Value;
@@ -388,67 +391,12 @@ public static class WatchEntryEndpoints
         if (request.TotalEpisodes.HasValue) entry.TotalEpisodes = request.TotalEpisodes.Value;
         if (request.WatchingTime.HasValue) entry.WatchingTime = request.WatchingTime.Value;
 
-        // Handle bulk ratings if provided (group mode)
-        if (request.Ratings is { Count: > 0 })
+        // Clear ratings when status changes to Planned or Watching
+        if (request.Status.HasValue &&
+            (request.Status.Value == WatchStatus.Planned || request.Status.Value == WatchStatus.Watching))
         {
-            // Get group IDs from junction table and legacy GroupId
-            var entryGroupIds = await db.WatchEntryGroups
-                .Where(weg => weg.WatchEntryId == entry.Id)
-                .Select(weg => weg.GroupId)
-                .ToListAsync();
-            if (entry.GroupId.HasValue && !entryGroupIds.Contains(entry.GroupId.Value))
-                entryGroupIds.Add(entry.GroupId.Value);
-
-            var validUserIds = entryGroupIds.Count > 0
-                ? await db.GroupMembers
-                    .Where(m => entryGroupIds.Contains(m.GroupId))
-                    .Select(m => m.UserId)
-                    .Distinct()
-                    .ToListAsync()
-                : new List<int> { userId };
-
-            // Remove ratings for users not in the new list
-            var submittedUserIds = request.Ratings.Select(r => r.UserId).ToHashSet();
-            var toRemove = entry.Ratings.Where(r => !submittedUserIds.Contains(r.UserId)).ToList();
-            db.EntryRatings.RemoveRange(toRemove);
-
-            foreach (var ri in request.Ratings)
-            {
-                if (!validUserIds.Contains(ri.UserId)) continue;
-                
-                var existing = entry.Ratings.FirstOrDefault(r => r.UserId == ri.UserId);
-                if (existing != null)
-                {
-                    existing.Rating = ri.Rating;
-                }
-                else
-                {
-                    db.EntryRatings.Add(new EntryRating
-                    {
-                        WatchEntryId = entry.Id,
-                        UserId = ri.UserId,
-                        Rating = ri.Rating
-                    });
-                }
-            }
-        }
-        else if (request.Rating.HasValue)
-        {
-            // Single own rating (backward compat)
-            var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
-            if (existing != null)
-            {
-                existing.Rating = request.Rating.Value;
-            }
-            else
-            {
-                db.EntryRatings.Add(new EntryRating
-                {
-                    WatchEntryId = entry.Id,
-                    UserId = userId,
-                    Rating = request.Rating.Value
-                });
-            }
+            if (entry.Ratings.Count > 0)
+                db.EntryRatings.RemoveRange(entry.Ratings);
         }
 
         entry.UpdatedAt = DateTime.UtcNow;
@@ -478,15 +426,51 @@ public static class WatchEntryEndpoints
         if (entry == null)
             return Results.NotFound();
 
-        // Check access - members can rate entries in their groups (via junction table or legacy GroupId)
+        // Determine target user for rating
+        var targetUserId = request.TargetUserId ?? userId;
+
+        // Check access via junction table or legacy GroupId
         var entryGroupIds = entry.WatchEntryGroups.Select(weg => weg.GroupId).ToList();
         if (entry.GroupId.HasValue && !entryGroupIds.Contains(entry.GroupId.Value))
             entryGroupIds.Add(entry.GroupId.Value);
 
         if (entryGroupIds.Count > 0)
         {
-            if (!await db.GroupMembers.AnyAsync(m => entryGroupIds.Contains(m.GroupId) && m.UserId == userId))
+            // Check permissions using dedicated PermissionService methods
+            bool hasPermission = false;
+            bool isRatingSelf = targetUserId == userId;
+
+            foreach (var gid in entryGroupIds)
+            {
+                if (isRatingSelf)
+                {
+                    if (await PermissionService.CanRateSelf(db, userId, gid))
+                    {
+                        hasPermission = true;
+                        break;
+                    }
+                }
+                else
+                {
+                    if (await PermissionService.CanRateOthers(db, userId, gid))
+                    {
+                        hasPermission = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasPermission)
                 return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+
+            // Validate that targetUserId is a member of at least one of the entry's groups
+            if (targetUserId != userId)
+            {
+                var isTargetMember = await db.GroupMembers
+                    .AnyAsync(m => entryGroupIds.Contains(m.GroupId) && m.UserId == targetUserId);
+                if (!isTargetMember)
+                    return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsRate"]));
+            }
         }
         else if (entry.UserId != userId)
         {
@@ -494,8 +478,15 @@ public static class WatchEntryEndpoints
         }
 
         var rating = request.Rating;
-        var existing = entry.Ratings.FirstOrDefault(r => r.UserId == userId);
-        if (existing != null)
+        var existing = entry.Ratings.FirstOrDefault(r => r.UserId == targetUserId);
+
+        if (rating == 0)
+        {
+            // Rating 0 means remove the rating
+            if (existing != null)
+                db.EntryRatings.Remove(existing);
+        }
+        else if (existing != null)
         {
             existing.Rating = rating;
         }
@@ -504,7 +495,7 @@ public static class WatchEntryEndpoints
             db.EntryRatings.Add(new EntryRating
             {
                 WatchEntryId = entry.Id,
-                UserId = userId,
+                UserId = targetUserId,
                 Rating = rating
             });
         }
@@ -605,8 +596,6 @@ public static class WatchEntryEndpoints
             AverageMyRating: myRatings.Count > 0 ? myRatings.Average() : 0,
             AveragePartnerRating: otherRatings.Count > 0 ? otherRatings.Average() : 0,
             ByType: entries.GroupBy(e => e.Movie.Type.ToString()).ToDictionary(g => g.Key, g => g.Count()),
-            ByEmotion: entries.Where(e => e.Emotion.HasValue).GroupBy(e => e.Emotion!.Value.ToString())
-                .ToDictionary(g => g.Key, g => g.Count()),
             MemberRatings: allRatings
                 .GroupBy(r => r.UserId)
                 .Select(g => new MemberRatingDto(
@@ -622,4 +611,4 @@ public static class WatchEntryEndpoints
     }
 }
 
-public record RateRequest(int Rating);
+public record RateRequest(int Rating, Guid? TargetUserId = null);

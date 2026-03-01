@@ -1,20 +1,7 @@
 import type {Metadata} from "next";
-// import {Geist, Geist_Mono} from "next/font/google";
 import "./globals.css";
-import {Providers} from "@/components/providers";
-import {Header} from "@/components/header";
-import {Footer} from "@/components/footer";
+import {Providers} from "@/components/layout/providers";
 import {Toaster} from "@/components/ui/sonner";
-
-// const geistSans = Geist({
-//     variable: "--font-geist-sans",
-//     subsets: ["latin"],
-// });
-
-// const geistMono = Geist_Mono({
-//     variable: "--font-geist-mono",
-//     subsets: ["latin"],
-// });
 
 export const metadata: Metadata = {
     title: "MovieChecker",
@@ -28,18 +15,12 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" className="dark" suppressHydrationWarning>
-        <body
-            className={`antialiased min-h-screen flex flex-col`}
-        >
-        <Providers>
-            <Header/>
-            <div className="flex-1">
-                {children}
-            </div>
-            <Footer/>
-            <Toaster/>
-        </Providers>
-        </body>
+            <body className="antialiased">
+                <Providers>
+                    {children}
+                    <Toaster/>
+                </Providers>
+            </body>
         </html>
     );
 }

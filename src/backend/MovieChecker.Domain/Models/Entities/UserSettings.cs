@@ -3,7 +3,7 @@ namespace MovieChecker.Domain.Models.Entities;
 public class UserSettings
 {
     public int Id { get; set; }
-    public int UserId { get; set; }
+    public Guid UserId { get; set; }
     public bool PreventOthersAddingToMyPersonal { get; set; } = false;
     public bool PreventMeAddingToMyPersonal { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

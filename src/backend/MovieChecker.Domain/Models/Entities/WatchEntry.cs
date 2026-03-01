@@ -6,7 +6,7 @@ public class WatchEntry
 {
     public int Id { get; set; }
     public int MovieId { get; set; }
-    public int UserId { get; set; }
+    public Guid UserId { get; set; }
     public int? GroupId { get; set; }
 
     public WatchStatus Status { get; set; } = WatchStatus.Planned;
@@ -14,7 +14,6 @@ public class WatchEntry
     public int? MyRating { get; set; }
     public int? PartnerRating { get; set; }
 
-    public Emotion? Emotion { get; set; }
     public string? Comment { get; set; }
     public string? PrivateComment { get; set; }
 

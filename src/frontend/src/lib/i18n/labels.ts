@@ -1,4 +1,4 @@
-import { ContentType, WatchStatus, Emotion, EmotionEmojis } from "@/types";
+import { EntryContentType, WatchStatus } from "@/lib/api/generated";
 import type { Locale } from "./index";
 import { t } from "./index";
 import en from "./en";
@@ -15,13 +15,13 @@ genreKeys.forEach((key) => {
   genreEnglishToKey[en[key]] = key;
 });
 
-export function getContentTypeLabels(locale: Locale): Record<ContentType, string> {
+export function getContentTypeLabels(locale: Locale): Record<EntryContentType, string> {
   return {
-    [ContentType.Movie]: t("contentMovie", locale),
-    [ContentType.Series]: t("contentSeries", locale),
-    [ContentType.Anime]: t("contentAnime", locale),
-    [ContentType.Cartoon]: t("contentCartoon", locale),
-    [ContentType.Show]: t("contentShow", locale),
+    [EntryContentType.Movie]: t("contentMovie", locale),
+    [EntryContentType.Series]: t("contentSeries", locale),
+    [EntryContentType.Anime]: t("contentAnime", locale),
+    [EntryContentType.Cartoon]: t("contentCartoon", locale),
+    [EntryContentType.Show]: t("contentShow", locale),
   };
 }
 
@@ -33,19 +33,6 @@ export function getWatchStatusLabels(locale: Locale): Record<WatchStatus, string
     [WatchStatus.Dropped]: t("statusDropped", locale),
   };
 }
-
-export function getEmotionLabels(locale: Locale): Record<Emotion, string> {
-  return {
-    [Emotion.Joy]: t("emotionJoy", locale),
-    [Emotion.Sadness]: t("emotionSadness", locale),
-    [Emotion.Excitement]: t("emotionExcitement", locale),
-    [Emotion.Cringe]: t("emotionCringe", locale),
-    [Emotion.Confused]: t("emotionConfused", locale),
-    [Emotion.Neutral]: t("emotionNeutral", locale),
-  };
-}
-
-export { EmotionEmojis };
 
 /**
  * Translate a genre string (comma-separated) from stored English names to the current locale.

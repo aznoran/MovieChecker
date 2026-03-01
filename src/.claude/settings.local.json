@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(tail:*)",
+      "Bash(cd D:\\\\MovieChecker:*)",
+      "Bash(ls:*)",
+      "Bash(cd D:/MovieChecker/src/backend && dotnet build 2>&1)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(cd D:/MovieChecker/src/frontend && npx tsc --noEmit 2>&1)",
+      "Bash(rm -rf D:/MovieChecker/src/frontend/.next/types && cd D:/MovieChecker/src/frontend && npx tsc --noEmit 2>&1)"
+    ]
+  }
+}

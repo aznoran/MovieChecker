@@ -16,6 +16,7 @@ const en = {
     // Nav
     navDiary: "Diary",
     navStats: "Stats",
+    navPages: "Pages",
 
     // Auth
     signIn: "Sign In",
@@ -84,6 +85,7 @@ const en = {
     deleteSucess: "Entry deleted successfully!",
     deleteError: "Failed to delete entry",
     authError: "Authentication failed. Please log in again",
+    editPermitted: "You dont have permission to edit this entry",
     titleRequired: "Title is required",
     clipboardNoImage: "No image found in clipboard",
     clipboardFailed: "Failed to read clipboard",
@@ -240,6 +242,12 @@ const en = {
     totalEpisodes: "Total Episodes",
     watchingTime: "Last Watching Time",
 
+    // Rate-only mode
+    rateOnlyTitle: "Rate Entry",
+    rateOnlyDescription: "You can rate this entry but cannot edit other fields",
+    ratingUpdated: "Rating updated successfully!",
+    failedToRate: "Failed to update rating",
+
     // Field Descriptions
     posterDescription: "Upload a poster or paste from clipboard",
     genreDescription: "Select one or more genres",
@@ -321,7 +329,72 @@ const en = {
     landingWhy3Desc: "Core features are completely free. No hidden costs or subscriptions.",
     landingCtaTitle: "Ready to Start Tracking?",
     landingCtaSubtitle: "Join MovieChecker today and never forget what you've watched",
-    landingCtaButton: "Create Free Account"
+    landingCtaButton: "Create Free Account",
+
+    // Permissions
+    permissionEditor: "Edit Permissions",
+    customPermissionsWarning: "This member has custom permissions",
+    resetToDefaults: "Reset to Defaults",
+    permissionsUpdated: "Permissions updated",
+    permissionsUpdateError: "Failed to update permissions",
+    permViewEntries: "View Entries",
+    permCreateEntries: "Create Entries",
+    permEditOwnEntries: "Edit Own Entries",
+    permEditAllEntries: "Edit All Entries",
+    permDeleteOwnEntries: "Delete Own Entries",
+    permDeleteAllEntries: "Delete All Entries",
+    permRateSelf: "Rate Own Entries",
+    permRateSelfDetailed: "Allows you to rate entries in the current group only as yourself",
+    permRateOthers: "Rate Others' Entries",
+    permRateOthersDetailed: "Allows you to rate entries made by any member within the current group",
+    permManageMembers: "Manage Members",
+    permManageGroup: "Manage Group",
+    roleDefaultOn: "On by role",
+    roleDefaultOff: "Off by role",
+
+    // Share & Invite Links
+    share: "Share",
+    shareGroup: "Share Group",
+    copyInviteCode: "Copy Invite Code",
+    createInviteLink: "Create Invite Link",
+    inviteLink: "Invite Link",
+    inviteLinkCreated: "Invite link created!",
+    inviteLinkError: "Failed to create invite link",
+    expiresIn: "Expires In",
+    maxUses: "Max Uses",
+    unlimited: "Unlimited",
+    noLimit: "No limit",
+    uses: "uses",
+    revokeLink: "Revoke",
+    revokeLinkConfirm: "Revoke this invite link?",
+    activeInviteLinks: "Active Links",
+    noActiveLinks: "No active invite links",
+    regenerateLink: "Regenerate Link",
+    regenerateLinkConfirm: "This will revoke the current link and create a new one. Anyone with the old link won't be able to join.",
+    linkRegenerated: "Link regenerated!",
+    linkExpired: "Expired",
+    linkCopied: "Link copied!",
+    expirationTime: "Expiration",
+    duration1Hour: "1 hour",
+    duration6Hours: "6 hours",
+    duration12Hours: "12 hours",
+    duration1Day: "1 day",
+    duration7Days: "7 days",
+    durationNever: "Never",
+    joiningGroup: "Joining group...",
+    joinedGroupSuccess: "You've joined the group!",
+    redirecting: "Redirecting...",
+    loginRequiredToJoin: "You need to sign in to join this group",
+    goToLogin: "Sign In",
+
+    // Card Size
+    cardSize: "Card Size",
+    cardSizeDescription: "Choose how large the entry cards appear on the main page",
+    cardSizeSmall: "Small",
+    cardSizeMedium: "Medium",
+    cardSizeLarge: "Large",
+    displaySettings: "Display Settings",
+    displaySettingsDescription: "Customize how your diary looks",
 } as const;
 
 export type TranslationKeys = keyof typeof en;

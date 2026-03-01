@@ -1,7 +1,23 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(^d \")",
+      "Bash(npm run build:*)",
+      "Bash(wc:*)",
+      "Bash(awk:*)",
+      "Bash(ls:*)",
+      "Bash(npm run lint)",
+      "WebFetch(domain:ui.shadcn.com)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(dir:*)",
+      "Bash(git mv:*)",
+      "Bash(git rm:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "shadcn"
+  ]
 }

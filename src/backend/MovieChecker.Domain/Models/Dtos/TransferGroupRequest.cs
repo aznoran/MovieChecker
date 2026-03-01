@@ -1,3 +1,3 @@
 namespace MovieChecker.Domain.Models.Dtos;
 
-public sealed record TransferGroupRequest(int NewOwnerId);
+public sealed record TransferGroupRequest(Guid NewOwnerId);
