@@ -38,16 +38,17 @@ export enum EntryContentType {
   Show = "Show",
 }
 
-export interface AuthResponse {
-  token?: string | null;
-  user?: UserDto;
-}
-
 export interface CreateGroupRequest {
   name?: string | null;
   isPrivate?: boolean;
-  password?: string | null;
   defaultRole?: GroupRole;
+}
+
+export interface CreateInviteLinkRequest {
+  /** @format int32 */
+  expiresInMinutes?: number | null;
+  /** @format int32 */
+  maxUses?: number | null;
 }
 
 export interface CreateMovieRequest {
@@ -87,14 +88,14 @@ export interface CreateWatchEntryRequest {
   /** @format int32 */
   watchingTime?: number | null;
   ratings?: UserRatingInput[] | null;
-  viewers?: number[] | null;
+  viewers?: string[] | null;
 }
 
 export interface EntryRatingDto {
   /** @format int32 */
   id?: number;
-  /** @format int32 */
-  userId?: number;
+  /** @format uuid */
+  userId?: string;
   displayName?: string | null;
   /** @format int32 */
   rating?: number;
@@ -115,8 +116,8 @@ export interface GroupDto {
   id?: number;
   name?: string | null;
   inviteCode?: string | null;
-  /** @format int32 */
-  createdByUserId?: number;
+  /** @format uuid */
+  createdByUserId?: string;
   isPrivate?: boolean;
   groupType?: GroupType;
   defaultRole?: GroupRole;
@@ -128,13 +129,12 @@ export interface GroupDto {
 export interface GroupInfoResponse {
   exists?: boolean;
   isPrivate?: boolean;
-  hasPassword?: boolean;
   groupName?: string | null;
 }
 
 export interface GroupMemberDto {
-  /** @format int32 */
-  userId?: number;
+  /** @format uuid */
+  userId?: string;
   displayName?: string | null;
   role?: GroupRole;
   /** @format date-time */
@@ -146,20 +146,29 @@ export interface HealthResponse {
   status?: string | null;
 }
 
+export interface InviteLinkDto {
+  /** @format int32 */
+  id?: number;
+  token?: string | null;
+  url?: string | null;
+  /** @format date-time */
+  expiresAt?: string | null;
+  /** @format int32 */
+  maxUses?: number | null;
+  /** @format int32 */
+  useCount?: number;
+  /** @format date-time */
+  createdAt?: string;
+}
+
 export interface JoinGroupRequest {
   inviteCode?: string | null;
-  password?: string | null;
   otp?: string | null;
   inviteLinkToken?: string | null;
 }
 
 export interface LanguageResponse {
   language?: string | null;
-}
-
-export interface LoginRequest {
-  username?: string | null;
-  password?: string | null;
 }
 
 export interface MemberPermissionDetailResponse {
@@ -185,8 +194,8 @@ export interface MemberPermissionDetailResponse {
 }
 
 export interface MemberRatingDto {
-  /** @format int32 */
-  userId?: number;
+  /** @format uuid */
+  userId?: string;
   displayName?: string | null;
   /** @format int32 */
   averageRating?: number;
@@ -223,22 +232,21 @@ export interface PermissionsResponse {
   canManageGroup?: boolean;
 }
 
+export interface ProvisionResponse {
+  user?: UserDto;
+  isNewUser?: boolean;
+}
+
 export interface RateRequest {
   /** @format int32 */
   rating?: number;
-  /** @format int32 */
-  targetUserId?: number | null;
+  /** @format uuid */
+  targetUserId?: string | null;
 }
 
 export interface RatingResponse {
   /** @format int32 */
   rating?: number;
-}
-
-export interface RegisterRequest {
-  username?: string | null;
-  password?: string | null;
-  displayName?: string | null;
 }
 
 export interface SetLanguageRequest {
@@ -262,22 +270,15 @@ export interface StatsDto {
   memberRatings?: MemberRatingDto[] | null;
 }
 
-export interface SuccessResponse {
-  message?: string | null;
-}
-
 export interface TransferGroupRequest {
-  /** @format int32 */
-  newOwnerId?: number;
-}
-
-export interface UpdateGroupPasswordRequest {
-  newPassword?: string | null;
+  /** @format uuid */
+  newOwnerId?: string;
 }
 
 export interface UpdateGroupSettingsRequest {
   name?: string | null;
   isPrivate?: boolean | null;
+  defaultRole?: GroupRole;
 }
 
 export interface UpdateMemberPermissionsRequest {
@@ -330,15 +331,15 @@ export interface UploadPosterResponse {
 }
 
 export interface UserDto {
-  /** @format int32 */
-  id?: number;
+  /** @format uuid */
+  id?: string;
   username?: string | null;
   displayName?: string | null;
 }
 
 export interface UserRatingInput {
-  /** @format int32 */
-  userId?: number;
+  /** @format uuid */
+  userId?: string;
   /** @format int32 */
   rating?: number;
 }
@@ -348,23 +349,13 @@ export interface UserSettingsDto {
   preventMeAddingToMyPersonal?: boolean;
 }
 
-export interface ValidationError {
-  field?: string | null;
-  message?: string | null;
-}
-
-export interface ValidationErrorResponse {
-  message?: string | null;
-  errors?: ValidationError[] | null;
-}
-
 export interface WatchEntryDto {
   /** @format int32 */
   id?: number;
   /** @format int32 */
   movieId?: number;
-  /** @format int32 */
-  userId?: number;
+  /** @format uuid */
+  userId?: string;
   movie?: MovieDto;
   status?: WatchStatus;
   /** @format int32 */
@@ -573,37 +564,33 @@ export class Api<
 > extends HttpClient<SecurityDataType> {
   api = {
     /**
-     * @description Creates a new user account and returns a JWT token
+     * @description Creates or updates a local user from the Authentik JWT. Called once per login from the frontend callback page.
      *
      * @tags AuthEndpoints
-     * @name AuthRegisterCreate
-     * @summary Register a new user
-     * @request POST:/api/auth/register
+     * @name AuthProvisionCreate
+     * @summary Provision user
+     * @request POST:/api/auth/provision
      */
-    authRegisterCreate: (data: RegisterRequest, params: RequestParams = {}) =>
-      this.request<AuthResponse, ValidationErrorResponse>({
-        path: `/api/auth/register`,
+    authProvisionCreate: (params: RequestParams = {}) =>
+      this.request<ProvisionResponse, ErrorResponse | void>({
+        path: `/api/auth/provision`,
         method: "POST",
-        body: data,
-        type: ContentType.Json,
         format: "json",
         ...params,
       }),
 
     /**
-     * @description Authenticates a user and returns a JWT token
+     * @description Returns the current authenticated user's info.
      *
      * @tags AuthEndpoints
-     * @name AuthLoginCreate
-     * @summary Login with credentials
-     * @request POST:/api/auth/login
+     * @name AuthMeList
+     * @summary Get current user
+     * @request GET:/api/auth/me
      */
-    authLoginCreate: (data: LoginRequest, params: RequestParams = {}) =>
-      this.request<AuthResponse, void>({
-        path: `/api/auth/login`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
+    authMeList: (params: RequestParams = {}) =>
+      this.request<UserDto, void>({
+        path: `/api/auth/me`,
+        method: "GET",
         format: "json",
         ...params,
       }),
@@ -743,7 +730,7 @@ export class Api<
      */
     groupsMembersDelete: (
       id: number,
-      userId: number,
+      userId: string,
       params: RequestParams = {},
     ) =>
       this.request<void, ErrorResponse | void>({
@@ -784,7 +771,7 @@ export class Api<
      */
     groupsMembersRoleUpdate: (
       id: number,
-      userId: number,
+      userId: string,
       data: UpdateMemberRoleRequest,
       params: RequestParams = {},
     ) =>
@@ -809,28 +796,6 @@ export class Api<
       this.request<GenerateOtpResponse, ErrorResponse | void>({
         path: `/api/groups/${id}/generate-otp`,
         method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Updates the password for a private group
-     *
-     * @tags GroupEndpoints
-     * @name GroupsPasswordUpdate
-     * @summary Update group password
-     * @request PUT:/api/groups/{id}/password
-     */
-    groupsPasswordUpdate: (
-      id: number,
-      data: UpdateGroupPasswordRequest,
-      params: RequestParams = {},
-    ) =>
-      this.request<SuccessResponse, ErrorResponse | void>({
-        path: `/api/groups/${id}/password`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -883,7 +848,7 @@ export class Api<
      */
     groupsMembersPermissionsList: (
       id: number,
-      userId: number,
+      userId: string,
       params: RequestParams = {},
     ) =>
       this.request<MemberPermissionDetailResponse, ErrorResponse | void>({
@@ -903,7 +868,7 @@ export class Api<
      */
     groupsMembersPermissionsUpdate: (
       id: number,
-      userId: number,
+      userId: string,
       data: UpdateMemberPermissionsRequest,
       params: RequestParams = {},
     ) =>
@@ -913,6 +878,63 @@ export class Api<
         body: data,
         type: ContentType.Json,
         format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Creates a time-limited invite link for a group (Owner/Admin only)
+     *
+     * @tags GroupEndpoints
+     * @name GroupsInviteLinksCreate
+     * @summary Create invite link
+     * @request POST:/api/groups/{id}/invite-links
+     */
+    groupsInviteLinksCreate: (
+      id: number,
+      data: CreateInviteLinkRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<InviteLinkDto, ErrorResponse | void>({
+        path: `/api/groups/${id}/invite-links`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Returns all active invite links for a group (Owner/Admin only)
+     *
+     * @tags GroupEndpoints
+     * @name GroupsInviteLinksList
+     * @summary Get active invite links
+     * @request GET:/api/groups/{id}/invite-links
+     */
+    groupsInviteLinksList: (id: number, params: RequestParams = {}) =>
+      this.request<InviteLinkDto[], void>({
+        path: `/api/groups/${id}/invite-links`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Revokes an invite link (Owner/Admin only)
+     *
+     * @tags GroupEndpoints
+     * @name GroupsInviteLinksDelete
+     * @summary Revoke invite link
+     * @request DELETE:/api/groups/{id}/invite-links/{linkId}
+     */
+    groupsInviteLinksDelete: (
+      id: number,
+      linkId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, void>({
+        path: `/api/groups/${id}/invite-links/${linkId}`,
+        method: "DELETE",
         ...params,
       }),
 

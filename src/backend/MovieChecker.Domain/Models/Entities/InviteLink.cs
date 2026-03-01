@@ -8,7 +8,7 @@ public class InviteLink
     public DateTime? ExpiresAt { get; set; }
     public int? MaxUses { get; set; }
     public int UseCount { get; set; }
-    public int CreatedByUserId { get; set; }
+    public Guid CreatedByUserId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Group Group { get; set; } = null!;

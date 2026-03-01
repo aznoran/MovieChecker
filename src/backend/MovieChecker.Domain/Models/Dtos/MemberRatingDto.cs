@@ -1,3 +1,3 @@
 namespace MovieChecker.Domain.Models.Dtos;
 
-public record MemberRatingDto(int UserId, string DisplayName, int AverageRating, int TotalRated);
+public record MemberRatingDto(Guid UserId, string DisplayName, int AverageRating, int TotalRated);

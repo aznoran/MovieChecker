@@ -20,7 +20,7 @@ import {
 import {Eye, User, Shield} from "lucide-react";
 
 interface RoleChangeDialogProps {
-    roleChangeDialog: { groupId: number; userId: number; currentRole: GroupRole } | null;
+    roleChangeDialog: { groupId: number; userId: string; currentRole: GroupRole } | null;
     selectedNewRole: GroupRole | null;
     onRoleChange: (role: GroupRole) => void;
     onConfirm: () => void;

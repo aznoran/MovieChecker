@@ -6,7 +6,7 @@ public record GroupDto(
     int Id,
     string Name,
     string? InviteCode,
-    int CreatedByUserId,
+    Guid CreatedByUserId,
     bool IsPrivate,
     GroupType GroupType,
     GroupRole DefaultRole,

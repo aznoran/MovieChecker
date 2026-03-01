@@ -1,10 +1,10 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using MovieChecker.Domain.Models.Dtos;
 using MovieChecker.Domain.Models.Entities;
-using MovieChecker.Domain.Models.Enums;
-using MovieChecker.Infrastructure.Abstractions;
 using MovieChecker.Infrastructure.Data;
-using MovieChecker.Infrastructure.Services;
 
 namespace MovieChecker.Web.Endpoints;
 
@@ -14,17 +14,21 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth");
 
-        group.MapPost("/register", Register)
-            .Produces<AuthResponse>(StatusCodes.Status200OK)
-            .Produces<ValidationErrorResponse>(StatusCodes.Status400BadRequest)
-            .WithSummary("Register a new user")
-            .WithDescription("Creates a new user account and returns a JWT token");
-
-        group.MapPost("/login", Login)
-            .Produces<AuthResponse>(StatusCodes.Status200OK)
+        group.MapPost("/provision", Provision)
+            .RequireAuthorization()
+            .Produces<ProvisionResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
-            .WithSummary("Login with credentials")
-            .WithDescription("Authenticates a user and returns a JWT token");
+            .WithSummary("Provision user")
+            .WithDescription(
+                "Creates or updates a local user from the Authentik JWT. Called once per login from the frontend callback page.");
+
+        group.MapGet("/me", GetCurrentUser)
+            .RequireAuthorization()
+            .Produces<UserDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Get current user")
+            .WithDescription("Returns the current authenticated user's info.");
 
         group.MapPost("/language", SetLanguage)
             .Produces<LanguageResponse>(StatusCodes.Status200OK)
@@ -32,88 +36,56 @@ public static class AuthEndpoints
             .WithDescription("Sets the user's preferred language (en or ru)");
     }
 
-    private static async Task<IResult> Register(
-        RegisterRequest request,
+    private static async Task<IResult> Provision(
+        HttpContext httpContext,
         AppDbContext db,
-        JwtService jwtService,
-        ValidationService validationService,
-        ILocalizationService localizer)
+        HybridCache cache,
+        IConfiguration configuration)
     {
-        // Validate input
-        var validationResult = validationService.ValidateRegistration(
-            request.Username,
-            request.Password,
-            request.DisplayName
-        );
+        var authHeader = httpContext.Request.Headers.Authorization.ToString();
+        if (!authHeader.StartsWith("Bearer ")) return Results.Unauthorized();
+        var token = authHeader["Bearer ".Length..];
 
-        if (!validationResult.IsValid)
+        var handler = new JwtSecurityTokenHandler();
+        if (!handler.CanReadToken(token)) return Results.Unauthorized();
+        var jwt = handler.ReadJwtToken(token);
+
+        var sub = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(sub) || !Guid.TryParse(sub, out var userId))
+            return Results.BadRequest(new ErrorResponse("Invalid sub claim"));
+
+        var username = jwt.Claims.FirstOrDefault(c => c.Type == "preferred_username")?.Value ?? sub;
+        var displayName = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? username;
+
+        var user = await db.Users.FindAsync(userId);
+        bool isNewUser = user is null;
+
+        if (user is null)
         {
-            return Results.BadRequest(new ValidationErrorResponse(
-                localizer["ValidationFailed"], 
-                validationResult.Errors
-            ));
+            user = new User { Id = userId, Username = username, DisplayName = displayName };
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+            // Personal group is created lazily on first GET /api/groups request
+        }
+        else if (user.DisplayName != displayName)
+        {
+            user.DisplayName = displayName;
+            await db.SaveChangesAsync();
         }
 
-        if (await db.Users.AnyAsync(u => u.Username == request.Username))
-        {
-            return Results.BadRequest(new ErrorResponse(localizer["UsernameAlreadyExists"]));
-        }
+        // Warm up the exists-cache so OnTokenValidated succeeds immediately after
+        await cache.SetAsync($"user_exists_{sub}", true);
 
-        var user = new User
-        {
-            Username = request.Username,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            DisplayName = string.IsNullOrEmpty(request.DisplayName) ? request.Username : request.DisplayName
-        };
-
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
-
-        // Create personal group for the new user
-        var personalGroup = new Group
-        {
-            Name = "Personal",
-            InviteCode = null,
-            CreatedByUserId = user.Id,
-            IsPrivate = false,
-            GroupType = GroupType.Personal,
-            DefaultRole = GroupRole.Owner
-        };
-        db.Groups.Add(personalGroup);
-        await db.SaveChangesAsync();
-
-        db.GroupMembers.Add(new GroupMember
-        {
-            GroupId = personalGroup.Id,
-            UserId = user.Id,
-            Role = GroupRole.Owner
-        });
-        await db.SaveChangesAsync();
-
-        var token = jwtService.GenerateToken(user);
-        return Results.Ok(new AuthResponse(
-            token,
-            new UserDto(user.Id, user.Username, user.DisplayName)
-        ));
+        return Results.Ok(new ProvisionResponse(
+            new UserDto(user.Id, user.Username, user.DisplayName),
+            isNewUser));
     }
 
-    private static async Task<IResult> Login(
-        LoginRequest request,
-        AppDbContext db,
-        JwtService jwtService)
+    private static async Task<IResult> GetCurrentUser(HttpContext ctx, AppDbContext db)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-
-        if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-        {
-            return Results.Unauthorized();
-        }
-
-        var token = jwtService.GenerateToken(user);
-        return Results.Ok(new AuthResponse(
-            token,
-            new UserDto(user.Id, user.Username, user.DisplayName)
-        ));
+        var userId = Guid.Parse(ctx.User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var user = await db.Users.FindAsync(userId);
+        return user is null ? Results.NotFound() : Results.Ok(new UserDto(user.Id, user.Username, user.DisplayName));
     }
 
     private static IResult SetLanguage(HttpContext context, SetLanguageRequest request)
@@ -142,3 +114,4 @@ public static class AuthEndpoints
 }
 
 public record SetLanguageRequest(string Language);
+public record ProvisionResponse(UserDto User, bool IsNewUser);

@@ -79,7 +79,7 @@ interface PermissionEditorDialogProps {
     open: boolean;
     onClose: () => void;
     groupId: number;
-    userId: number;
+    userId: string;
     displayName: string;
     role: GroupRole;
 }

@@ -1,0 +1,311 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: MovieChecker Branding
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: >-
+      Cinema dark theme for MovieChecker login/registration pages.
+      Locale is auto-detected from the browser (supports ru + en).
+entries:
+  - model: authentik_brands.brand
+    identifiers:
+      domain: authentik-default
+    state: present
+    attrs:
+      default: true
+      branding_title: "MovieChecker"
+      # Use Authentik's own bundled assets — data URIs are not supported
+      branding_favicon: /static/dist/assets/icons/icon.png
+      branding_default_flow_background: /static/dist/assets/images/flow_background.jpg
+      # Locale is intentionally left empty so the browser language is used.
+      # Authentik ships built-in ru + en translations for all standard UI strings.
+      # Custom prompt labels are translated via the `translations` field in
+      # moviechecker-oauth2.yaml.
+      attributes:
+        settings:
+          locale: ""
+          theme:
+            base: automatic
+      flow_authentication:
+        !Find [authentik_flows.flow, [slug, default-authentication-flow]]
+      flow_invalidation:
+        !Find [authentik_flows.flow, [slug, platform-provider-logout]]
+      flow_user_settings:
+        !Find [authentik_flows.flow, [slug, default-user-settings-flow]]
+      branding_custom_css: |
+        /* ════════════════════════════════════════════════════════════════
+           MovieChecker — Cinema Dark Theme
+           Uses pf-c- prefix (PatternFly v4, which authentik bundles).
+           CSS custom properties cascade into web-component shadow DOM.
+           ════════════════════════════════════════════════════════════════ */
+
+        /* ── 1. Design tokens ─────────────────────────────────────────── */
+        :host {
+          --ak-accent:        #ffffff;
+          --ak-accent-hover:  rgba(255, 255, 255, 0.82);
+          --ak-bg:            #000000;
+          --ak-card-bg:       #0a0a0a;
+          --ak-border:        rgba(255, 255, 255, 0.1);
+          --ak-text:          #ffffff;
+          --ak-text-muted:    rgba(255, 255, 255, 0.48);
+          --ak-accent-glow:   rgba(255, 255, 255, 0.12);
+        }
+
+        /* ── 2. Page background ───────────────────────────────────────── */
+        .pf-c-login {
+          background: #000000 !important;
+        }
+
+        /* ── 3. Flow card ─────────────────────────────────────────────── */
+        .pf-c-login__main {
+          background-color: var(--ak-card-bg) !important;
+          border: 1px solid var(--ak-border) !important;
+          border-radius: 16px !important;
+          box-shadow:
+            0 32px 80px rgba(0, 0, 0, 0.8),
+            0  0   0  1px rgba(255, 255, 255, 0.06) !important;
+        }
+
+        /* ── 4. Logo: hide img, replace with text via ::after ─────────── */
+        img.branding-logo {
+          display: none !important;
+        }
+
+        .pf-c-brand {
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          min-height: 52px;
+        }
+
+        .pf-c-brand::after {
+          content: "MovieChecker";
+          font-family: Inter, system-ui, -apple-system, sans-serif;
+          font-size: 1.9rem;
+          font-weight: 700;
+          color: #ffffff;
+          letter-spacing: -0.03em;
+        }
+
+        /* ── 5. Card header title ─────────────────────────────────────── */
+        h1.pf-c-title.pf-m-3xl {
+          font-size: 1.15rem !important;
+          font-weight: 500 !important;
+          color: var(--ak-text-muted) !important;
+          margin-bottom: 0 !important;
+        }
+
+        /* Hide the "Sign in to continue to …" subtitle */
+        .pf-c-login__main-header-desc {
+          display: none !important;
+        }
+
+        ak-stage-identification form.pf-c-form > p:first-child,
+        :host form.pf-c-form > p:first-child {
+          display: none !important;
+        }
+
+        /* ── 6. Form labels ───────────────────────────────────────────── */
+        .pf-c-form__label-text {
+          color: var(--ak-text-muted) !important;
+          font-size: 0.84rem !important;
+          font-weight: 500 !important;
+        }
+
+        /* ── 7. Form inputs ───────────────────────────────────────────── */
+        .pf-c-form-control {
+          background-color: rgba(255, 255, 255, 0.04) !important;
+          border-color: var(--ak-border) !important;
+          color: var(--ak-text) !important;
+          border-radius: 9px !important;
+        }
+
+        .pf-c-form-control:focus {
+          border-color: #ffffff !important;
+          box-shadow: 0 0 0 3px var(--ak-accent-glow) !important;
+          outline: none !important;
+        }
+
+        .pf-c-form-control::placeholder {
+          color: rgba(255, 255, 255, 0.22) !important;
+        }
+
+        /* ── 8. Primary button ────────────────────────────────────────── */
+        .pf-c-button.pf-m-primary {
+          border-radius: 9px !important;
+          background-color: #ffffff !important;
+          border-color: #ffffff !important;
+          color: #000000 !important;
+          font-weight: 600 !important;
+          letter-spacing: 0.02em !important;
+          transition: background-color 0.15s, transform 0.12s, box-shadow 0.15s !important;
+        }
+
+        .pf-c-button.pf-m-primary:hover {
+          background-color: rgba(255, 255, 255, 0.85) !important;
+          border-color: rgba(255, 255, 255, 0.85) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 24px rgba(255, 255, 255, 0.2) !important;
+        }
+
+        .pf-c-button.pf-m-primary:active {
+          transform: translateY(0) !important;
+          box-shadow: none !important;
+        }
+
+        /* Spinner inside primary button */
+        .pf-c-button.pf-m-primary .pf-c-spinner__path {
+          stroke: #000000 !important;
+        }
+
+        /* ── 9. Link buttons & anchors ────────────────────────────────── */
+        .pf-c-button.pf-m-link,
+        .pf-c-button.pf-m-plain {
+          color: #ffffff !important;
+        }
+
+        .pf-c-button.pf-m-link:hover {
+          color: rgba(255, 255, 255, 0.75) !important;
+        }
+
+        a { color: #ffffff !important; }
+        a:hover { color: rgba(255, 255, 255, 0.75) !important; }
+
+        /* ── 10. Footer links ─────────────────────────────────────────── */
+        .pf-c-list.pf-m-inline li,
+        .pf-c-list.pf-m-inline li a {
+          color: var(--ak-text-muted);
+          font-size: 0.875rem;
+          transition: color 0.15s;
+        }
+
+        .pf-c-list.pf-m-inline li:hover,
+        .pf-c-list.pf-m-inline li:hover a {
+          color: #ffffff;
+        }
+
+        /* ── 11. Alerts ───────────────────────────────────────────────── */
+        .pf-c-alert.pf-m-danger {
+          background: rgba(224, 82, 96, 0.1) !important;
+          border-color: rgba(224, 82, 96, 0.28) !important;
+          border-radius: 9px !important;
+        }
+
+        .pf-c-alert.pf-m-success {
+          background: rgba(76, 175, 130, 0.1) !important;
+          border-color: rgba(76, 175, 130, 0.28) !important;
+          border-radius: 9px !important;
+        }
+
+        /* ── 12. Hide the flow debug inspector ────────────────────────── */
+        ak-flow-inspector,
+        #flow-inspector,
+        .inspector-toggle,
+        .pf-c-page__header-tools {
+          display: none !important;
+        }
+
+        /* ── 13. Spinner ──────────────────────────────────────────────── */
+        .pf-c-spinner__path {
+          stroke: #ffffff !important;
+        }
+
+        /* ── 14. Scrollbar ────────────────────────────────────────────── */
+        * {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 3px;
+        }
+
+        /* ── 15. Locale / language selector ────────────────────────────── */
+
+        /* Hide all languages except English and Russian.
+           Works for both native <select> options (Chromium + Firefox honour
+           display:none on <option>) and PatternFly list items. */
+        ak-locale-select select option:not([value=""]):not([value="en"]):not([value="ru"]) {
+          display: none !important;
+        }
+
+        /* PatternFly menu items — hide non-en/non-ru entries.
+           Authentik renders each item with a data-locale or a lang attribute;
+           fall back to :not() on common locale codes if neither exists. */
+        ak-locale-select .pf-c-select__menu-item:not([data-locale="en"]):not([data-locale="ru"]):not([data-locale=""]),
+        ak-locale-select li:not([lang="en"]):not([lang="ru"]):not(:first-child) {
+          display: none !important;
+        }
+
+        /* Fix white background on the native <select> element */
+        ak-locale-select select,
+        select[name="locale"] {
+          background-color: #111111 !important;
+          background-image: none !important;
+          color: #ffffff !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          border-radius: 8px !important;
+          padding: 0.3rem 2rem 0.3rem 0.65rem !important;
+          -webkit-appearance: none !important;
+          appearance: none !important;
+          cursor: pointer;
+        }
+
+        ak-locale-select select:focus,
+        select[name="locale"]:focus {
+          border-color: #ffffff !important;
+          box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12) !important;
+          outline: none !important;
+        }
+
+        /* Option items inside the native select */
+        ak-locale-select select option {
+          background-color: #111111 !important;
+          color: #ffffff !important;
+        }
+
+        /* PatternFly custom select toggle (button that opens the dropdown) */
+        ak-locale-select .pf-c-select__toggle {
+          background-color: #111111 !important;
+          color: #ffffff !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          border-radius: 8px !important;
+        }
+
+        ak-locale-select .pf-c-select__toggle:hover {
+          background-color: rgba(255, 255, 255, 0.07) !important;
+        }
+
+        ak-locale-select .pf-c-select__toggle::before {
+          border-color: rgba(255, 255, 255, 0.15) !important;
+        }
+
+        ak-locale-select .pf-c-select__toggle-arrow {
+          color: rgba(255, 255, 255, 0.5) !important;
+        }
+
+        /* PatternFly dropdown menu panel */
+        ak-locale-select .pf-c-select__menu {
+          background-color: #111111 !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
+          border-radius: 9px !important;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7) !important;
+        }
+
+        ak-locale-select .pf-c-select__menu-item {
+          background-color: transparent !important;
+          color: #ffffff !important;
+        }
+
+        ak-locale-select .pf-c-select__menu-item:hover,
+        ak-locale-select .pf-c-select__menu-item:focus {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+          color: #ffffff !important;
+        }
+
+        ak-locale-select .pf-c-select__menu-item.pf-m-selected {
+          color: #ffffff !important;
+        }

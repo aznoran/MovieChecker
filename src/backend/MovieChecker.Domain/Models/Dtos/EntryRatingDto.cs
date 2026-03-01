@@ -2,7 +2,7 @@ namespace MovieChecker.Domain.Models.Dtos;
 
 public record EntryRatingDto(
     int Id,
-    int UserId,
+    Guid UserId,
     string DisplayName,
     int Rating
 );

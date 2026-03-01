@@ -6,7 +6,7 @@ public class WatchEntry
 {
     public int Id { get; set; }
     public int MovieId { get; set; }
-    public int UserId { get; set; }
+    public Guid UserId { get; set; }
     public int? GroupId { get; set; }
 
     public WatchStatus Status { get; set; } = WatchStatus.Planned;

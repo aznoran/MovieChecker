@@ -48,7 +48,7 @@ public class PermissionService
     /// Loads the group member with custom permissions and computes effective permissions.
     /// Returns null if the user is not a member of the group.
     /// </summary>
-    public static async Task<Permission?> GetUserPermissions(AppDbContext db, int userId, int groupId)
+    public static async Task<Permission?> GetUserPermissions(AppDbContext db, Guid userId, int groupId)
     {
         var member = await db.GroupMembers
             .Include(m => m.CustomPermission)
@@ -61,7 +61,7 @@ public class PermissionService
     /// <summary>
     /// Checks if a user has a specific permission in a group
     /// </summary>
-    public static async Task<bool> HasPermission(AppDbContext db, int userId, int groupId, Permission permission)
+    public static async Task<bool> HasPermission(AppDbContext db, Guid userId, int groupId, Permission permission)
     {
         var perms = await GetUserPermissions(db, userId, groupId);
         if (perms == null) return false;
@@ -71,7 +71,7 @@ public class PermissionService
     /// <summary>
     /// Checks if a user has permission to create entries in a group
     /// </summary>
-    public static async Task<bool> CanCreateInGroup(AppDbContext db, int userId, int groupId)
+    public static async Task<bool> CanCreateInGroup(AppDbContext db, Guid userId, int groupId)
     {
         return await HasPermission(db, userId, groupId, Permission.CreateEntries);
     }
@@ -79,7 +79,7 @@ public class PermissionService
     /// <summary>
     /// Checks if a user has permission to edit an entry
     /// </summary>
-    public static async Task<bool> CanEditEntry(AppDbContext db, int userId, WatchEntry entry)
+    public static async Task<bool> CanEditEntry(AppDbContext db, Guid userId, WatchEntry entry)
     {
         // Personal entries (legacy with no group): only owner can edit
         if (!entry.GroupId.HasValue)
@@ -122,7 +122,7 @@ public class PermissionService
     /// <summary>
     /// Checks if a user has permission to delete an entry
     /// </summary>
-    public static async Task<bool> CanDeleteEntry(AppDbContext db, int userId, WatchEntry entry)
+    public static async Task<bool> CanDeleteEntry(AppDbContext db, Guid userId, WatchEntry entry)
     {
         // Personal entries (legacy with no group): only owner can delete
         if (!entry.GroupId.HasValue)
@@ -162,7 +162,7 @@ public class PermissionService
     /// <summary>
     /// Checks if a user has permission to view entries in a group
     /// </summary>
-    public static async Task<bool> CanViewGroup(AppDbContext db, int userId, int groupId)
+    public static async Task<bool> CanViewGroup(AppDbContext db, Guid userId, int groupId)
     {
         return await HasPermission(db, userId, groupId, Permission.ViewEntries);
     }
@@ -170,7 +170,7 @@ public class PermissionService
     /// <summary>
     /// Checks if a user can rate an entry (own rating)
     /// </summary>
-    public static async Task<bool> CanRateSelf(AppDbContext db, int userId, int groupId)
+    public static async Task<bool> CanRateSelf(AppDbContext db, Guid userId, int groupId)
     {
         return await HasPermission(db, userId, groupId, Permission.RateSelf);
     }
@@ -178,7 +178,7 @@ public class PermissionService
     /// <summary>
     /// Checks if a user can set ratings for other members
     /// </summary>
-    public static async Task<bool> CanRateOthers(AppDbContext db, int userId, int groupId)
+    public static async Task<bool> CanRateOthers(AppDbContext db, Guid userId, int groupId)
     {
         return await HasPermission(db, userId, groupId, Permission.RateOthers);
     }

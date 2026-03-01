@@ -1,7 +1,7 @@
 "use client";
 
 import {useRouter} from "next/navigation";
-import {useAuth} from "@/context/auth-context";
+import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
@@ -24,10 +24,10 @@ import type {Locale} from "@/lib/i18n";
 
 export default function LandingPage() {
     const {locale, setLocale, t} = useLocale();
-    const {isAuthenticated} = useAuth();
+    const { data: session } = useSession();
     const router = useRouter();
 
-    if (isAuthenticated) {
+    if (session) {
         router.push("/");
         return null;
     }

@@ -1,2 +1,4 @@
 ﻿pgadmin
 certs/
+authentik/media/
+authentik/custom-templates/

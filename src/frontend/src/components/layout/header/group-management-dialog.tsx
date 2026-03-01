@@ -4,12 +4,7 @@ import {useState} from "react";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {GroupRole, GroupType} from "@/lib/api/generated";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import {Dialog, DialogContent, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
 import {FieldGroup, FieldSeparator} from "@/components/ui/field";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {UsersRound} from "lucide-react";
@@ -28,10 +23,10 @@ export function GroupManagementDialog({open, onOpenChange}: GroupManagementDialo
     const {groups, updateMemberRole} = useGroup();
 
     const [error, setError] = useState("");
-    const [roleChangeDialog, setRoleChangeDialog] = useState<{ groupId: number; userId: number; currentRole: GroupRole } | null>(null);
+    const [roleChangeDialog, setRoleChangeDialog] = useState<{ groupId: number; userId: string; currentRole: GroupRole } | null>(null);
     const [selectedNewRole, setSelectedNewRole] = useState<GroupRole | null>(null);
 
-    const handleChangeRole = async (groupId: number, userId: number, currentRole: GroupRole) => {
+    const handleChangeRole = async (groupId: number, userId: string, currentRole: GroupRole) => {
         setRoleChangeDialog({ groupId, userId, currentRole });
         setSelectedNewRole(currentRole);
     };
@@ -53,6 +48,7 @@ export function GroupManagementDialog({open, onOpenChange}: GroupManagementDialo
         setSelectedNewRole(null);
     };
 
+    console.log(groups)
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,24 +77,27 @@ export function GroupManagementDialog({open, onOpenChange}: GroupManagementDialo
                                     {error}
                                 </div>
                             )}
-                            <FieldSeparator className="p-6"/>
-                            {/* Group list */}
-                            {groups.length > 0 && (
-                                <div className="space-y-3">
-                                    <h3 className="text-sm font-semibold text-foreground/90 px-1">
-                                        {t("yourGroups")}
-                                    </h3>
-                                    <FieldGroup>
-                                        {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => (
-                                            <GroupCard
-                                                key={g.id}
-                                                group={g}
-                                                onChangeRole={handleChangeRole}
-                                                setError={setError}
-                                            />
-                                        ))}
-                                    </FieldGroup>
-                                </div>
+                            {groups.filter(x => x.groupType !== GroupType.Personal).length > 0 && (
+                                <>
+                                    <FieldSeparator className="p-6"/>
+
+                                    {/* Group list */}
+                                    <div className="space-y-3">
+                                        <h3 className="text-sm font-semibold text-foreground/90 px-1">
+                                            {t("yourGroups")}
+                                        </h3>
+                                        <FieldGroup>
+                                            {groups.filter((g) => g.groupType !== GroupType.Personal).map((g) => (
+                                                <GroupCard
+                                                    key={g.id}
+                                                    group={g}
+                                                    onChangeRole={handleChangeRole}
+                                                    setError={setError}
+                                                />
+                                            ))}
+                                        </FieldGroup>
+                                    </div>
+                                </>
                             )}
                         </div>
                     </ScrollArea>
