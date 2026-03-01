@@ -1,3 +1,3 @@
 namespace MovieChecker.Domain.Models.Dtos;
 
-public record UserDto(int Id, string Username, string DisplayName);
+public record UserDto(Guid Id, string Username, string DisplayName);

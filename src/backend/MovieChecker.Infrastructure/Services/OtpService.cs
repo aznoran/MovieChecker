@@ -55,27 +55,19 @@ public class OtpService
     }
 
     /// <summary>
-    /// Gets all active OTPs for a group (for admin view - unused currently)
+    /// Invalidates all active OTPs for a group
     /// </summary>
-    /*
-    public async Task<List<(string Code, TimeSpan? TimeLeft)>> GetActiveOtpsAsync(int groupId)
+    public async Task InvalidateAllOtpsAsync(int groupId)
     {
         var pattern = $"otp:group:{groupId}:*";
         var server = _redis.Multiplexer.GetServer(_redis.Multiplexer.GetEndPoints().First());
-        var keys = server.Keys(pattern: pattern);
-        
-        var result = new List<(string Code, TimeSpan? TimeLeft)>();
-        
+        var keys = server.Keys(pattern: pattern).ToArray();
+
         foreach (var key in keys)
         {
-            var ttl = await _redis.KeyTimeToLiveAsync(key);
-            var code = key.ToString().Split(':').Last();
-            result.Add((code, ttl));
+            await _redis.KeyDeleteAsync(key);
         }
-        
-        return result;
     }
-    */
 
     private string GenerateRandomCode()
     {

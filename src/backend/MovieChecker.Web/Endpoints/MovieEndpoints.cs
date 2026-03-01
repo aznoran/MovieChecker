@@ -52,7 +52,7 @@ public static class MovieEndpoints
 
         if (type.HasValue)
         {
-            query = query.Where(m => m.Type == (ContentType)type.Value);
+            query = query.Where(m => m.Type == (EntryContentType)type.Value);
         }
 
         var movies = await query
