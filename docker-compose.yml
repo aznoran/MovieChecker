@@ -84,11 +84,16 @@ services:
       context: ./src/frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: https://xui123qweqwe.org
-        NEXT_PUBLIC_AUTHENTIK_URL: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
-        NEXT_PUBLIC_AUTHENTIK_CLIENT_ID: moviechecker
-        NEXT_PUBLIC_AUTHENTIK_REDIRECT_URI: https://xui123qweqwe.org/auth/callback
+        NEXT_PUBLIC_API_URL: https://${APP_DOMAIN:-xui123qweqwe.org}
         NEXT_PUBLIC_AUTHENTIK_LOGOUT_URL: https://auth.${APP_DOMAIN:-xui123qweqwe.org}/if/flow/platform-provider-logout/
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_AUTHENTIK_ID: moviechecker
+      AUTH_AUTHENTIK_SECRET: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
+      AUTH_AUTHENTIK_ISSUER: "https://auth.${APP_DOMAIN:-xui123qweqwe.org}/application/o/moviechecker/"
+      AUTH_URL: "https://${APP_DOMAIN:-xui123qweqwe.org}"
+      API_URL: "http://backend:5000"
+      AUTH_TRUST_HOST: "true"
     restart: unless-stopped
     expose:
       - "3000"
