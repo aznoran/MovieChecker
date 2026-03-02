@@ -9,7 +9,7 @@ public class AppDbContext : DbContext
     {
     }
 
-    public DbSet<User> Users => Set<User>();
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<Movie> Movies => Set<Movie>();
     public DbSet<WatchEntry> WatchEntries => Set<WatchEntry>();
     public DbSet<PosterImage> PosterImages => Set<PosterImage>();

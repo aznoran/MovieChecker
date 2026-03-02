@@ -65,6 +65,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session: { strategy: "jwt" },
 
     callbacks: {
+        async redirect({ url, baseUrl }) {
+            if (url.startsWith("/")) return `${baseUrl}${url}`;
+            try {
+                const target = new URL(url);
+                if (target.origin === baseUrl) return url;
+            } catch { /* no-op */ }
+            return baseUrl;
+        },
+
         async jwt({ token, account, profile }) {
             // Первый логин — сохраняем все токены и провизионируем пользователя
             if (account) {
@@ -77,20 +86,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     const p = profile as Record<string, unknown>;
                     token.groups = p.groups as string[] | undefined;
                     token.username = p.preferred_username as string | undefined;
-                }
-
-                // Провизионируем пользователя в БД (создаём запись + личную группу если новый)
-                const apiUrl =
-                    process.env.API_URL ||
-                    process.env.NEXT_PUBLIC_API_URL ||
-                    "http://localhost:5000";
-                try {
-                    await fetch(`${apiUrl}/api/auth/provision`, {
-                        method: "POST",
-                        headers: { Authorization: `Bearer ${account.access_token}` },
-                    });
-                } catch {
-                    // Non-fatal: provisioning failure will surface as 401 on first API call
                 }
 
                 return token;
@@ -107,6 +102,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
 
             return token;
+        },
+
+        async authorized({ auth, request }) {
+            const isLoggedIn = !!auth?.user;
+            const isPublicRoute = request.nextUrl.pathname.startsWith("/login") ||
+                                  request.nextUrl.pathname.startsWith("/landing");
+            if (isPublicRoute) return true;
+            return isLoggedIn;
         },
 
         async session({ session, token }) {
@@ -139,7 +142,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 });
 
-// ---------- Token refresh ----------
+// ---------- Token refresh (with deduplication) ----------
 
 interface RefreshableToken {
     refreshToken?: string;
@@ -152,11 +155,28 @@ interface RefreshableToken {
     [key: string]: unknown;
 }
 
+// Prevent concurrent refresh: if multiple JWT callbacks fire simultaneously
+// (e.g. SessionProvider + getSession() on reload), only one refresh request is made.
+let _refreshPromise: Promise<RefreshableToken> | null = null;
+
 async function refreshAccessToken(
     token: RefreshableToken,
 ): Promise<RefreshableToken> {
+    if (_refreshPromise) return _refreshPromise;
+
+    _refreshPromise = doRefreshAccessToken(token);
     try {
-        const baseUrl = (process.env.AUTH_AUTHENTIK_ISSUER ?? "").replace(/\/application\/o\/.*$/, "");
+        return await _refreshPromise;
+    } finally {
+        _refreshPromise = null;
+    }
+}
+
+async function doRefreshAccessToken(
+    token: RefreshableToken,
+): Promise<RefreshableToken> {
+    try {
+        const baseUrl = getAuthentikBaseUrl();
         const tokenUrl = `${baseUrl}/application/o/token/`;
 
         const response = await fetch(tokenUrl, {
@@ -196,7 +216,7 @@ async function refreshAccessToken(
 
 async function revokeToken(token: string): Promise<void> {
     try {
-        const baseUrl = (process.env.AUTH_AUTHENTIK_ISSUER ?? "").replace(/\/application\/o\/.*$/, "");
+        const baseUrl = getAuthentikBaseUrl();
         const revokeUrl = `${baseUrl}/application/o/revoke/`;
 
         await fetch(revokeUrl, {
@@ -211,5 +231,16 @@ async function revokeToken(token: string): Promise<void> {
         });
     } catch {
         // Отзыв токена — best-effort; не блокируем logout при ошибке
+    }
+}
+
+// ---------- Helpers ----------
+
+function getAuthentikBaseUrl(): string {
+    const issuerEnv = process.env.AUTH_AUTHENTIK_ISSUER ?? "";
+    try {
+        return new URL(issuerEnv).origin;
+    } catch {
+        return issuerEnv.replace(/\/application\/o\/.*$/, "");
     }
 }

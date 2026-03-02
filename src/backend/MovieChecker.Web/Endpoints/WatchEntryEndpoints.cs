@@ -63,7 +63,9 @@ public static class WatchEntryEndpoints
     }
 
     private static Guid GetUserId(ClaimsPrincipal user) =>
-        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
+        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)
+                   ?? user.FindFirstValue("sub")
+                   ?? Guid.Empty.ToString());
 
 
     private static WatchEntryDto ToDto(WatchEntry w) => new(
@@ -96,7 +98,9 @@ public static class WatchEntryEndpoints
         w.CurrentSeason,
         w.CurrentEpisode,
         w.TotalEpisodes,
-        w.WatchingTime
+        w.WatchingTime,
+        w.TotalSeasons,
+        w.RuntimeMinutes
     );
 
     private static async Task<IResult> GetAll(
@@ -221,6 +225,8 @@ public static class WatchEntryEndpoints
             CurrentEpisode = request.CurrentEpisode,
             TotalEpisodes = request.TotalEpisodes,
             WatchingTime = request.WatchingTime,
+            TotalSeasons = request.TotalSeasons,
+            RuntimeMinutes = request.RuntimeMinutes,
         };
 
         db.WatchEntries.Add(entry);
@@ -390,6 +396,8 @@ public static class WatchEntryEndpoints
         if (request.CurrentEpisode.HasValue) entry.CurrentEpisode = request.CurrentEpisode.Value;
         if (request.TotalEpisodes.HasValue) entry.TotalEpisodes = request.TotalEpisodes.Value;
         if (request.WatchingTime.HasValue) entry.WatchingTime = request.WatchingTime.Value;
+        if (request.TotalSeasons.HasValue) entry.TotalSeasons = request.TotalSeasons.Value;
+        if (request.RuntimeMinutes.HasValue) entry.RuntimeMinutes = request.RuntimeMinutes.Value;
 
         // Clear ratings when status changes to Planned or Watching
         if (request.Status.HasValue &&
@@ -560,6 +568,7 @@ public static class WatchEntryEndpoints
 
             query = db.WatchEntries
                 .Include(w => w.Movie)
+                .Include(w => w.User)
                 .Include(w => w.Ratings)
                 .ThenInclude(x => x.User)
                 .Where(w => w.WatchEntryGroups.Any(weg => weg.GroupId == groupId.Value)
@@ -569,6 +578,7 @@ public static class WatchEntryEndpoints
         {
             query = db.WatchEntries
                 .Include(w => w.Movie)
+                .Include(w => w.User)
                 .Include(w => w.Ratings)
                 .ThenInclude(x => x.User)
                 .Where(w => w.UserId == userId && w.GroupId == null);
@@ -588,6 +598,31 @@ public static class WatchEntryEndpoints
             .Select(r => r.Rating)
             .ToList();
 
+        var activityTimeline = entries
+            .GroupBy(e => e.CreatedAt.Date)
+            .OrderBy(g => g.Key)
+            .Select(g => new ActivityTimelinePoint(g.Key.ToString("yyyy-MM-dd"), g.Count()))
+            .ToList();
+
+        var ratingDistribution = allRatings
+            .GroupBy(r => r.Rating)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var genreDistribution = entries
+            .Where(e => !string.IsNullOrWhiteSpace(e.Movie.Genre))
+            .SelectMany(e => e.Movie.Genre!.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            .GroupBy(g => g)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var memberActivity = entries
+            .GroupBy(e => e.UserId)
+            .Select(g => new MemberActivityDto(
+                g.Key,
+                g.Select(e => e.User?.DisplayName).FirstOrDefault() ?? string.Empty,
+                g.Count()
+            ))
+            .ToList();
+
         var stats = new StatsDto(
             TotalWatched: entries.Count(e => e.Status == WatchStatus.Completed),
             TotalPlanned: entries.Count(e => e.Status == WatchStatus.Planned),
@@ -604,7 +639,11 @@ public static class WatchEntryEndpoints
                     (int)Math.Round(g.Average(r => r.Rating)),
                     g.Count()
                 ))
-                .ToList()
+                .ToList(),
+            ActivityTimeline: activityTimeline,
+            RatingDistribution: ratingDistribution,
+            GenreDistribution: genreDistribution,
+            MemberActivity: memberActivity
         );
 
         return Results.Ok(stats);

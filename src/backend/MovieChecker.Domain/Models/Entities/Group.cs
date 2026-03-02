@@ -13,7 +13,7 @@ public class Group
     public GroupRole DefaultRole { get; set; } = GroupRole.Member;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public User CreatedBy { get; set; } = null!;
+    public UserProfile CreatedBy { get; set; } = null!;
     public ICollection<GroupMember> Members { get; set; } = [];
     public ICollection<WatchEntryGroup> WatchEntryGroups { get; set; } = [];
 }

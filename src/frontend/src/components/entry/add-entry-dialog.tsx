@@ -85,6 +85,12 @@ function createAddEntrySchema(t: (key: TranslationKeys) => string) {
         totalEpisodes: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
             .optional().or(z.literal("")),
+        totalSeasons: z.string()
+            .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
+            .optional().or(z.literal("")),
+        runtimeMinutes: z.string()
+            .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
+            .optional().or(z.literal("")),
         hours: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 0), t("invalidNumber"))
             .optional().or(z.literal("")),
@@ -135,6 +141,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             currentSeason: "",
             currentEpisode: "",
             totalEpisodes: "",
+            totalSeasons: "",
+            runtimeMinutes: "",
             hours: "",
             minutes: "",
             seconds: "",
@@ -198,10 +206,14 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 viewers: isGroupMode ? selectedMembers : undefined,
                 comment: values.comment || undefined,
                 groupId: activeGroupId,
-                ...(values.status === WatchStatus.Watching && isSeries ? {
-                    currentSeason: values.currentSeason ? parseInt(values.currentSeason) : undefined,
-                    currentEpisode: values.currentEpisode ? parseInt(values.currentEpisode) : undefined,
-                    totalEpisodes: values.totalEpisodes ? parseInt(values.totalEpisodes) : undefined,
+                ...(values.status === WatchStatus.Watching ? {
+                    ...(isSeries ? {
+                        currentSeason: values.currentSeason ? parseInt(values.currentSeason) : undefined,
+                        currentEpisode: values.currentEpisode ? parseInt(values.currentEpisode) : undefined,
+                        totalEpisodes: values.totalEpisodes ? parseInt(values.totalEpisodes) : undefined,
+                        totalSeasons: values.totalSeasons ? parseInt(values.totalSeasons) : undefined,
+                    } : {}),
+                    runtimeMinutes: values.runtimeMinutes ? parseInt(values.runtimeMinutes) : undefined,
                     watchingTime: (values.hours || values.minutes || values.seconds)
                         ? (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"))
                         : undefined,
@@ -210,6 +222,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["watchEntries"]});
+            queryClient.invalidateQueries({queryKey: ["stats"]});
             toast.success(t("postAdded"), {position: "top-center"});
             resetForm();
             onOpenChange(false);
@@ -270,7 +283,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     // Helper to pass validation errors + handleFieldChange to SeriesTrackingSection
     const validationErrors: Record<string, string> = {};
     const formErrors = form.formState.errors;
-    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "hours", "minutes", "seconds"] as const) {
+    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "totalSeasons", "runtimeMinutes", "hours", "minutes", "seconds"] as const) {
         if (formErrors[key]?.message) {
             validationErrors[key] = formErrors[key].message as string;
         }
@@ -280,11 +293,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         form.setValue(name as keyof AddEntryFormValues, value, {shouldValidate: true});
     };
 
-    const showTracking = watchedStatus === WatchStatus.Watching && (
-        watchedContentType === EntryContentType.Anime ||
-        watchedContentType === EntryContentType.Series ||
-        watchedContentType === EntryContentType.Cartoon
-    );
+    const showTracking = watchedStatus === WatchStatus.Watching;
 
     const showRating = watchedStatus === WatchStatus.Completed || watchedStatus === WatchStatus.Dropped;
 
@@ -446,12 +455,17 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
 
                                         {showTracking && (
                                             <SeriesTrackingSection
+                                                contentType={watchedContentType}
                                                 currentSeason={form.watch("currentSeason") ?? ""}
                                                 setCurrentSeason={(v) => form.setValue("currentSeason", v, {shouldValidate: true})}
                                                 currentEpisode={form.watch("currentEpisode") ?? ""}
                                                 setCurrentEpisode={(v) => form.setValue("currentEpisode", v, {shouldValidate: true})}
                                                 totalEpisodes={form.watch("totalEpisodes") ?? ""}
                                                 setTotalEpisodes={(v) => form.setValue("totalEpisodes", v, {shouldValidate: true})}
+                                                totalSeasons={form.watch("totalSeasons") ?? ""}
+                                                setTotalSeasons={(v) => form.setValue("totalSeasons", v, {shouldValidate: true})}
+                                                runtimeMinutes={form.watch("runtimeMinutes") ?? ""}
+                                                setRuntimeMinutes={(v) => form.setValue("runtimeMinutes", v, {shouldValidate: true})}
                                                 hours={form.watch("hours") ?? ""}
                                                 setHours={(v) => form.setValue("hours", v, {shouldValidate: true})}
                                                 minutes={form.watch("minutes") ?? ""}
@@ -483,12 +497,17 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
 
                                         {showTracking && (
                                             <SeriesTrackingSection
+                                                contentType={watchedContentType}
                                                 currentSeason={form.watch("currentSeason") ?? ""}
                                                 setCurrentSeason={(v) => form.setValue("currentSeason", v, {shouldValidate: true})}
                                                 currentEpisode={form.watch("currentEpisode") ?? ""}
                                                 setCurrentEpisode={(v) => form.setValue("currentEpisode", v, {shouldValidate: true})}
                                                 totalEpisodes={form.watch("totalEpisodes") ?? ""}
                                                 setTotalEpisodes={(v) => form.setValue("totalEpisodes", v, {shouldValidate: true})}
+                                                totalSeasons={form.watch("totalSeasons") ?? ""}
+                                                setTotalSeasons={(v) => form.setValue("totalSeasons", v, {shouldValidate: true})}
+                                                runtimeMinutes={form.watch("runtimeMinutes") ?? ""}
+                                                setRuntimeMinutes={(v) => form.setValue("runtimeMinutes", v, {shouldValidate: true})}
                                                 hours={form.watch("hours") ?? ""}
                                                 setHours={(v) => form.setValue("hours", v, {shouldValidate: true})}
                                                 minutes={form.watch("minutes") ?? ""}

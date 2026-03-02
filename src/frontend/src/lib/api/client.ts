@@ -1,3 +1,4 @@
+import axios from "axios";
 import { getSession, signIn } from "next-auth/react";
 import {
     Api,
@@ -22,18 +23,38 @@ const apiClient = new Api({
     secure: true,
 });
 
-// Inject Bearer token and locale on every request
+// Deduplicate concurrent getSession() calls (e.g. multiple queries on page reload)
+let _sessionPromise: Promise<Awaited<ReturnType<typeof getSession>>> | null = null;
+
+function getSessionCached() {
+    if (!_sessionPromise) {
+        _sessionPromise = getSession().then((session) => {
+            if (!session) {
+                // Don't cache null - allow immediate retry
+                setTimeout(() => { _sessionPromise = null; }, 0);
+            } else {
+                setTimeout(() => { _sessionPromise = null; }, 2000);
+            }
+            return session;
+        });
+    }
+    return _sessionPromise;
+}
+
+// Request interceptor: attach Bearer token from session
 apiClient.instance.interceptors.request.use(async (config) => {
     if (typeof window !== "undefined") {
-        const session = await getSession();
+        const session = await getSessionCached();
 
         if (session?.error === "RefreshTokenError") {
             signIn("authentik");
-            return config;
+            return Promise.reject(new axios.Cancel("Session expired, redirecting to login"));
         }
 
         if (session?.accessToken) {
             config.headers.Authorization = `Bearer ${session.accessToken}`;
+        } else {
+            return Promise.reject(new axios.Cancel("No auth session available"));
         }
 
         const locale = localStorage.getItem("locale") || "en";
@@ -46,6 +67,7 @@ apiClient.instance.interceptors.request.use(async (config) => {
 apiClient.instance.interceptors.response.use(
     (response) => response,
     (error) => {
+        if (axios.isCancel(error)) return Promise.reject(error);
         const isAuthRequest = error.config?.url?.includes("/auth/");
         if (error.response?.status === 401 && typeof window !== "undefined" && !isAuthRequest) {
             signIn("authentik");

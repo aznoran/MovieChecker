@@ -76,7 +76,7 @@ app.UseCors();
 app.UseRequestLocalization();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<UserProvisioningMiddleware>();
+app.UseMiddleware<ProfileSyncMiddleware>();
 
 // Map endpoints
 app.MapAuthEndpoints();

@@ -9,5 +9,5 @@ public class EntryRating
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public WatchEntry WatchEntry { get; set; } = null!;
-    public User User { get; set; } = null!;
+    public UserProfile User { get; set; } = null!;
 }

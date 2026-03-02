@@ -242,7 +242,17 @@ const ru: Record<TranslationKeys, string> = {
     season: "Сезон",
     episode: "Эпизод",
     totalEpisodes: "Общее кол-во эпизодов",
+    totalSeasons: "Всего сезонов",
+    runtimeMinutes: "Длительность",
+    runtimeDescription: "Общая продолжительность того, что смотрите",
+    runtimeDescriptionMovie: "Общая продолжительность фильма",
+    runtimeDescriptionSeries: "Длительность эпизода, на котором остановились",
+    runtimeDescriptionCartoon: "Длительность серии мультфильма, на которой остановились",
+    runtimeDescriptionShow: "Общая продолжительность шоу",
     watchingTime: "Время последнего просмотра",
+    hoursShort: "ч",
+    minutesShort: "мин",
+    secondsShort: "сек",
 
     // Rate-only mode
     rateOnlyTitle: "Оценить запись",
@@ -397,6 +407,27 @@ const ru: Record<TranslationKeys, string> = {
     cardSizeLarge: "Большой",
     displaySettings: "Настройки отображения",
     displaySettingsDescription: "Настройте внешний вид дневника",
+
+    // Progress
+    progress: "Прогресс",
+
+    // Stats Charts
+    activityTimeline: "Активность по времени",
+    ratingDistribution: "Распределение оценок",
+    topGenres: "Топ жанров",
+    memberComparison: "Сравнение участников",
+    entries: "записей",
+
+    episodeDuration: "Длит. эпизода",
+    timeProgress: "По времени",
+
+    // Timestamps
+    created: "Создано",
+    lastModified: "Изменено",
+
+    // Feedback
+    feedback: "Обратная связь",
+    feedbackDescription: "Есть предложения или нашли ошибку? Свяжитесь с нами!",
 };
 
 export default ru;

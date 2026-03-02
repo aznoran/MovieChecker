@@ -87,14 +87,23 @@ export function GroupProvider({children}: { children: React.ReactNode }) {
 
     const personalGroup = useMemo(() => groups.find((g) => g.groupType === GroupType.Personal), [groups]);
 
-    // Derive activeGroupId: use raw value if valid, otherwise fall back to personal group
+    // Derive activeGroupId: undefined until groups are loaded, then validate against actual groups
     const activeGroupId = useMemo(() => {
-        if (!session || isLoading) return rawActiveGroupId;
+        if (!session || isLoading) return undefined;
         if (rawActiveGroupId !== undefined && groups.find((g) => g.id === rawActiveGroupId)) {
             return rawActiveGroupId;
         }
         return personalGroup?.id;
     }, [rawActiveGroupId, session, isLoading, groups, personalGroup]);
+
+    // Clean up stale localStorage when stored group ID is no longer valid
+    useEffect(() => {
+        if (!isLoading && groups.length > 0 && rawActiveGroupId !== undefined) {
+            if (!groups.find((g) => g.id === rawActiveGroupId)) {
+                setActiveGroupId(personalGroup?.id);
+            }
+        }
+    }, [isLoading, groups, rawActiveGroupId, personalGroup, setActiveGroupId]);
 
     const activeGroup = groups.find((g) => g.id === activeGroupId);
 
