@@ -61,6 +61,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
     const {t} = useLocale();
     const {leaveGroup, kickMember, transferOwnership, generateOtp, updateGroupSettings} = useGroup();
 
+    console.log("[GroupCard] session:", session, "userId:", userId);
     const currentMember = (g.members ?? []).find(m => m.userId === userId);
     const isOwner = userId === g.createdByUserId || currentMember?.role === GroupRole.Owner;
     const {data: permissions} = useQuery({
