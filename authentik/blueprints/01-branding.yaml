@@ -35,21 +35,63 @@ entries:
         !Find [authentik_flows.flow, [slug, default-user-settings-flow]]
       branding_custom_css: |
         /* ════════════════════════════════════════════════════════════════
-           MovieChecker — Cinema Dark Theme
-           Uses pf-c- prefix (PatternFly v4, which authentik bundles).
-           CSS custom properties cascade into web-component shadow DOM.
+           MovieChecker — Cinema Dark Theme (rewritten from scratch)
+
+           Key insight: authentik uses Shadow DOM for stage components.
+           Direct class selectors (.pf-c-form__label-text etc.) do NOT
+           penetrate shadow boundaries. We must override via:
+           1. CSS custom properties (inherit through shadow DOM)
+           2. Broad selectors on light-DOM elements
+           3. The * selector for color forcing where needed
            ════════════════════════════════════════════════════════════════ */
 
-        /* ── 1. Design tokens ─────────────────────────────────────────── */
-        :host {
-          --ak-accent:        #ffffff;
-          --ak-accent-hover:  rgba(255, 255, 255, 0.82);
-          --ak-bg:            #000000;
-          --ak-card-bg:       #0a0a0a;
-          --ak-border:        rgba(255, 255, 255, 0.1);
-          --ak-text:          #ffffff;
-          --ak-text-muted:    rgba(255, 255, 255, 0.48);
-          --ak-accent-glow:   rgba(255, 255, 255, 0.12);
+        /* ── 1. PatternFly & authentik CSS custom properties ──────────
+           These cascade INTO shadow DOM and are the primary theming
+           mechanism. Override all PF4 color tokens globally. ───────── */
+        :root,
+        .pf-c-login,
+        .pf-c-login * {
+          --pf-global--Color--100: #ffffff !important;
+          --pf-global--Color--200: rgba(255, 255, 255, 0.85) !important;
+          --pf-global--Color--light-100: #ffffff !important;
+          --pf-global--Color--light-200: rgba(255, 255, 255, 0.85) !important;
+          --pf-global--Color--dark-100: #ffffff !important;
+          --pf-global--BackgroundColor--100: #0a0a0a !important;
+          --pf-global--BackgroundColor--200: #000000 !important;
+          --pf-global--BackgroundColor--dark-100: #000000 !important;
+          --pf-global--BorderColor--100: rgba(255, 255, 255, 0.1) !important;
+          --pf-global--BorderColor--200: rgba(255, 255, 255, 0.1) !important;
+          --pf-global--primary-color--100: #ffffff !important;
+          --pf-global--primary-color--200: rgba(255, 255, 255, 0.85) !important;
+          --pf-global--link--Color: #ffffff !important;
+          --pf-global--link--Color--hover: rgba(255, 255, 255, 0.75) !important;
+          --pf-global--link--Color--visited: #ffffff !important;
+          --pf-c-login__main-header--c-title--Color: #ffffff !important;
+          --pf-c-title--m-3xl--Color: #ffffff !important;
+          --pf-c-title--m-xl--Color: #ffffff !important;
+          --pf-c-form__label--Color: #ffffff !important;
+          --pf-c-form__label-text--Color: #ffffff !important;
+          --pf-c-form-control--Color: #ffffff !important;
+          --pf-c-form-control--BackgroundColor: rgba(255, 255, 255, 0.04) !important;
+          --pf-c-form-control--BorderBottomColor: rgba(255, 255, 255, 0.2) !important;
+          --pf-c-form-control--focus--BorderBottomColor: #ffffff !important;
+          --pf-c-button--m-primary--BackgroundColor: #ffffff !important;
+          --pf-c-button--m-primary--Color: #000000 !important;
+          --pf-c-button--m-primary--hover--BackgroundColor: rgba(255, 255, 255, 0.85) !important;
+          --pf-c-button--m-primary--hover--Color: #000000 !important;
+          --pf-c-button--m-primary--active--BackgroundColor: rgba(255, 255, 255, 0.9) !important;
+          --pf-c-button--m-primary--active--Color: #000000 !important;
+          --pf-c-button--m-link--Color: #ffffff !important;
+          --pf-c-button--m-link--hover--Color: rgba(255, 255, 255, 0.75) !important;
+          --pf-c-login--BackgroundColor: #000000 !important;
+          --pf-c-login__main--BackgroundColor: #0a0a0a !important;
+          --ak-dark-foreground: #ffffff !important;
+          --ak-dark-foreground-link: #ffffff !important;
+          --ak-dark-background: #000000 !important;
+          --ak-dark-background-light: #0a0a0a !important;
+          --ak-dark-background-light-ish: #111111 !important;
+          --ak-dark-background-lighter: #1a1a1a !important;
+          color: #ffffff !important;
         }
 
         /* ── 2. Page background ───────────────────────────────────────── */
@@ -59,15 +101,15 @@ entries:
 
         /* ── 3. Flow card ─────────────────────────────────────────────── */
         .pf-c-login__main {
-          background-color: var(--ak-card-bg) !important;
-          border: 1px solid var(--ak-border) !important;
+          background-color: #0a0a0a !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
           border-radius: 16px !important;
           box-shadow:
             0 32px 80px rgba(0, 0, 0, 0.8),
             0  0   0  1px rgba(255, 255, 255, 0.06) !important;
         }
 
-        /* ── 4. Logo: hide img, replace with text via ::after ─────────── */
+        /* ── 4. Logo: hide img, replace with text ─────────────────────── */
         img.branding-logo {
           display: none !important;
         }
@@ -88,12 +130,26 @@ entries:
           letter-spacing: -0.03em;
         }
 
-        /* ── 5. Card header title ─────────────────────────────────────── */
-        h1.pf-c-title.pf-m-3xl {
+        /* ── 5. Force ALL text white inside login pages ───────────────
+           This is the nuclear option that catches everything inside
+           shadow DOM that CSS custom properties might miss. ────────── */
+        .pf-c-login,
+        .pf-c-login *,
+        .pf-c-login__main *,
+        .pf-c-login__main-header *,
+        .pf-c-login__main-body *,
+        .pf-c-login__main-footer *,
+        .pf-c-login__main-footer-band * {
+          color: #ffffff !important;
+        }
+
+        /* ── 6. Card header title (light DOM) ─────────────────────────── */
+        .pf-c-login__main-header .pf-c-title,
+        .pf-c-login__main-header h1,
+        .pf-c-title.pf-m-3xl {
           font-size: 1.15rem !important;
           font-weight: 500 !important;
-          color: var(--ak-text-muted) !important;
-          margin-bottom: 0 !important;
+          color: #ffffff !important;
         }
 
         /* Hide the "Sign in to continue to …" subtitle */
@@ -101,35 +157,38 @@ entries:
           display: none !important;
         }
 
-        ak-stage-identification form.pf-c-form > p:first-child,
-        :host form.pf-c-form > p:first-child {
-          display: none !important;
+        /* ── 7. Form labels (force via CSS vars + direct) ─────────────── */
+        .pf-c-form__label,
+        .pf-c-form__label-text,
+        label {
+          color: #ffffff !important;
         }
 
-        /* ── 6. Form labels ───────────────────────────────────────────── */
-        .pf-c-form__label-text {
-          color: var(--ak-text-muted) !important;
-          font-size: 0.84rem !important;
-          font-weight: 500 !important;
+        /* ── 8. Username display text ─────────────────────────────────── */
+        .username,
+        [class*="username"],
+        .pf-c-login .username,
+        .pf-c-description-list__text,
+        .pf-c-description-list dd {
+          color: #ffffff !important;
         }
 
-        .pf-c-login__main-footer-band-item {
-          color: var(--ak-text-muted) !important;
-          font-size: 0.84rem !important;
-          font-weight: 500 !important;
-        }
-
-        /* ── 7. Form inputs ───────────────────────────────────────────── */
-        .pf-c-form-control {
+        /* ── 9. Form inputs ───────────────────────────────────────────── */
+        .pf-c-form-control,
+        .pf-c-login .pf-c-form-control,
+        input[type="text"],
+        input[type="password"],
+        input[type="email"] {
           background-color: rgba(255, 255, 255, 0.04) !important;
-          border-color: var(--ak-border) !important;
-          color: var(--ak-text) !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+          color: #ffffff !important;
           border-radius: 9px !important;
         }
 
-        .pf-c-form-control:focus {
+        .pf-c-form-control:focus,
+        .pf-c-login .pf-c-form-control:focus {
           border-color: #ffffff !important;
-          box-shadow: 0 0 0 3px var(--ak-accent-glow) !important;
+          box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12) !important;
           outline: none !important;
         }
 
@@ -137,7 +196,7 @@ entries:
           color: rgba(255, 255, 255, 0.22) !important;
         }
 
-        /* ── 8. Primary button ────────────────────────────────────────── */
+        /* ── 10. Primary button — white bg, black text ────────────────── */
         .pf-c-button.pf-m-primary {
           border-radius: 9px !important;
           background-color: #ffffff !important;
@@ -151,21 +210,22 @@ entries:
         .pf-c-button.pf-m-primary:hover {
           background-color: rgba(255, 255, 255, 0.85) !important;
           border-color: rgba(255, 255, 255, 0.85) !important;
+          color: #000000 !important;
           transform: translateY(-1px) !important;
           box-shadow: 0 6px 24px rgba(255, 255, 255, 0.2) !important;
         }
 
         .pf-c-button.pf-m-primary:active {
+          color: #000000 !important;
           transform: translateY(0) !important;
           box-shadow: none !important;
         }
 
-        /* Spinner inside primary button */
         .pf-c-button.pf-m-primary .pf-c-spinner__path {
           stroke: #000000 !important;
         }
 
-        /* ── 9. Link buttons & anchors ────────────────────────────────── */
+        /* ── 11. Link buttons & anchors ───────────────────────────────── */
         .pf-c-button.pf-m-link,
         .pf-c-button.pf-m-plain {
           color: #ffffff !important;
@@ -175,23 +235,35 @@ entries:
           color: rgba(255, 255, 255, 0.75) !important;
         }
 
-        a { color: #ffffff !important; }
-        a:hover { color: rgba(255, 255, 255, 0.75) !important; }
+        a, a:visited {
+          color: #ffffff !important;
+        }
 
-        /* ── 10. Footer links ─────────────────────────────────────────── */
+        a:hover {
+          color: rgba(255, 255, 255, 0.75) !important;
+        }
+
+        /* ── 12. Footer band (registration link) ─────────────────────── */
+        .pf-c-login__main-footer-band,
+        .pf-c-login__main-footer-band-item,
+        .pf-c-login__main-footer-band-item a {
+          color: #ffffff !important;
+        }
+
+        /* ── 13. Footer links ─────────────────────────────────────────── */
         .pf-c-list.pf-m-inline li,
         .pf-c-list.pf-m-inline li a {
-          color: var(--ak-text-muted);
+          color: rgba(255, 255, 255, 0.48) !important;
           font-size: 0.875rem;
           transition: color 0.15s;
         }
 
         .pf-c-list.pf-m-inline li:hover,
         .pf-c-list.pf-m-inline li:hover a {
-          color: #ffffff;
+          color: #ffffff !important;
         }
 
-        /* ── 11. Alerts ───────────────────────────────────────────────── */
+        /* ── 14. Alerts ───────────────────────────────────────────────── */
         .pf-c-alert.pf-m-danger {
           background: rgba(224, 82, 96, 0.1) !important;
           border-color: rgba(224, 82, 96, 0.28) !important;
@@ -204,7 +276,7 @@ entries:
           border-radius: 9px !important;
         }
 
-        /* ── 12. Hide the flow debug inspector ────────────────────────── */
+        /* ── 15. Hide the flow debug inspector ────────────────────────── */
         ak-flow-inspector,
         #flow-inspector,
         .inspector-toggle,
@@ -212,41 +284,33 @@ entries:
           display: none !important;
         }
 
-        /* ── 13. Spinner ──────────────────────────────────────────────── */
+        /* ── 16. Spinner ──────────────────────────────────────────────── */
         .pf-c-spinner__path {
           stroke: #ffffff !important;
         }
 
-        /* ── 14. Scrollbar ────────────────────────────────────────────── */
-        * {
+        /* ── 17. Scrollbar ────────────────────────────────────────────── */
+        .pf-c-login {
           scrollbar-width: thin;
           scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
         }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb {
+        .pf-c-login::-webkit-scrollbar { width: 5px; }
+        .pf-c-login::-webkit-scrollbar-track { background: transparent; }
+        .pf-c-login::-webkit-scrollbar-thumb {
           background: rgba(255, 255, 255, 0.2);
           border-radius: 3px;
         }
 
-        /* ── 15. Locale / language selector ────────────────────────────── */
-
-        /* Hide all languages except English and Russian.
-           Works for both native <select> options (Chromium + Firefox honour
-           display:none on <option>) and PatternFly list items. */
+        /* ── 18. Locale / language selector ───────────────────────────── */
         ak-locale-select select option:not([value=""]):not([value="en"]):not([value="ru"]) {
           display: none !important;
         }
 
-        /* PatternFly menu items — hide non-en/non-ru entries.
-           Authentik renders each item with a data-locale or a lang attribute;
-           fall back to :not() on common locale codes if neither exists. */
         ak-locale-select .pf-c-select__menu-item:not([data-locale="en"]):not([data-locale="ru"]):not([data-locale=""]),
         ak-locale-select li:not([lang="en"]):not([lang="ru"]):not(:first-child) {
           display: none !important;
         }
 
-        /* Fix white background on the native <select> element */
         ak-locale-select select,
         select[name="locale"] {
           background-color: #111111 !important;
@@ -267,13 +331,11 @@ entries:
           outline: none !important;
         }
 
-        /* Option items inside the native select */
         ak-locale-select select option {
           background-color: #111111 !important;
           color: #ffffff !important;
         }
 
-        /* PatternFly custom select toggle (button that opens the dropdown) */
         ak-locale-select .pf-c-select__toggle {
           background-color: #111111 !important;
           color: #ffffff !important;
@@ -293,7 +355,6 @@ entries:
           color: rgba(255, 255, 255, 0.5) !important;
         }
 
-        /* PatternFly dropdown menu panel */
         ak-locale-select .pf-c-select__menu {
           background-color: #111111 !important;
           border: 1px solid rgba(255, 255, 255, 0.15) !important;

@@ -33,6 +33,9 @@
       "Bash(xargs cat:*)",
       "Bash(python3:*)",
       "WebFetch(domain:authjs.dev)"
+      "Bash(cat:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)"
     ]
   }
 }
