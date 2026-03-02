@@ -23,14 +23,6 @@ entries:
     state: created
     attrs: {}
 
-  # Assign bootstrap admin to administrator group
-  - model: authentik_core.user
-    identifiers: { username: akadmin }
-    state: present
-    attrs:
-      groups:
-        - !KeyOf group-administrator
-
   # Custom scope mapping — only includes moviechecker-* groups in token
   - model: authentik_providers_oauth2.scopemapping
     id: scope-groups
