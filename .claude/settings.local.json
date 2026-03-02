@@ -20,7 +20,11 @@
       "Bash(find:*)",
       "Bash(find D:/MovieChecker/src/backend/MovieChecker.Domain/Models/Dtos/ -name \"*.cs\" | xargs grep -l \"newOwner\\\\|TransferOwner\" 2>/dev/null)",
       "Bash(head:*)",
-      "Bash(find D:\\\\education-platform-authentik:*)"
+      "Bash(find D:\\\\education-platform-authentik:*)",
+      "Bash(xargs ls:*)",
+      "Bash(cat:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)"
     ]
   }
 }
