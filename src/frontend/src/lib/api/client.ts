@@ -82,6 +82,11 @@ export const getMe = async (): Promise<UserDto> => {
     return response.data;
 };
 
+export const provisionUser = async (): Promise<UserDto> => {
+    const response = await apiClient.instance.post("/api/provision");
+    return response.data;
+};
+
 export const setLanguage = async (language: "en" | "ru"): Promise<void> => {
     const response = await apiClient.api.authLanguageCreate({language});
     if (typeof window !== "undefined") {

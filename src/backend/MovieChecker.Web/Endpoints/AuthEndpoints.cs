@@ -1,5 +1,8 @@
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using MovieChecker.Domain.Models.Dtos;
+using MovieChecker.Domain.Models.Entities;
+using MovieChecker.Infrastructure.Data;
 
 namespace MovieChecker.Web.Endpoints;
 
@@ -19,6 +22,12 @@ public static class AuthEndpoints
             .Produces<LanguageResponse>(StatusCodes.Status200OK)
             .WithSummary("Set preferred language")
             .WithDescription("Sets the user's preferred language (en or ru)");
+
+        app.MapPost("/api/provision", ProvisionUser)
+            .RequireAuthorization()
+            .Produces<UserDto>(StatusCodes.Status200OK)
+            .WithSummary("Provision user profile")
+            .WithDescription("Creates or updates the user profile from JWT claims. Called once on first login.");
     }
 
     private static IResult GetCurrentUser(HttpContext ctx)
@@ -34,6 +43,57 @@ public static class AuthEndpoints
         var displayName = ctx.User.FindFirstValue("name")
                        ?? ctx.User.FindFirstValue(ClaimTypes.Name)
                        ?? username;
+        return Results.Ok(new UserDto(userId, username, displayName));
+    }
+
+    private static async Task<IResult> ProvisionUser(HttpContext ctx, AppDbContext db)
+    {
+        var sub = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                  ?? ctx.User.FindFirstValue("sub");
+        if (string.IsNullOrEmpty(sub) || !Guid.TryParse(sub, out var userId))
+            return Results.Unauthorized();
+
+        var username = ctx.User.FindFirstValue("preferred_username")
+                       ?? ctx.User.FindFirstValue("nickname")
+                       ?? sub;
+        var displayName = ctx.User.FindFirstValue("name")
+                       ?? ctx.User.FindFirstValue(ClaimTypes.Name)
+                       ?? username;
+
+        var profile = await db.UserProfiles.FindAsync(userId);
+        if (profile is null)
+        {
+            try
+            {
+                db.UserProfiles.Add(new UserProfile
+                {
+                    Id = userId,
+                    DisplayName = displayName,
+                    Username = username
+                });
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // Race condition: another request inserted concurrently.
+                db.ChangeTracker.Clear();
+                profile = await db.UserProfiles.FindAsync(userId);
+                if (profile is not null &&
+                    (profile.DisplayName != displayName || profile.Username != username))
+                {
+                    profile.DisplayName = displayName;
+                    profile.Username = username;
+                    await db.SaveChangesAsync();
+                }
+            }
+        }
+        else if (profile.DisplayName != displayName || profile.Username != username)
+        {
+            profile.DisplayName = displayName;
+            profile.Username = username;
+            await db.SaveChangesAsync();
+        }
+
         return Results.Ok(new UserDto(userId, username, displayName));
     }
 

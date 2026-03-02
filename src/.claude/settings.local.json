@@ -11,7 +11,9 @@
       "Bash(cd D:/MovieChecker/src/frontend && npx tsc --noEmit 2>&1)",
       "Bash(rm -rf D:/MovieChecker/src/frontend/.next/types && cd D:/MovieChecker/src/frontend && npx tsc --noEmit 2>&1)",
       "Bash(npx tsc:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(curl:*)",
+      "Bash(docker ps:*)"
     ]
   }
 }

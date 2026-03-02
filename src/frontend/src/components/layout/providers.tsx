@@ -7,6 +7,7 @@ import {LocaleProvider} from "@/context/locale-context";
 import {GroupProvider} from "@/context/group-context";
 import {PermissionsProvider} from "@/context/permissions-context";
 import {SessionProvider} from "next-auth/react";
+import {ProvisionGuard} from "@/components/auth/provision-guard";
 
 export function Providers({children}: { children: ReactNode }) {
     const [queryClient] = useState(
@@ -31,9 +32,11 @@ export function Providers({children}: { children: ReactNode }) {
                     disableTransitionOnChange
                 >
                     <LocaleProvider>
-                        <GroupProvider>
-                            <PermissionsProvider>{children}</PermissionsProvider>
-                        </GroupProvider>
+                        <ProvisionGuard>
+                            <GroupProvider>
+                                <PermissionsProvider>{children}</PermissionsProvider>
+                            </GroupProvider>
+                        </ProvisionGuard>
                     </LocaleProvider>
                 </ThemeProvider>
             </QueryClientProvider>

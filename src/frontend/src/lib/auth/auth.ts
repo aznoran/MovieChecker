@@ -24,6 +24,7 @@ declare module "@auth/core/jwt" {
         expiresAt?: number;
         groups?: string[];
         username?: string;
+        authentikSub?: string;
         error?: "RefreshTokenError";
     }
 }
@@ -86,6 +87,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     const p = profile as Record<string, unknown>;
                     token.groups = p.groups as string[] | undefined;
                     token.username = p.preferred_username as string | undefined;
+                    token.authentikSub = p.sub as string | undefined;
                 }
 
                 return token;
@@ -117,8 +119,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             session.idToken = token.idToken;
             session.error = token.error;
 
-            if (token.sub) {
-                session.user.id = token.sub;
+            if (token.authentikSub) {
+                session.user.id = token.authentikSub;
             }
 
             session.user.username = token.username;

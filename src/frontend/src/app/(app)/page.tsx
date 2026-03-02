@@ -53,7 +53,6 @@ import {
     AlertCircle,
     Settings,
 } from "lucide-react";
-import {RelativeTimeCard} from "@/components/ui/relative-time-card";
 import {HoverCard, HoverCardTrigger, HoverCardContent} from "@/components/ui/hover-card";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -421,9 +420,6 @@ export default function HomePage() {
                                                         )}
                                                     </p>
                                                 </div>
-                                                {entry.createdAt && (
-                                                    <RelativeTimeCard date={entry.createdAt} variant="muted" className="text-[10px] shrink-0 opacity-60 hover:opacity-100 transition-opacity"/>
-                                                )}
                                             </div>
 
                                             <div className={`flex flex-wrap items-center gap-1.5 ${metaSpacing[cardSize]}`}>
