@@ -13,6 +13,7 @@ import { signOut } from "next-auth/react";
  * with an internal Docker hostname in the `iss` claim.
  */
 export async function fullLogout() {
+    localStorage.removeItem("user_provisioned");
     await signOut({ redirect: false });
 
     const logoutFlowUrl = process.env.NEXT_PUBLIC_AUTHENTIK_LOGOUT_URL;

@@ -24,7 +24,9 @@ public static class UserSettingsEndpoints
     }
 
     private static Guid GetUserId(ClaimsPrincipal user) =>
-        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
+        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)
+                   ?? user.FindFirstValue("sub")
+                   ?? Guid.Empty.ToString());
 
     private static async Task<IResult> GetSettings(ClaimsPrincipal user, AppDbContext db)
     {

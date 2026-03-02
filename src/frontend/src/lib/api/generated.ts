@@ -87,6 +87,10 @@ export interface CreateWatchEntryRequest {
   totalEpisodes?: number | null;
   /** @format int32 */
   watchingTime?: number | null;
+  /** @format int32 */
+  totalSeasons?: number | null;
+  /** @format int32 */
+  runtimeMinutes?: number | null;
   ratings?: UserRatingInput[] | null;
   viewers?: string[] | null;
 }
@@ -253,6 +257,20 @@ export interface SetLanguageRequest {
   language?: string | null;
 }
 
+export interface ActivityTimelinePoint {
+  date?: string;
+  /** @format int32 */
+  count?: number;
+}
+
+export interface MemberActivityDto {
+  /** @format uuid */
+  userId?: string;
+  displayName?: string | null;
+  /** @format int32 */
+  totalEntries?: number;
+}
+
 export interface StatsDto {
   /** @format int32 */
   totalWatched?: number;
@@ -268,6 +286,10 @@ export interface StatsDto {
   averagePartnerRating?: number;
   byType?: Record<string, number>;
   memberRatings?: MemberRatingDto[] | null;
+  activityTimeline?: ActivityTimelinePoint[] | null;
+  ratingDistribution?: Record<string, number>;
+  genreDistribution?: Record<string, number>;
+  memberActivity?: MemberActivityDto[] | null;
 }
 
 export interface TransferGroupRequest {
@@ -323,6 +345,10 @@ export interface UpdateWatchEntryRequest {
   totalEpisodes?: number | null;
   /** @format int32 */
   watchingTime?: number | null;
+  /** @format int32 */
+  totalSeasons?: number | null;
+  /** @format int32 */
+  runtimeMinutes?: number | null;
 }
 
 export interface UploadPosterResponse {
@@ -378,6 +404,10 @@ export interface WatchEntryDto {
   totalEpisodes?: number | null;
   /** @format int32 */
   watchingTime?: number | null;
+  /** @format int32 */
+  totalSeasons?: number | null;
+  /** @format int32 */
+  runtimeMinutes?: number | null;
 }
 
 import type {

@@ -11,6 +11,6 @@ public class GroupMember
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
 
     public Group Group { get; set; } = null!;
-    public User User { get; set; } = null!;
+    public UserProfile User { get; set; } = null!;
     public MemberPermission? CustomPermission { get; set; }
 }

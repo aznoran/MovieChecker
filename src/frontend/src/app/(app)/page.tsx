@@ -48,11 +48,14 @@ import {
     Popcorn,
     ImageOff,
     Play,
+    Clock,
     RefreshCw,
     AlertCircle,
     Settings,
 } from "lucide-react";
+import {HoverCard, HoverCardTrigger, HoverCardContent} from "@/components/ui/hover-card";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type CardSize = "small" | "medium" | "large";
 
@@ -106,6 +109,39 @@ const metaSpacing: Record<CardSize, string> = {
     large: "mb-4",
 };
 
+const skeletonCounts: Record<CardSize, number> = {
+    small: 10,
+    medium: 8,
+    large: 6,
+};
+
+const skeletonTitleHeight: Record<CardSize, string> = {
+    small: "h-4",
+    medium: "h-5",
+    large: "h-6",
+};
+
+function CardSkeleton({size}: {size: CardSize}) {
+    return (
+        <Card className="overflow-hidden grid grid-rows-[auto_1fr] gap-0 py-0">
+            <Skeleton className="w-full aspect-[4/3] rounded-none"/>
+            <CardContent className={cardContentPadding[size]}>
+                <div className="min-w-0">
+                    <div className={metaSpacing[size]}>
+                        <Skeleton className={`${skeletonTitleHeight[size]} w-3/4 mb-2`}/>
+                        <Skeleton className="h-3 w-1/2"/>
+                    </div>
+                    <div className={metaSpacing[size]}>
+                        <Skeleton className="h-5 w-20 rounded-full"/>
+                    </div>
+                    <Skeleton className={`h-3 w-full ${metaSpacing[size]}`}/>
+                    <Skeleton className="h-3 w-2/3"/>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 const statusColors: Record<WatchStatus, string> = {
     [WatchStatus.Planned]: "bg-blue-500/20 text-blue-400 border-blue-500/30",
     [WatchStatus.Watching]: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
@@ -149,12 +185,27 @@ function PosterImage({src, alt}: {src: string; alt?: string}) {
     );
 }
 
+function formatWatchingTime(totalSeconds: number): string {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+}
+
+function formatMinutesToHM(totalMinutes: number): string {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h`;
+    return `${minutes}m`;
+}
+
 export const dynamic = "force-dynamic";
 
 export default function HomePage() {
     const { data: session, status: authStatus } = useSession();
     const {locale, t} = useLocale();
-    const {activeGroupId} = useGroup();
+    const {activeGroupId, isLoading: isGroupsLoading} = useGroup();
     const {permissions} = usePermissions();
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -193,7 +244,7 @@ export default function HomePage() {
         queryKey: ["watchEntries", statusFilter, activeGroupId],
         queryFn: () =>
             getWatchEntries(statusFilter !== null ? statusFilter : undefined, activeGroupId),
-        enabled: !!session,
+        enabled: !!session && activeGroupId !== undefined,
         retry: false,
         placeholderData: keepPreviousData,
     });
@@ -202,10 +253,12 @@ export default function HomePage() {
         mutationFn: deleteWatchEntry,
         onSuccess: () => {
             queryClient.invalidateQueries({queryKey: ["watchEntries"]});
+            queryClient.invalidateQueries({queryKey: ["stats"]});
             toast.success(t("deleteSucess"), { position: "top-center"})
         },
         onError: () => {
             queryClient.invalidateQueries({queryKey: ["watchEntries"]});
+            queryClient.invalidateQueries({queryKey: ["stats"]});
             toast.error(t("deleteError"), { position: "top-center"})
         },
     });
@@ -280,7 +333,7 @@ export default function HomePage() {
                         ))}
                     </div>
                     <div className="flex items-start gap-2 mb-6">
-                        {canCreate && (
+                        {canCreate && !isLoading && !isGroupsLoading && (
                             <Button className="min-w-[12rem]" onClick={() => setAddOpen(true)}>
                                 <Plus className="h-4 w-4 mr-1.5"/>
                                 {t("addEntry")}
@@ -297,9 +350,11 @@ export default function HomePage() {
                     </div>
                 </div>
 
-                {isLoading ? (
-                    <div className="flex justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
+                {(isLoading || isGroupsLoading) ? (
+                    <div className={gridClasses[cardSize]}>
+                        {Array.from({length: skeletonCounts[cardSize]}).map((_, i) => (
+                            <CardSkeleton key={i} size={cardSize}/>
+                        ))}
                     </div>
                 ) : error ? (
                     <div className="text-center py-12">
@@ -376,34 +431,118 @@ export default function HomePage() {
                                                 </Badge>
                                             </div>
                                             {entry.status === WatchStatus.Watching && (
-                                                (entry.currentEpisode || entry.currentSeason || entry.watchingTime) && (
-                                                    <div
-                                                        className={`text-sm text-muted-foreground ${metaSpacing[cardSize]} flex items-start gap-1`}>
-                                                        <Play className="h-3.5 w-3.5 mt-0.5 shrink-0"/>
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {entry.currentSeason && (
-                                                                <span>
-                                                                    S{entry.currentSeason}
-                                                                </span>
-                                                            )}
-                                                            {entry.currentEpisode && (
-                                                                <span>
-                                                                    E{entry.currentEpisode}
-                                                                </span>
-                                                            )}
-                                                            {(entry.currentSeason || entry.currentEpisode) && entry.totalEpisodes && (
-                                                                <span className="text-muted-foreground/70">
-                                                                    /{entry.totalEpisodes}
-                                                                </span>
-                                                            )}
-                                                            {entry.watchingTime && (
-                                                                <span className="ml-1">
-                                                                    · {entry.watchingTime} мин
-                                                                </span>
+                                                (entry.currentEpisode || entry.currentSeason || entry.watchingTime || entry.runtimeMinutes) && (() => {
+                                                    const isSeries = movie.type === EntryContentType.Series ||
+                                                        movie.type === EntryContentType.Anime ||
+                                                        movie.type === EntryContentType.Cartoon;
+                                                    const hasEpisodeProgress = isSeries && entry.currentEpisode && entry.totalEpisodes && entry.totalEpisodes > 0;
+                                                    const hasTimeProgress = entry.watchingTime && entry.runtimeMinutes && entry.runtimeMinutes > 0;
+                                                    const timeProgressPct = hasTimeProgress
+                                                        ? Math.min(100, (entry.watchingTime! / 60 / entry.runtimeMinutes!) * 100)
+                                                        : 0;
+                                                    const episodeProgressPct = hasEpisodeProgress
+                                                        ? Math.min(100, (entry.currentEpisode! / entry.totalEpisodes!) * 100)
+                                                        : 0;
+                                                    // For series: episode bar; for movies: time bar
+                                                    const showBar = isSeries ? hasEpisodeProgress : hasTimeProgress;
+                                                    const barPct = isSeries ? episodeProgressPct : timeProgressPct;
+                                                    const barColor = isSeries ? "bg-yellow-500" : "bg-blue-500";
+
+                                                    return (
+                                                        <div className={`${metaSpacing[cardSize]} space-y-1.5`}>
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                {isSeries && (entry.currentSeason || entry.currentEpisode) && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/10 text-yellow-500 px-2 py-0.5 text-xs font-medium">
+                                                                        <Play className="h-3 w-3"/>
+                                                                        {entry.currentSeason ? `S${entry.currentSeason}` : ""}{entry.currentEpisode ? ` E${entry.currentEpisode}` : ""}
+                                                                    </span>
+                                                                )}
+                                                                {entry.watchingTime && (
+                                                                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                                                        <Clock className="h-3 w-3"/>
+                                                                        {formatWatchingTime(entry.watchingTime)}
+                                                                        {entry.runtimeMinutes ? ` / ${formatMinutesToHM(entry.runtimeMinutes)}` : ""}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {showBar && (
+                                                                <HoverCard openDelay={300} closeDelay={150}>
+                                                                    <HoverCardTrigger asChild>
+                                                                        <div className="relative w-full cursor-pointer -my-1.5 py-1.5 -mx-2 px-2">
+                                                                            <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                                                                <div
+                                                                                    className={`${barColor} h-full rounded-full transition-all`}
+                                                                                    style={{width: `${barPct}%`}}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    </HoverCardTrigger>
+                                                                    <HoverCardContent side="top" align="start" className="w-auto min-w-[200px] p-3 text-sm space-y-1.5">
+                                                                        {/* Series: season, episode, episode progress */}
+                                                                        {isSeries && (
+                                                                            <>
+                                                                                {entry.currentSeason && (
+                                                                                    <div className="flex justify-between gap-4">
+                                                                                        <span className="text-muted-foreground">{t("season")}</span>
+                                                                                        <span className="font-medium">
+                                                                                            {entry.currentSeason}{entry.totalSeasons ? ` / ${entry.totalSeasons}` : ""}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {hasEpisodeProgress && (
+                                                                                    <>
+                                                                                        <div className="flex justify-between gap-4">
+                                                                                            <span className="text-muted-foreground">{t("episode")}</span>
+                                                                                            <span className="font-medium">{entry.currentEpisode} / {entry.totalEpisodes}</span>
+                                                                                        </div>
+                                                                                        <div className="flex justify-between gap-4">
+                                                                                            <span className="text-muted-foreground">{t("progress")}</span>
+                                                                                            <span className="font-medium">{Math.round(episodeProgressPct)}%</span>
+                                                                                        </div>
+                                                                                    </>
+                                                                                )}
+                                                                            </>
+                                                                        )}
+                                                                        {/* Time section: duration, watching time, time progress */}
+                                                                        {(entry.watchingTime || entry.runtimeMinutes) && (
+                                                                            <>
+                                                                                {isSeries && <div className="border-t border-border my-1" />}
+                                                                                {entry.runtimeMinutes && (
+                                                                                    <div className="flex justify-between gap-4">
+                                                                                        <span className="text-muted-foreground">
+                                                                                            {isSeries ? t("episodeDuration") : t("runtimeMinutes")}
+                                                                                        </span>
+                                                                                        <span className="font-medium">{formatMinutesToHM(entry.runtimeMinutes)}</span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {entry.watchingTime && (
+                                                                                    <div className="flex justify-between gap-4">
+                                                                                        <span className="text-muted-foreground">{t("watchingTime")}</span>
+                                                                                        <span className="font-medium">{formatWatchingTime(entry.watchingTime)}</span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {hasTimeProgress && (
+                                                                                    <div className="space-y-1 pt-0.5">
+                                                                                        <div className="flex justify-between gap-4">
+                                                                                            <span className="text-muted-foreground">{t("timeProgress")}</span>
+                                                                                            <span className="font-medium">{Math.round(timeProgressPct)}%</span>
+                                                                                        </div>
+                                                                                        <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                                                                            <div
+                                                                                                className="bg-blue-500 h-full rounded-full transition-all"
+                                                                                                style={{width: `${timeProgressPct}%`}}
+                                                                                            />
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </>
+                                                                        )}
+                                                                    </HoverCardContent>
+                                                                </HoverCard>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                )
+                                                    );
+                                                })()
                                             )}
 
                                             {entry.ratings && entry.ratings.length > 0 && (() => {

@@ -63,6 +63,7 @@ import {PosterUploadSection} from "@/components/entry/poster-upload-section";
 import {SeriesTrackingSection} from "@/components/entry/series-tracking-section";
 import {RatingSection} from "@/components/entry/rating-section";
 import {MemberSelect} from "@/components/entry/member-select";
+import {RelativeTimeCard} from "@/components/ui/relative-time-card";
 import type {TranslationKeys} from "@/lib/i18n/en";
 
 function createEditEntrySchema(t: (key: TranslationKeys) => string) {
@@ -76,6 +77,12 @@ function createEditEntrySchema(t: (key: TranslationKeys) => string) {
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
             .optional().or(z.literal("")),
         totalEpisodes: z.string()
+            .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
+            .optional().or(z.literal("")),
+        totalSeasons: z.string()
+            .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
+            .optional().or(z.literal("")),
+        runtimeMinutes: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
             .optional().or(z.literal("")),
         hours: z.string()
@@ -143,6 +150,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             currentSeason: entry.currentSeason?.toString() || "",
             currentEpisode: entry.currentEpisode?.toString() || "",
             totalEpisodes: entry.totalEpisodes?.toString() || "",
+            totalSeasons: entry.totalSeasons?.toString() || "",
+            runtimeMinutes: entry.runtimeMinutes?.toString() || "",
             hours: Math.floor((entry.watchingTime || 0) / 3600).toString(),
             minutes: Math.floor(((entry.watchingTime || 0) % 3600) / 60).toString(),
             seconds: ((entry.watchingTime || 0) % 60).toString(),
@@ -160,6 +169,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 currentSeason: entry.currentSeason?.toString() || "",
                 currentEpisode: entry.currentEpisode?.toString() || "",
                 totalEpisodes: entry.totalEpisodes?.toString() || "",
+                totalSeasons: entry.totalSeasons?.toString() || "",
+                runtimeMinutes: entry.runtimeMinutes?.toString() || "",
                 hours: Math.floor((entry.watchingTime || 0) / 3600).toString(),
                 minutes: Math.floor(((entry.watchingTime || 0) % 3600) / 60).toString(),
                 seconds: ((entry.watchingTime || 0) % 60).toString(),
@@ -198,6 +209,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if ((values.currentSeason || "") !== (entry.currentSeason?.toString() || "")) return true;
             if ((values.currentEpisode || "") !== (entry.currentEpisode?.toString() || "")) return true;
             if ((values.totalEpisodes || "") !== (entry.totalEpisodes?.toString() || "")) return true;
+            if ((values.totalSeasons || "") !== (entry.totalSeasons?.toString() || "")) return true;
+            if ((values.runtimeMinutes || "") !== (entry.runtimeMinutes?.toString() || "")) return true;
             const newWt = (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"));
             if (newWt !== (entry.watchingTime || 0)) return true;
         }
@@ -280,10 +293,14 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 await updateWatchEntry(entry.id!, {
                     status: values.status,
                     comment: values.comment || undefined,
-                    ...(values.status === WatchStatus.Watching && isSeries ? {
-                        currentSeason: values.currentSeason ? parseInt(values.currentSeason) : undefined,
-                        currentEpisode: values.currentEpisode ? parseInt(values.currentEpisode) : undefined,
-                        totalEpisodes: values.totalEpisodes ? parseInt(values.totalEpisodes) : undefined,
+                    ...(values.status === WatchStatus.Watching ? {
+                        ...(isSeries ? {
+                            currentSeason: values.currentSeason ? parseInt(values.currentSeason) : undefined,
+                            currentEpisode: values.currentEpisode ? parseInt(values.currentEpisode) : undefined,
+                            totalEpisodes: values.totalEpisodes ? parseInt(values.totalEpisodes) : undefined,
+                            totalSeasons: values.totalSeasons ? parseInt(values.totalSeasons) : undefined,
+                        } : {}),
+                        runtimeMinutes: values.runtimeMinutes ? parseInt(values.runtimeMinutes) : undefined,
                         watchingTime: (values.hours || values.minutes || values.seconds)
                             ? (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"))
                             : undefined,
@@ -313,6 +330,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
         onSuccess: () => {
             toast.success(isRateOnlyMode ? t("ratingUpdated") : t("postUpdated"), {position: "top-center"});
             queryClient.invalidateQueries({queryKey: ["watchEntries"]});
+            queryClient.invalidateQueries({queryKey: ["stats"]});
             onOpenChange(false);
         },
         onError: (error: unknown) => {
@@ -395,17 +413,13 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     // Build validation errors for SeriesTrackingSection
     const validationErrors: Record<string, string> = {};
     const formErrors = form.formState.errors;
-    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "hours", "minutes", "seconds"] as const) {
+    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "totalSeasons", "runtimeMinutes", "hours", "minutes", "seconds"] as const) {
         if (formErrors[key]?.message) {
             validationErrors[key] = formErrors[key].message as string;
         }
     }
 
-    const showTracking = watchedStatus === WatchStatus.Watching && (
-        entry.movie?.type === EntryContentType.Anime ||
-        entry.movie?.type === EntryContentType.Series ||
-        entry.movie?.type === EntryContentType.Cartoon
-    );
+    const showTracking = watchedStatus === WatchStatus.Watching;
 
     const showRating = watchedStatus === WatchStatus.Completed || watchedStatus === WatchStatus.Dropped;
 
@@ -432,7 +446,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     <div style={{maxHeight: "calc(85vh - 120px)"}}>
                         <div className="bg-muted p-3 rounded-lg mb-4 flex items-center gap-3">
                             <Film className="h-5 w-5 text-muted-foreground shrink-0"/>
-                            <div>
+                            <div className="flex-1 min-w-0">
                                 <h3 className="font-semibold">{entry.movie?.title}</h3>
                                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                                     {contentTypeLabels[entry.movie!.type! as EntryContentType]}
@@ -443,6 +457,18 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         </>
                                     )}
                                 </p>
+                                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                                    {entry.createdAt && (
+                                        <span className="text-xs text-muted-foreground/70 flex items-center gap-1">
+                                            {t("created")}: <RelativeTimeCard date={entry.createdAt} variant="muted" className="text-xs" tabIndex={-1}/>
+                                        </span>
+                                    )}
+                                    {entry.updatedAt && entry.updatedAt !== entry.createdAt && (
+                                        <span className="text-xs text-muted-foreground/70 flex items-center gap-1">
+                                            {t("lastModified")}: <RelativeTimeCard date={entry.updatedAt} variant="muted" className="text-xs" tabIndex={-1}/>
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -633,12 +659,17 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
 
                                             {showTracking && (
                                                 <SeriesTrackingSection
+                                                    contentType={entry.movie?.type ?? EntryContentType.Movie}
                                                     currentSeason={form.watch("currentSeason") ?? ""}
                                                     setCurrentSeason={(v) => form.setValue("currentSeason", v, {shouldValidate: true})}
                                                     currentEpisode={form.watch("currentEpisode") ?? ""}
                                                     setCurrentEpisode={(v) => form.setValue("currentEpisode", v, {shouldValidate: true})}
                                                     totalEpisodes={form.watch("totalEpisodes") ?? ""}
                                                     setTotalEpisodes={(v) => form.setValue("totalEpisodes", v, {shouldValidate: true})}
+                                                    totalSeasons={form.watch("totalSeasons") ?? ""}
+                                                    setTotalSeasons={(v) => form.setValue("totalSeasons", v, {shouldValidate: true})}
+                                                    runtimeMinutes={form.watch("runtimeMinutes") ?? ""}
+                                                    setRuntimeMinutes={(v) => form.setValue("runtimeMinutes", v, {shouldValidate: true})}
                                                     hours={form.watch("hours") ?? ""}
                                                     setHours={(v) => form.setValue("hours", v, {shouldValidate: true})}
                                                     minutes={form.watch("minutes") ?? ""}

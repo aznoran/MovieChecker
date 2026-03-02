@@ -240,7 +240,17 @@ const en = {
     season: "Season",
     episode: "Episode",
     totalEpisodes: "Total Episodes",
+    totalSeasons: "Total Seasons",
+    runtimeMinutes: "Duration",
+    runtimeDescription: "Total length of what you're watching",
+    runtimeDescriptionMovie: "Total length of the movie",
+    runtimeDescriptionSeries: "Length of the episode you stopped at",
+    runtimeDescriptionCartoon: "Length of the cartoon episode you stopped at",
+    runtimeDescriptionShow: "Total length of the show",
     watchingTime: "Last Watching Time",
+    hoursShort: "h",
+    minutesShort: "min",
+    secondsShort: "sec",
 
     // Rate-only mode
     rateOnlyTitle: "Rate Entry",
@@ -395,6 +405,27 @@ const en = {
     cardSizeLarge: "Large",
     displaySettings: "Display Settings",
     displaySettingsDescription: "Customize how your diary looks",
+
+    // Progress
+    progress: "Progress",
+
+    // Stats Charts
+    activityTimeline: "Activity Timeline",
+    ratingDistribution: "Rating Distribution",
+    topGenres: "Top Genres",
+    memberComparison: "Member Comparison",
+    entries: "entries",
+
+    episodeDuration: "Episode Duration",
+    timeProgress: "Time Progress",
+
+    // Timestamps
+    created: "Created",
+    lastModified: "Modified",
+
+    // Feedback
+    feedback: "Feedback",
+    feedbackDescription: "Have suggestions or found a bug? Get in touch!",
 } as const;
 
 export type TranslationKeys = keyof typeof en;

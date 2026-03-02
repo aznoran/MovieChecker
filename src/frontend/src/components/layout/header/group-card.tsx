@@ -61,13 +61,16 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
     const {t} = useLocale();
     const {leaveGroup, kickMember, transferOwnership, generateOtp, updateGroupSettings} = useGroup();
 
-    const isOwner = userId === g.createdByUserId;
+    const currentMember = (g.members ?? []).find(m => m.userId === userId);
+    const isOwner = userId === g.createdByUserId || currentMember?.role === GroupRole.Owner;
     const {data: permissions} = useQuery({
         queryKey: ["permissions", g.id],
         queryFn: () => getMyPermissions(g.id!),
+        enabled: !!session && !!g.id,
     });
-    const canManageMembers = permissions?.canManageMembers ?? false;
-    const canManageGroup = permissions?.canManageGroup ?? false;
+    // Fall back to role-based check if permissions API hasn't resolved yet
+    const canManageMembers = permissions?.canManageMembers ?? isOwner;
+    const canManageGroup = permissions?.canManageGroup ?? isOwner;
 
     // Local state for this card
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -436,7 +439,6 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                 </div>
             )}
 
-
             <FieldSeparator className="my-1"/>
 
             {/* Members list */}
@@ -444,7 +446,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                 <p className="text-xs font-semibold text-foreground/70 uppercase tracking-wide">{t("members")}</p>
                 <div className="space-y-1.5">
                     {(g.members ?? []).map((m) => {
-                        const isMemberOwner = m.userId === g.createdByUserId;
+                        const isMemberOwner = m.userId === g.createdByUserId || m.role === GroupRole.Owner;
                         const isSelf = m.userId === userId;
 
                         let roleIcon = <User className="h-3.5 w-3.5 text-muted-foreground shrink-0"/>;

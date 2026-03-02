@@ -12,5 +12,5 @@ public class InviteLink
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Group Group { get; set; } = null!;
-    public User CreatedBy { get; set; } = null!;
+    public UserProfile CreatedBy { get; set; } = null!;
 }

@@ -130,7 +130,9 @@ public static class GroupEndpoints
     }
 
     private static Guid GetUserId(ClaimsPrincipal user) =>
-        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
+        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)
+                   ?? user.FindFirstValue("sub")
+                   ?? Guid.Empty.ToString());
 
     private static string InviteLinkCacheKey(string token) => $"invite_link:{token}";
 
@@ -270,7 +272,7 @@ public static class GroupEndpoints
         });
         await db.SaveChangesAsync();
 
-        var displayName = (await db.Users.FindAsync(userId))!.DisplayName;
+        var displayName = (await db.UserProfiles.FindAsync(userId))!.DisplayName;
 
         return Results.Created($"/api/groups/{g.Id}", new GroupDto(
             g.Id,

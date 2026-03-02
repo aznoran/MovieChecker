@@ -28,11 +28,15 @@ public class WatchEntry
 
     public int? WatchingTime { get; set; }
 
+    public int? TotalSeasons { get; set; }
+
+    public int? RuntimeMinutes { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public Movie Movie { get; set; } = null!;
-    public User User { get; set; } = null!;
+    public UserProfile User { get; set; } = null!;
     public Group? Group { get; set; }
     public ICollection<EntryRating> Ratings { get; set; } = [];
     public ICollection<WatchEntryGroup> WatchEntryGroups { get; set; } = [];

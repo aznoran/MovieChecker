@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {User, UsersRound, Lock, LockOpen} from "lucide-react";
+import {User, UsersRound, Lock, LockOpen, Loader2} from "lucide-react";
 
 interface GroupSwitcherProps {
     onOpenGroupDialog: () => void;
@@ -19,16 +19,21 @@ interface GroupSwitcherProps {
 
 export function GroupSwitcher({onOpenGroupDialog}: GroupSwitcherProps) {
     const {t} = useLocale();
-    const {groups, personalGroup, activeGroupId, setActiveGroupId} = useGroup();
+    const {groups, personalGroup, activeGroupId, setActiveGroupId, isLoading} = useGroup();
 
     return (
         <>
             <Select
                 value={activeGroupId?.toString() ?? personalGroup?.id?.toString() ?? ""}
                 onValueChange={(v) => setActiveGroupId(parseInt(v))}
+                disabled={isLoading}
             >
                 <SelectTrigger className="w-[180px] h-8 text-sm">
-                    <SelectValue/>
+                    {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>
+                    ) : (
+                        <SelectValue/>
+                    )}
                 </SelectTrigger>
                 <SelectContent position="popper" sideOffset={4}>
                     {personalGroup && (
