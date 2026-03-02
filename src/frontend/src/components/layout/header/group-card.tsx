@@ -440,7 +440,6 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
                 </div>
             )}
 
-
             <FieldSeparator className="my-1"/>
 
             {/* Members list */}

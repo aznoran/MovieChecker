@@ -2,3 +2,4 @@
 certs/
 authentik/media/
 authentik/custom-templates/
+.env
