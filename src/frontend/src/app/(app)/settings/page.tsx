@@ -1,10 +1,9 @@
 "use client"
 
-import {useState, useEffect} from "react";
 import {useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
-import {getUserSettings, updateUserSettings} from "@/lib/api";
+import {useUserSettings, useUpdateUserSettings} from "@/hooks/api";
 import {Button} from "@/components/ui/button";
 import {Field, FieldLabel, FieldDescription, FieldSeparator} from "@/components/ui/field";
 import {Switch} from "@/components/ui/switch";
@@ -14,60 +13,25 @@ export default function SettingsPage() {
     const router = useRouter();
     const { data: session } = useSession();
     const {t} = useLocale();
-    const [preventOthersAdding, setPreventOthersAdding] = useState(false);
-    const [preventMeAdding, setPreventMeAdding] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        if (!session) {
-            router.push("/login");
-            return;
-        }
+    const {data: settings, isLoading: loading} = useUserSettings({ enabled: !!session });
+    const updateMutation = useUpdateUserSettings();
 
-        const loadSettings = async () => {
-            try {
-                const settings = await getUserSettings();
-                setPreventOthersAdding(settings.preventOthersAddingToMyPersonal);
-                setPreventMeAdding(settings.preventMeAddingToMyPersonal);
-            } catch (error) {
-                console.error("Failed to load settings:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+    if (!session) {
+        router.push("/login");
+        return null;
+    }
 
-        loadSettings();
-    }, [session, router]);
+    const preventOthersAdding = settings?.preventOthersAddingToMyPersonal ?? false;
+    const preventMeAdding = settings?.preventMeAddingToMyPersonal ?? false;
+    const saving = updateMutation.isPending;
 
-    const handleToggleOthers = async (checked: boolean) => {
-        setSaving(true);
-        try {
-            const settings = await updateUserSettings({
-                preventOthersAddingToMyPersonal: checked
-            });
-            setPreventOthersAdding(settings.preventOthersAddingToMyPersonal);
-            setPreventMeAdding(settings.preventMeAddingToMyPersonal);
-        } catch (error) {
-            console.error("Failed to update settings:", error);
-        } finally {
-            setSaving(false);
-        }
+    const handleToggleOthers = (checked: boolean) => {
+        updateMutation.mutate({ preventOthersAddingToMyPersonal: checked });
     };
 
-    const handleToggleMe = async (checked: boolean) => {
-        setSaving(true);
-        try {
-            const settings = await updateUserSettings({
-                preventMeAddingToMyPersonal: checked
-            });
-            setPreventOthersAdding(settings.preventOthersAddingToMyPersonal);
-            setPreventMeAdding(settings.preventMeAddingToMyPersonal);
-        } catch (error) {
-            console.error("Failed to update settings:", error);
-        } finally {
-            setSaving(false);
-        }
+    const handleToggleMe = (checked: boolean) => {
+        updateMutation.mutate({ preventMeAddingToMyPersonal: checked });
     };
 
     if (loading) {

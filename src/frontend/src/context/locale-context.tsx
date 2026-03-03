@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { t as translate, type Locale, type TranslationKeys } from "@/lib/i18n";
-import { setLanguage as setLanguageApi } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 
 interface LocaleContextType {
   locale: Locale;
@@ -30,7 +30,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("locale", newLocale);
     // Call backend to set culture cookie
     try {
-      await setLanguageApi(newLocale);
+      await apiClient.api.authLanguageCreate({ language: newLocale });
     } catch (error) {
       console.error("Failed to set language on backend:", error);
       // Continue with local change even if API call fails

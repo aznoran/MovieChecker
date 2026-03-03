@@ -1,11 +1,10 @@
 "use client";
 
-import {useQuery} from "@tanstack/react-query";
 import {useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
-import {getStats} from "@/lib/api";
+import {useStats} from "@/hooks/api";
 import {GroupType, EntryContentType} from "@/lib/api/generated";
 import {getContentTypeLabels, translateGenre} from "@/lib/i18n/labels";
 import type {TranslationKeys} from "@/lib/i18n";
@@ -85,9 +84,7 @@ export default function StatsPage() {
     const router = useRouter();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
-    const {data: stats, isLoading, error, refetch} = useQuery({
-        queryKey: ["stats", activeGroupId],
-        queryFn: () => getStats(activeGroupId),
+    const {data: stats, isLoading, error, refetch} = useStats(activeGroupId, {
         enabled: !!session && activeGroupId !== undefined,
         retry: false,
     });

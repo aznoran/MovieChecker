@@ -1,8 +1,8 @@
 "use client"
 
-import {useState, useEffect, useCallback} from "react";
+import {useState} from "react";
 import {useLocale} from "@/context/locale-context";
-import {createInviteLink, getInviteLinks, deleteInviteLink} from "@/lib/api/client";
+import {useInviteLinks, useCreateInviteLink, useDeleteInviteLink} from "@/hooks/api";
 import type {InviteLinkDto} from "@/lib/api/generated";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -44,31 +44,16 @@ export function SharePopover({groupId, inviteCode, isPublicGroup = false, canMan
     const {t} = useLocale();
     const [open, setOpen] = useState(false);
     const [copied, setCopied] = useState<string | null>(null);
-    const [links, setLinks] = useState<InviteLinkDto[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [creating, setCreating] = useState(false);
 
     // Create form state (private groups only)
     const [expirationMinutes, setExpirationMinutes] = useState<string>("1440");
     const [maxUses, setMaxUses] = useState<string>("");
 
-    const loadLinks = useCallback(async () => {
-        try {
-            setLoading(true);
-            const data = await getInviteLinks(groupId);
-            setLinks(data);
-        } catch {
-            // silently fail
-        } finally {
-            setLoading(false);
-        }
-    }, [groupId]);
+    const {data: links = [], isLoading: loading} = useInviteLinks(groupId, { enabled: open });
+    const createLinkMutation = useCreateInviteLink(groupId);
+    const deleteLinkMutation = useDeleteInviteLink(groupId);
 
-    useEffect(() => {
-        if (open) {
-            loadLinks();
-        }
-    }, [open, loadLinks]);
+    const creating = createLinkMutation.isPending || deleteLinkMutation.isPending;
 
     const handleCopy = async (text: string, id: string) => {
         await navigator.clipboard.writeText(text);
@@ -86,7 +71,6 @@ export function SharePopover({groupId, inviteCode, isPublicGroup = false, canMan
         }
     };
 
-
     const handleSetMaxUses = (value: string) => {
         if (0 <= Number(value) && Number(value) <= 999999) {
             setMaxUses(value);
@@ -95,43 +79,37 @@ export function SharePopover({groupId, inviteCode, isPublicGroup = false, canMan
 
     const handleCreateLink = async () => {
         try {
-            setCreating(true);
             const expires = expirationMinutes === "never" ? undefined : parseInt(expirationMinutes);
             const parsedMax = maxUses ? parseInt(maxUses) : undefined;
             const max = parsedMax && parsedMax <= 999999 ? parsedMax : undefined;
-            await createInviteLink(groupId, expires, max);
+            await createLinkMutation.mutateAsync({
+                expiresInMinutes: expires ?? null,
+                maxUses: max ?? null,
+            });
             toast.success(t("inviteLinkCreated"), {position: "top-center"});
-            await loadLinks();
             setMaxUses("");
         } catch {
             toast.error(t("inviteLinkError"), {position: "top-center"});
-        } finally {
-            setCreating(false);
         }
     };
 
     const handleRegenerateLink = async () => {
         try {
-            setCreating(true);
             // Delete all existing links
             for (const link of links) {
-                await deleteInviteLink(groupId, link.id!);
+                await deleteLinkMutation.mutateAsync(link.id!);
             }
             // Create a new permanent link
-            await createInviteLink(groupId);
+            await createLinkMutation.mutateAsync({});
             toast.success(t("linkRegenerated"), {position: "top-center"});
-            await loadLinks();
         } catch {
             toast.error(t("inviteLinkError"), {position: "top-center"});
-        } finally {
-            setCreating(false);
         }
     };
 
     const handleRevokeLink = async (linkId: number) => {
         try {
-            await deleteInviteLink(groupId, linkId);
-            setLinks(prev => prev.filter(l => l.id !== linkId));
+            await deleteLinkMutation.mutateAsync(linkId);
         } catch {
             // silently fail
         }

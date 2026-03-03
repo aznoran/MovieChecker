@@ -5,7 +5,7 @@ import {useMutation, useQueryClient} from "@tanstack/react-query";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {z} from "zod";
-import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry} from "@/lib/api";
+import {apiClient, getPosterUrl} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useSession} from "next-auth/react";
 import {useGroup} from "@/context/group-context";
@@ -261,12 +261,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             const newRating = Math.round((memberRatings[uid] ?? 0) * 2);
                             const origRating = origMap[uid] ?? 0;
                             if (newRating !== origRating) {
-                                await rateEntry(entry.id!, newRating, uid);
+                                await apiClient.api.watchEntriesRateCreate(entry.id!, {rating: newRating, targetUserId: uid});
                             }
                         }
                     } else {
                         const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
-                        await rateEntry(entry.id!, Math.round(currentRating * 2));
+                        await apiClient.api.watchEntriesRateCreate(entry.id!, {rating: Math.round(currentRating * 2)});
                     }
                 }
                 return;
@@ -279,10 +279,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if (!entryChanged && !posterChanged && !ratingsChanged) return;
 
             if (fileToUpload) {
-                const posterUrl = await uploadPoster(fileToUpload);
-                await updateMovie(entry.movieId!, {posterUrl});
+                const uploadRes = await apiClient.api.uploadPosterCreate({file: fileToUpload});
+                const posterUrl = (uploadRes.data.id || 0).toString();
+                await apiClient.api.moviesUpdate(entry.movieId!, {posterUrl});
             } else if (posterRemoved) {
-                await updateMovie(entry.movieId!, {posterUrl: ""});
+                await apiClient.api.moviesUpdate(entry.movieId!, {posterUrl: ""});
             }
 
             if (entryChanged) {
@@ -290,7 +291,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     entry.movie?.type === EntryContentType.Series ||
                     entry.movie?.type === EntryContentType.Cartoon;
 
-                await updateWatchEntry(entry.id!, {
+                await apiClient.api.watchEntriesUpdate(entry.id!, {
                     status: values.status,
                     comment: values.comment || undefined,
                     ...(values.status === WatchStatus.Watching ? {
@@ -318,12 +319,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                         const newRating = Math.round((memberRatings[uid] ?? 0) * 2);
                         const origRating = origMap[uid] ?? 0;
                         if (newRating !== origRating) {
-                            await rateEntry(entry.id!, newRating, uid);
+                            await apiClient.api.watchEntriesRateCreate(entry.id!, {rating: newRating, targetUserId: uid});
                         }
                     }
                 } else {
                     const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
-                    await rateEntry(entry.id!, Math.round(currentRating * 2));
+                    await apiClient.api.watchEntriesRateCreate(entry.id!, {rating: Math.round(currentRating * 2)});
                 }
             }
         },
@@ -651,8 +652,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                     onMemberRatingChange={handleMemberRatingChange}
                                                     myRating={myRating}
                                                     onMyRatingChange={setMyRating}
-                                                    canRateOthers={canRateOthers}
-                                                    canRateSelf={canRateSelf}
+                                                    canRateOthers={canRateOthers ?? false}
+                                                    canRateSelf={canRateSelf ?? false}
                                                     currentUserId={user?.id}
                                                 />
                                             )}

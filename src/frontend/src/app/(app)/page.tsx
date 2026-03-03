@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
 import { usePermissions } from "@/context/permissions-context";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { getWatchEntries, deleteWatchEntry, getPosterUrl } from "@/lib/api";
+import { getPosterUrl } from "@/lib/api";
+import { useWatchEntries, useDeleteWatchEntry } from "@/hooks/api";
 import { WatchStatus, EntryContentType } from "@/lib/api/generated";
 import type { WatchEntryDto } from "@/lib/api/generated";
 import {
@@ -208,8 +209,6 @@ export default function HomePage() {
     const {activeGroupId, isLoading: isGroupsLoading} = useGroup();
     const {permissions} = usePermissions();
     const router = useRouter();
-    const queryClient = useQueryClient();
-
     const contentTypeLabels = getContentTypeLabels(locale);
     const watchStatusLabels = getWatchStatusLabels(locale);
 
@@ -240,28 +239,13 @@ export default function HomePage() {
         localStorage.setItem(CARD_SIZE_KEY, size);
     };
 
-    const {data: entries = [], isLoading, error, refetch} = useQuery({
-        queryKey: ["watchEntries", statusFilter, activeGroupId],
-        queryFn: () =>
-            getWatchEntries(statusFilter !== null ? statusFilter : undefined, activeGroupId),
-        enabled: !!session && activeGroupId !== undefined,
-        retry: false,
-        placeholderData: keepPreviousData,
-    });
+    const {data: entries = [], isLoading, error, refetch} = useWatchEntries(
+        statusFilter !== null ? statusFilter : undefined,
+        activeGroupId,
+        { enabled: !!session && activeGroupId !== undefined, retry: false, placeholderData: keepPreviousData },
+    );
 
-    const deleteMutation = useMutation({
-        mutationFn: deleteWatchEntry,
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: ["watchEntries"]});
-            queryClient.invalidateQueries({queryKey: ["stats"]});
-            toast.success(t("deleteSucess"), { position: "top-center"})
-        },
-        onError: () => {
-            queryClient.invalidateQueries({queryKey: ["watchEntries"]});
-            queryClient.invalidateQueries({queryKey: ["stats"]});
-            toast.error(t("deleteError"), { position: "top-center"})
-        },
-    });
+    const deleteMutation = useDeleteWatchEntry();
 
     // Show toast notification on error
     useEffect(() => {
@@ -595,7 +579,10 @@ export default function HomePage() {
                                                                 {t("delete")}
                                                             </Button>
                                                         }
-                                                        onConfirm={() => deleteMutation.mutate(entry.id!)}
+                                                        onConfirm={() => deleteMutation.mutate(entry.id!, {
+                                                            onSuccess: () => toast.success(t("deleteSucess"), { position: "top-center" }),
+                                                            onError: () => toast.error(t("deleteError"), { position: "top-center" }),
+                                                        })}
                                                         title={t("delete")}
                                                         description={t("deleteConfirm")}
                                                         confirmText={t("delete")}

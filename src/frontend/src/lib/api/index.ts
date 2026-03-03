@@ -1,3 +1,2 @@
-export * from "./client";
+export { apiClient, queryClient, getPosterUrl, API_URL } from "./client";
 export * from "./generated";
-export { default } from "./client";

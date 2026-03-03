@@ -6,7 +6,7 @@ import {useMutation, useQueryClient} from "@tanstack/react-query";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {z} from "zod";
-import {createMovie, createWatchEntry, uploadPoster} from "@/lib/api";
+import {apiClient} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
 import {
@@ -176,10 +176,11 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             const fileToUpload = overridePosterFile ?? cropper.posterFile;
             let posterUrl: string | undefined;
             if (fileToUpload) {
-                posterUrl = await uploadPoster(fileToUpload);
+                const uploadRes = await apiClient.api.uploadPosterCreate({file: fileToUpload});
+                posterUrl = (uploadRes.data.id || 0).toString();
             }
 
-            const movie = await createMovie({
+            const movieRes = await apiClient.api.moviesCreate({
                 title: values.title,
                 description: values.description || undefined,
                 type: values.contentType,
@@ -187,6 +188,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 genre: values.genre || undefined,
                 posterUrl,
             });
+            const movie = movieRes.data;
 
             const ratingsArray = isGroupMode
                 ? selectedMembers
@@ -198,7 +200,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 values.contentType === EntryContentType.Series ||
                 values.contentType === EntryContentType.Cartoon;
 
-            await createWatchEntry({
+            await apiClient.api.watchEntriesCreate({
                 movieId: movie.id!,
                 status: values.status,
                 rating: !isGroupMode && myRating ? myRating * 2 : undefined,
@@ -447,7 +449,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                 onMemberRatingChange={handleMemberRatingChange}
                                                 myRating={myRating}
                                                 onMyRatingChange={setMyRating}
-                                                canRateOthers={canRateOthers}
+                                                canRateOthers={canRateOthers ?? false}
                                                 canRateSelf
                                                 currentUserId={currentUserId}
                                             />

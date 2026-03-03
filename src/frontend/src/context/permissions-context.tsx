@@ -1,15 +1,14 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useGroup } from "@/context/group-context";
-import { getMyPermissions } from "@/lib/api";
-import type { UserPermissions } from "@/lib/api";
+import { useMyPermissions } from "@/hooks/api";
+import type { PermissionsResponse } from "@/lib/api/generated";
 import { GroupType } from "@/lib/api/generated";
 
 /** All permissions default to true (personal/owner mode) */
-const ALL_PERMISSIONS: UserPermissions = {
+const ALL_PERMISSIONS: PermissionsResponse = {
     permissionFlags: -1,
     canViewEntries: true,
     canCreateEntries: true,
@@ -24,7 +23,7 @@ const ALL_PERMISSIONS: UserPermissions = {
 };
 
 /** All permissions default to false (loading/unauthenticated) */
-const NO_PERMISSIONS: UserPermissions = {
+const NO_PERMISSIONS: PermissionsResponse = {
     permissionFlags: 0,
     canViewEntries: false,
     canCreateEntries: false,
@@ -39,7 +38,7 @@ const NO_PERMISSIONS: UserPermissions = {
 };
 
 interface PermissionsContextValue {
-    permissions: UserPermissions;
+    permissions: PermissionsResponse;
     isLoading: boolean;
 }
 
@@ -53,9 +52,7 @@ export function PermissionsProvider({children}: { children: React.ReactNode }) {
     const {activeGroup} = useGroup();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
-    const {data, isLoading} = useQuery({
-        queryKey: ["permissions", activeGroup?.id],
-        queryFn: () => getMyPermissions(activeGroup!.id!),
+    const {data, isLoading} = useMyPermissions(activeGroup?.id ?? 0, {
         enabled: !!session && isGroupMode && !!activeGroup?.id,
     });
 
