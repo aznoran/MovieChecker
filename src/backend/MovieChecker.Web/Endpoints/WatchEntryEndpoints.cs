@@ -100,7 +100,8 @@ public static class WatchEntryEndpoints
         w.TotalEpisodes,
         w.WatchingTime,
         w.TotalSeasons,
-        w.RuntimeMinutes
+        w.RuntimeMinutes,
+        w.RewatchCount
     );
 
     private static async Task<IResult> GetAll(
@@ -227,6 +228,7 @@ public static class WatchEntryEndpoints
             WatchingTime = request.WatchingTime,
             TotalSeasons = request.TotalSeasons,
             RuntimeMinutes = request.RuntimeMinutes,
+            RewatchCount = request.RewatchCount,
         };
 
         db.WatchEntries.Add(entry);
@@ -398,10 +400,11 @@ public static class WatchEntryEndpoints
         if (request.WatchingTime.HasValue) entry.WatchingTime = request.WatchingTime.Value;
         if (request.TotalSeasons.HasValue) entry.TotalSeasons = request.TotalSeasons.Value;
         if (request.RuntimeMinutes.HasValue) entry.RuntimeMinutes = request.RuntimeMinutes.Value;
+        if (request.RewatchCount.HasValue) entry.RewatchCount = request.RewatchCount.Value;
 
-        // Clear ratings when status changes to Planned or Watching
+        // Clear ratings when status changes to Planned, Watching, or Considering
         if (request.Status.HasValue &&
-            (request.Status.Value == WatchStatus.Planned || request.Status.Value == WatchStatus.Watching))
+            (request.Status.Value == WatchStatus.Planned || request.Status.Value == WatchStatus.Watching || request.Status.Value == WatchStatus.Considering))
         {
             if (entry.Ratings.Count > 0)
                 db.EntryRatings.RemoveRange(entry.Ratings);
@@ -628,6 +631,7 @@ public static class WatchEntryEndpoints
             TotalPlanned: entries.Count(e => e.Status == WatchStatus.Planned),
             TotalWatching: entries.Count(e => e.Status == WatchStatus.Watching),
             TotalDropped: entries.Count(e => e.Status == WatchStatus.Dropped),
+            TotalConsidering: entries.Count(e => e.Status == WatchStatus.Considering),
             AverageMyRating: myRatings.Count > 0 ? myRatings.Average() : 0,
             AveragePartnerRating: otherRatings.Count > 0 ? otherRatings.Average() : 0,
             ByType: entries.GroupBy(e => e.Movie.Type.ToString()).ToDictionary(g => g.Key, g => g.Count()),

@@ -20,5 +20,6 @@ public record CreateWatchEntryRequest(
     int? TotalSeasons,
     int? RuntimeMinutes,
     List<UserRatingInput>? Ratings,
-    List<Guid>? Viewers
+    List<Guid>? Viewers,
+    int? RewatchCount
 );

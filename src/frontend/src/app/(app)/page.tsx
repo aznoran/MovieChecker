@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { keepPreviousData } from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLocale } from "@/context/locale-context";
 import { useGroup } from "@/context/group-context";
 import { usePermissions } from "@/context/permissions-context";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { getPosterUrl } from "@/lib/api";
+import { getPosterUrl, apiClient } from "@/lib/api";
 import { useWatchEntries, useDeleteWatchEntry } from "@/hooks/api";
 import { WatchStatus, EntryContentType } from "@/lib/api/generated";
 import type { WatchEntryDto } from "@/lib/api/generated";
@@ -53,6 +53,10 @@ import {
     RefreshCw,
     AlertCircle,
     Settings,
+    CheckCircle2,
+    PlayCircle,
+    XCircle,
+    HelpCircle,
 } from "lucide-react";
 import {HoverCard, HoverCardTrigger, HoverCardContent} from "@/components/ui/hover-card";
 import { toast } from "sonner";
@@ -148,6 +152,7 @@ const statusColors: Record<WatchStatus, string> = {
     [WatchStatus.Watching]: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
     [WatchStatus.Completed]: "bg-green-500/20 text-green-400 border-green-500/30",
     [WatchStatus.Dropped]: "bg-red-500/20 text-red-400 border-red-500/30",
+    [WatchStatus.Considering]: "bg-gray-500/20 text-gray-400 border-gray-500/30",
 };
 
 function PosterImage({src, alt}: {src: string; alt?: string}) {
@@ -222,6 +227,15 @@ export default function HomePage() {
     // Check if user can create entries
     const canCreate = permissions.canCreateEntries;
 
+    // Check if user can edit an entry based on permissions
+    const canEditEntry = (entry: WatchEntryDto): boolean => {
+        if (permissions.canEditAllEntries) return true;
+        if (permissions.canEditOwnEntries) return entry.userId === session?.user?.id || false;
+        return false;
+    };
+
+    const queryClient = useQueryClient();
+
     const [addOpen, setAddOpen] = useState(false);
     const [editEntry, setEditEntry] = useState<WatchEntryDto | null>(null);
     const [statusFilter, setStatusFilter] = useState<WatchStatus | null>(null);
@@ -246,6 +260,20 @@ export default function HomePage() {
     );
 
     const deleteMutation = useDeleteWatchEntry();
+
+    const handleQuickStatusChange = async (entry: WatchEntryDto, targetStatus: WatchStatus, rewatchIncrement?: boolean) => {
+        try {
+            await apiClient.api.watchEntriesUpdate(entry.id!, {
+                status: targetStatus,
+                ...(rewatchIncrement ? { rewatchCount: (entry.rewatchCount ?? 0) + 1 } : {}),
+            });
+            queryClient.invalidateQueries({ queryKey: ["watchEntries"] });
+            queryClient.invalidateQueries({ queryKey: ["stats"] });
+            toast.success(t("postUpdated"), { position: "top-center" });
+        } catch {
+            toast.error(t("failedToUpdate"), { position: "top-center" });
+        }
+    };
 
     // Show toast notification on error
     useEffect(() => {
@@ -409,12 +437,18 @@ export default function HomePage() {
                                             <div className={`flex flex-wrap items-center gap-1.5 ${metaSpacing[cardSize]}`}>
                                                 <Badge
                                                     variant="outline"
-                                                    className={statusColors[entry.status!]}
+                                                    className={
+                                                        entry.status === WatchStatus.Watching && entry.rewatchCount && entry.rewatchCount > 0
+                                                            ? "bg-violet-500/20 text-violet-400 border-violet-500/30"
+                                                            : statusColors[entry.status!]
+                                                    }
                                                 >
-                                                    {watchStatusLabels[entry.status!]}
+                                                    {entry.status === WatchStatus.Watching && entry.rewatchCount && entry.rewatchCount > 0
+                                                        ? `${t("statusWatchingRewatch")} #${entry.rewatchCount}`
+                                                        : watchStatusLabels[entry.status!]}
                                                 </Badge>
                                             </div>
-                                            {entry.status === WatchStatus.Watching && (
+                                            {(entry.status === WatchStatus.Watching || entry.status === WatchStatus.Dropped) && (
                                                 (entry.currentEpisode || entry.currentSeason || entry.watchingTime || entry.runtimeMinutes) && (() => {
                                                     const isSeries = movie.type === EntryContentType.Series ||
                                                         movie.type === EntryContentType.Anime ||
@@ -565,18 +599,53 @@ export default function HomePage() {
                                                 </p>
                                             )}
                                         </div>
-                                        {canDeleteEntry(entry) && (
-                                            <div className="flex justify-end pt-3 shrink-0">
-                                                <div onClick={(e) => e.stopPropagation()}>
+                                        {(canEditEntry(entry) || canDeleteEntry(entry)) && (
+                                            <div className="flex flex-wrap gap-1 pt-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                {canEditEntry(entry) && entry.status === WatchStatus.Considering && (
+                                                    <>
+                                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleQuickStatusChange(entry, WatchStatus.Planned)}>
+                                                            <Clock className="h-3.5 w-3.5 mr-1"/>{watchStatusLabels[WatchStatus.Planned]}
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleQuickStatusChange(entry, WatchStatus.Dropped)}>
+                                                            <XCircle className="h-3.5 w-3.5 mr-1"/>{watchStatusLabels[WatchStatus.Dropped]}
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                {canEditEntry(entry) && entry.status === WatchStatus.Planned && (
+                                                    <>
+                                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleQuickStatusChange(entry, WatchStatus.Watching)}>
+                                                            <PlayCircle className="h-3.5 w-3.5 mr-1"/>{watchStatusLabels[WatchStatus.Watching]}
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleQuickStatusChange(entry, WatchStatus.Dropped)}>
+                                                            <XCircle className="h-3.5 w-3.5 mr-1"/>{watchStatusLabels[WatchStatus.Dropped]}
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                {canEditEntry(entry) && entry.status === WatchStatus.Watching && (
+                                                    <>
+                                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleQuickStatusChange(entry, WatchStatus.Completed)}>
+                                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1"/>{watchStatusLabels[WatchStatus.Completed]}
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleQuickStatusChange(entry, WatchStatus.Dropped)}>
+                                                            <XCircle className="h-3.5 w-3.5 mr-1"/>{watchStatusLabels[WatchStatus.Dropped]}
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                {canEditEntry(entry) && entry.status === WatchStatus.Completed && (
+                                                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleQuickStatusChange(entry, WatchStatus.Watching, true)}>
+                                                        <RefreshCw className="h-3.5 w-3.5 mr-1"/>{t("quickActionRewatch")}
+                                                    </Button>
+                                                )}
+                                                {canEditEntry(entry) && entry.status === WatchStatus.Dropped && (
+                                                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleQuickStatusChange(entry, WatchStatus.Planned)}>
+                                                        <Clock className="h-3.5 w-3.5 mr-1"/>{watchStatusLabels[WatchStatus.Planned]}
+                                                    </Button>
+                                                )}
+                                                {canDeleteEntry(entry) && (
                                                     <ConfirmDialog
                                                         trigger={
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="text-destructive hover:text-destructive"
-                                                            >
-                                                                <Trash2 className="h-4 w-4 mr-1"/>
-                                                                {t("delete")}
+                                                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive">
+                                                                <Trash2 className="h-3.5 w-3.5 mr-1"/>{t("delete")}
                                                             </Button>
                                                         }
                                                         onConfirm={() => deleteMutation.mutate(entry.id!, {
@@ -590,7 +659,7 @@ export default function HomePage() {
                                                         variant="destructive"
                                                         icon={<Trash2 className="h-6 w-6" />}
                                                     />
-                                                </div>
+                                                )}
                                             </div>
                                         )}
                                     </CardContent>

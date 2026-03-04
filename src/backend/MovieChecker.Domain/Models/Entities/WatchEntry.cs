@@ -32,6 +32,8 @@ public class WatchEntry
 
     public int? RuntimeMinutes { get; set; }
 
+    public int? RewatchCount { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

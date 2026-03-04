@@ -166,6 +166,8 @@ const en = {
     statusWatching: "Watching",
     statusCompleted: "Completed",
     statusDropped: "Dropped",
+    statusConsidering: "Considering",
+    statusWatchingRewatch: "Rewatching",
 
     // Emotions
     emotionJoy: "Joy",
@@ -183,6 +185,7 @@ const en = {
     watching: "Watching",
     planned: "Planned",
     dropped: "Dropped",
+    considering: "Considering",
     myAvgRating: "My Average Rating",
     partnerAvgRating: "Partner Average Rating",
     friendAvgRating: "Friend's Average Rating",
@@ -422,6 +425,10 @@ const en = {
     // Timestamps
     created: "Created",
     lastModified: "Modified",
+
+    // Rewatch
+    rewatchCount: "Rewatch Count",
+    quickActionRewatch: "Start Rewatch",
 
     // Feedback
     feedback: "Feedback",

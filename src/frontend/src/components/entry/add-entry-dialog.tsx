@@ -208,7 +208,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 viewers: isGroupMode ? selectedMembers : undefined,
                 comment: values.comment || undefined,
                 groupId: activeGroupId,
-                ...(values.status === WatchStatus.Watching ? {
+                ...((values.status === WatchStatus.Watching || values.status === WatchStatus.Dropped) ? {
                     ...(isSeries ? {
                         currentSeason: values.currentSeason ? parseInt(values.currentSeason) : undefined,
                         currentEpisode: values.currentEpisode ? parseInt(values.currentEpisode) : undefined,
@@ -295,7 +295,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         form.setValue(name as keyof AddEntryFormValues, value, {shouldValidate: true});
     };
 
-    const showTracking = watchedStatus === WatchStatus.Watching;
+    const showTracking = watchedStatus === WatchStatus.Watching || watchedStatus === WatchStatus.Dropped;
 
     const showRating = watchedStatus === WatchStatus.Completed || watchedStatus === WatchStatus.Dropped;
 

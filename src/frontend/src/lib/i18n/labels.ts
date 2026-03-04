@@ -31,6 +31,7 @@ export function getWatchStatusLabels(locale: Locale): Record<WatchStatus, string
     [WatchStatus.Watching]: t("statusWatching", locale),
     [WatchStatus.Completed]: t("statusCompleted", locale),
     [WatchStatus.Dropped]: t("statusDropped", locale),
+    [WatchStatus.Considering]: t("statusConsidering", locale),
   };
 }
 

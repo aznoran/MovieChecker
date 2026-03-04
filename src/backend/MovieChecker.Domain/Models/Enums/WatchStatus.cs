@@ -8,5 +8,6 @@ public enum WatchStatus
     Planned,
     Watching,
     Completed,
-    Dropped
+    Dropped,
+    Considering
 }

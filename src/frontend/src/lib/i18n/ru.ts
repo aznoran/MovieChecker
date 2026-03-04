@@ -168,6 +168,8 @@ const ru: Record<TranslationKeys, string> = {
     statusWatching: "Смотрим",
     statusCompleted: "Просмотрено",
     statusDropped: "Брошено",
+    statusConsidering: "На рассмотрении",
+    statusWatchingRewatch: "Пересматриваем",
 
     // Emotions
     emotionJoy: "Радость",
@@ -185,6 +187,7 @@ const ru: Record<TranslationKeys, string> = {
     watching: "Смотрим",
     planned: "Запланировано",
     dropped: "Брошено",
+    considering: "На рассмотрении",
     myAvgRating: "Моя средняя оценка",
     partnerAvgRating: "Средняя оценка партнёра",
     friendAvgRating: "Средняя оценка друга",
@@ -424,6 +427,10 @@ const ru: Record<TranslationKeys, string> = {
     // Timestamps
     created: "Создано",
     lastModified: "Изменено",
+
+    // Rewatch
+    rewatchCount: "Кол-во пересмотров",
+    quickActionRewatch: "Начать пересмотр",
 
     // Feedback
     feedback: "Обратная связь",
