@@ -82,7 +82,7 @@ function createEditEntrySchema(t: (key: TranslationKeys) => string) {
         totalSeasons: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
             .optional().or(z.literal("")),
-        runtimeMinutes: z.string()
+        runtimeSeconds: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
             .optional().or(z.literal("")),
         hours: z.string()
@@ -151,7 +151,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             currentEpisode: entry.currentEpisode?.toString() || "",
             totalEpisodes: entry.totalEpisodes?.toString() || "",
             totalSeasons: entry.totalSeasons?.toString() || "",
-            runtimeMinutes: entry.runtimeMinutes?.toString() || "",
+            runtimeSeconds: entry.runtimeSeconds?.toString() || "",
             hours: Math.floor((entry.watchingTime || 0) / 3600).toString(),
             minutes: Math.floor(((entry.watchingTime || 0) % 3600) / 60).toString(),
             seconds: ((entry.watchingTime || 0) % 60).toString(),
@@ -170,7 +170,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 currentEpisode: entry.currentEpisode?.toString() || "",
                 totalEpisodes: entry.totalEpisodes?.toString() || "",
                 totalSeasons: entry.totalSeasons?.toString() || "",
-                runtimeMinutes: entry.runtimeMinutes?.toString() || "",
+                runtimeSeconds: entry.runtimeSeconds?.toString() || "",
                 hours: Math.floor((entry.watchingTime || 0) / 3600).toString(),
                 minutes: Math.floor(((entry.watchingTime || 0) % 3600) / 60).toString(),
                 seconds: ((entry.watchingTime || 0) % 60).toString(),
@@ -210,7 +210,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if ((values.currentEpisode || "") !== (entry.currentEpisode?.toString() || "")) return true;
             if ((values.totalEpisodes || "") !== (entry.totalEpisodes?.toString() || "")) return true;
             if ((values.totalSeasons || "") !== (entry.totalSeasons?.toString() || "")) return true;
-            if ((values.runtimeMinutes || "") !== (entry.runtimeMinutes?.toString() || "")) return true;
+            if ((values.runtimeSeconds || "") !== (entry.runtimeSeconds?.toString() || "")) return true;
             const newWt = (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"));
             if (newWt !== (entry.watchingTime || 0)) return true;
         }
@@ -301,7 +301,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             totalEpisodes: values.totalEpisodes ? parseInt(values.totalEpisodes) : undefined,
                             totalSeasons: values.totalSeasons ? parseInt(values.totalSeasons) : undefined,
                         } : {}),
-                        runtimeMinutes: values.runtimeMinutes ? parseInt(values.runtimeMinutes) : undefined,
+                        runtimeSeconds: values.runtimeSeconds ? parseInt(values.runtimeSeconds) : undefined,
                         watchingTime: (values.hours || values.minutes || values.seconds)
                             ? (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"))
                             : undefined,
@@ -414,7 +414,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     // Build validation errors for SeriesTrackingSection
     const validationErrors: Record<string, string> = {};
     const formErrors = form.formState.errors;
-    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "totalSeasons", "runtimeMinutes", "hours", "minutes", "seconds"] as const) {
+    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "totalSeasons", "runtimeSeconds", "hours", "minutes", "seconds"] as const) {
         if (formErrors[key]?.message) {
             validationErrors[key] = formErrors[key].message as string;
         }
@@ -669,8 +669,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                     setTotalEpisodes={(v) => form.setValue("totalEpisodes", v, {shouldValidate: true})}
                                                     totalSeasons={form.watch("totalSeasons") ?? ""}
                                                     setTotalSeasons={(v) => form.setValue("totalSeasons", v, {shouldValidate: true})}
-                                                    runtimeMinutes={form.watch("runtimeMinutes") ?? ""}
-                                                    setRuntimeMinutes={(v) => form.setValue("runtimeMinutes", v, {shouldValidate: true})}
+                                                    runtimeSeconds={form.watch("runtimeSeconds") ?? ""}
+                                                    setRuntimeSeconds={(v) => form.setValue("runtimeSeconds", v, {shouldValidate: true})}
                                                     hours={form.watch("hours") ?? ""}
                                                     setHours={(v) => form.setValue("hours", v, {shouldValidate: true})}
                                                     minutes={form.watch("minutes") ?? ""}
@@ -684,7 +684,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         </>
                                     ) : (
                                         <>
-                                            {watchedStatus !== WatchStatus.Planned && watchedStatus !== WatchStatus.Watching && (
+                                            {showRating && (
                                                 <RatingSection
                                                     isGroupMode={false}
                                                     members={[]}
@@ -697,6 +697,30 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                     canRateOthers={false}
                                                     canRateSelf
                                                     currentUserId={user?.id}
+                                                />
+                                            )}
+
+                                            {showTracking && (
+                                                <SeriesTrackingSection
+                                                    contentType={entry.movie?.type ?? EntryContentType.Movie}
+                                                    currentSeason={form.watch("currentSeason") ?? ""}
+                                                    setCurrentSeason={(v) => form.setValue("currentSeason", v, {shouldValidate: true})}
+                                                    currentEpisode={form.watch("currentEpisode") ?? ""}
+                                                    setCurrentEpisode={(v) => form.setValue("currentEpisode", v, {shouldValidate: true})}
+                                                    totalEpisodes={form.watch("totalEpisodes") ?? ""}
+                                                    setTotalEpisodes={(v) => form.setValue("totalEpisodes", v, {shouldValidate: true})}
+                                                    totalSeasons={form.watch("totalSeasons") ?? ""}
+                                                    setTotalSeasons={(v) => form.setValue("totalSeasons", v, {shouldValidate: true})}
+                                                    runtimeSeconds={form.watch("runtimeSeconds") ?? ""}
+                                                    setRuntimeSeconds={(v) => form.setValue("runtimeSeconds", v, {shouldValidate: true})}
+                                                    hours={form.watch("hours") ?? ""}
+                                                    setHours={(v) => form.setValue("hours", v, {shouldValidate: true})}
+                                                    minutes={form.watch("minutes") ?? ""}
+                                                    setMinutes={(v) => form.setValue("minutes", v, {shouldValidate: true})}
+                                                    seconds={form.watch("seconds") ?? ""}
+                                                    setSeconds={(v) => form.setValue("seconds", v, {shouldValidate: true})}
+                                                    handleFieldChange={handleFieldChange}
+                                                    validationErrors={validationErrors}
                                                 />
                                             )}
                                         </>

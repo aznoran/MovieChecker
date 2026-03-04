@@ -90,6 +90,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     token.authentikSub = p.sub as string | undefined;
                 }
 
+                // Provision user profile in DB (create record if new)
+                const apiUrl =
+                    process.env.API_URL ||
+                    process.env.NEXT_PUBLIC_API_URL ||
+                    "http://localhost:5000";
+                try {
+                    await fetch(`${apiUrl}/api/auth/provision`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${account.access_token}` },
+                    });
+                } catch {
+                    // Non-fatal: ProvisionGuard on the client side will retry
+                }
+
                 return token;
             }
 

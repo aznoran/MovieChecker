@@ -80,6 +80,9 @@ public static class WatchEntryEndpoints
             w.Movie.Year,
             w.Movie.Genre,
             w.Movie.PosterUrl,
+            w.Movie.TmdbId,
+            w.Movie.AnilistId,
+            w.Movie.IsCustom,
             w.Movie.CreatedAt
         ),
         w.Status,
@@ -100,7 +103,7 @@ public static class WatchEntryEndpoints
         w.TotalEpisodes,
         w.WatchingTime,
         w.TotalSeasons,
-        w.RuntimeMinutes
+        w.RuntimeSeconds
     );
 
     private static async Task<IResult> GetAll(
@@ -190,6 +193,18 @@ public static class WatchEntryEndpoints
         if (request.Comment != null && request.Comment.Length > 1000)
             return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
 
+        if (request.CurrentEpisode.HasValue && request.TotalEpisodes.HasValue
+            && request.CurrentEpisode.Value > request.TotalEpisodes.Value)
+            return Results.BadRequest(new ErrorResponse("Current episode cannot exceed total episodes"));
+
+        if (request.CurrentSeason.HasValue && request.TotalSeasons.HasValue
+            && request.CurrentSeason.Value > request.TotalSeasons.Value)
+            return Results.BadRequest(new ErrorResponse("Current season cannot exceed total seasons"));
+
+        if (request.WatchingTime.HasValue && request.RuntimeSeconds.HasValue
+            && request.WatchingTime.Value > request.RuntimeSeconds.Value)
+            return Results.BadRequest(new ErrorResponse("Watching time cannot exceed the total duration"));
+
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
             return Results.BadRequest(new ErrorResponse(localizer["MovieNotFound"]));
 
@@ -226,7 +241,7 @@ public static class WatchEntryEndpoints
             TotalEpisodes = request.TotalEpisodes,
             WatchingTime = request.WatchingTime,
             TotalSeasons = request.TotalSeasons,
-            RuntimeMinutes = request.RuntimeMinutes,
+            RuntimeSeconds = request.RuntimeSeconds,
         };
 
         db.WatchEntries.Add(entry);
@@ -387,6 +402,24 @@ public static class WatchEntryEndpoints
         if (request.Comment != null && request.Comment.Length > 1000)
             return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
 
+        var effectiveCurrentEpisode = request.CurrentEpisode ?? entry.CurrentEpisode;
+        var effectiveTotalEpisodes = request.TotalEpisodes ?? entry.TotalEpisodes;
+        if (effectiveCurrentEpisode.HasValue && effectiveTotalEpisodes.HasValue
+            && effectiveCurrentEpisode.Value > effectiveTotalEpisodes.Value)
+            return Results.BadRequest(new ErrorResponse("Current episode cannot exceed total episodes"));
+
+        var effectiveCurrentSeason = request.CurrentSeason ?? entry.CurrentSeason;
+        var effectiveTotalSeasons = request.TotalSeasons ?? entry.TotalSeasons;
+        if (effectiveCurrentSeason.HasValue && effectiveTotalSeasons.HasValue
+            && effectiveCurrentSeason.Value > effectiveTotalSeasons.Value)
+            return Results.BadRequest(new ErrorResponse("Current season cannot exceed total seasons"));
+
+        var effectiveWatchingTime = request.WatchingTime ?? entry.WatchingTime;
+        var effectiveRuntime = request.RuntimeSeconds ?? entry.RuntimeSeconds;
+        if (effectiveWatchingTime.HasValue && effectiveRuntime.HasValue
+            && effectiveWatchingTime.Value > effectiveRuntime.Value)
+            return Results.BadRequest(new ErrorResponse("Watching time cannot exceed the total duration"));
+
         if (request.Status.HasValue) entry.Status = request.Status.Value;
         if (request.Comment != null) entry.Comment = request.Comment;
         if (request.PrivateComment != null) entry.PrivateComment = request.PrivateComment;
@@ -397,7 +430,7 @@ public static class WatchEntryEndpoints
         if (request.TotalEpisodes.HasValue) entry.TotalEpisodes = request.TotalEpisodes.Value;
         if (request.WatchingTime.HasValue) entry.WatchingTime = request.WatchingTime.Value;
         if (request.TotalSeasons.HasValue) entry.TotalSeasons = request.TotalSeasons.Value;
-        if (request.RuntimeMinutes.HasValue) entry.RuntimeMinutes = request.RuntimeMinutes.Value;
+        if (request.RuntimeSeconds.HasValue) entry.RuntimeSeconds = request.RuntimeSeconds.Value;
 
         // Clear ratings when status changes to Planned or Watching
         if (request.Status.HasValue &&

@@ -5,3 +5,4 @@ export * from "./upload";
 export * from "./groups";
 export * from "./auth";
 export * from "./user-settings";
+export * from "./external-search";

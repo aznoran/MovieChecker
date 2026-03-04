@@ -118,6 +118,31 @@ export function useImageCropper(options: UseImageCropperOptions = {}) {
         options.onPosterRemoved?.();
     };
 
+    const startCroppingFromUrl = useCallback(async (url: string) => {
+        try {
+            const resp = await fetch(url);
+            const blob = await resp.blob();
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setEditorImageSrc(reader.result as string);
+                setCrop({ x: 0, y: 0 });
+                setZoom(1);
+                setRotation(0);
+                croppedAreaPixelsRef.current = null;
+                setIsCropping(true);
+            };
+            reader.readAsDataURL(blob);
+        } catch {
+            // Fallback: use URL directly
+            setEditorImageSrc(url);
+            setCrop({ x: 0, y: 0 });
+            setZoom(1);
+            setRotation(0);
+            croppedAreaPixelsRef.current = null;
+            setIsCropping(true);
+        }
+    }, []);
+
     const resetCropper = useCallback((preview?: string | null) => {
         setPosterFile(null);
         setPosterPreview(preview ?? null);
@@ -152,6 +177,7 @@ export function useImageCropper(options: UseImageCropperOptions = {}) {
         handlePasteFromClipboard,
         handleFileChange,
         removePoster,
+        startCroppingFromUrl,
         resetCropper,
     };
 }

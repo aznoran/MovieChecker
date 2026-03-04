@@ -6,6 +6,7 @@ export const queryKeys = {
     memberPermissions: (groupId: number, userId: string) => ["memberPermissions", groupId, userId] as const,
     inviteLinks: (groupId: number) => ["inviteLinks", groupId] as const,
     userSettings: () => ["userSettings"] as const,
+    externalSearch: (query: string, language?: string) => ["externalSearch", query, language] as const,
 };
 
 export const mutationKeys = {
@@ -31,4 +32,5 @@ export const mutationKeys = {
     provisionUser: () => ["provisionUser"] as const,
     setLanguage: () => ["setLanguage"] as const,
     updateUserSettings: () => ["updateUserSettings"] as const,
+    translateResults: () => ["translateResults"] as const,
 };

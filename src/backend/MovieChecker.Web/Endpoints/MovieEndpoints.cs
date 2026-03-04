@@ -65,6 +65,9 @@ public static class MovieEndpoints
                 m.Year,
                 m.Genre,
                 m.PosterUrl,
+                m.TmdbId,
+                m.AnilistId,
+                m.IsCustom,
                 m.CreatedAt
             ))
             .ToListAsync();
@@ -88,6 +91,9 @@ public static class MovieEndpoints
             movie.Year,
             movie.Genre,
             movie.PosterUrl,
+            movie.TmdbId,
+            movie.AnilistId,
+            movie.IsCustom,
             movie.CreatedAt
         ));
     }
@@ -97,8 +103,8 @@ public static class MovieEndpoints
         // Validate field lengths
         if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Length > 255)
             return Results.BadRequest(new ErrorResponse("Title is required and must not exceed 255 characters"));
-        if (request.Description != null && request.Description.Length > 1000)
-            return Results.BadRequest(new ErrorResponse("Description must not exceed 1000 characters"));
+        if (request.Description != null && request.Description.Length > 2500)
+            return Results.BadRequest(new ErrorResponse("Description must not exceed 2500 characters"));
         if (request.Genre != null && request.Genre.Length > 500)
             return Results.BadRequest(new ErrorResponse("Genre must not exceed 500 characters"));
 
@@ -109,7 +115,10 @@ public static class MovieEndpoints
             Type = request.Type,
             Year = request.Year,
             Genre = request.Genre,
-            PosterUrl = request.PosterUrl
+            PosterUrl = request.PosterUrl,
+            TmdbId = request.TmdbId,
+            AnilistId = request.AnilistId,
+            IsCustom = request.IsCustom
         };
 
         db.Movies.Add(movie);
@@ -123,6 +132,9 @@ public static class MovieEndpoints
             movie.Year,
             movie.Genre,
             movie.PosterUrl,
+            movie.TmdbId,
+            movie.AnilistId,
+            movie.IsCustom,
             movie.CreatedAt
         ));
     }
@@ -164,6 +176,9 @@ public static class MovieEndpoints
             movie.Year,
             movie.Genre,
             movie.PosterUrl,
+            movie.TmdbId,
+            movie.AnilistId,
+            movie.IsCustom,
             movie.CreatedAt
         ));
     }
@@ -202,6 +217,9 @@ public static class MovieEndpoints
                 m.Year,
                 m.Genre,
                 m.PosterUrl,
+                m.TmdbId,
+                m.AnilistId,
+                m.IsCustom,
                 m.CreatedAt
             ))
             .ToListAsync();

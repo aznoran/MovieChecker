@@ -38,14 +38,18 @@ import {
 import {GenreMultiSelect} from "@/components/entry/genre-multi-select";
 import {
     Type,
-    Calendar,
+    Calendar as CalendarIcon,
+    CalendarDays,
     Film,
     Tag,
     FileText,
     ListChecks,
     MessageSquare,
     Loader2,
+    Search,
 } from "lucide-react";
+import {Calendar} from "@/components/ui/calendar";
+import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
 import {Controller} from "react-hook-form";
 import {
     Field,
@@ -62,12 +66,18 @@ import {PosterUploadSection} from "@/components/entry/poster-upload-section";
 import {SeriesTrackingSection} from "@/components/entry/series-tracking-section";
 import {RatingSection} from "@/components/entry/rating-section";
 import {MemberSelect} from "@/components/entry/member-select";
+import {SearchResultsPanel} from "@/components/entry/search-results-panel";
+import {SearchAllResultsDialog} from "@/components/entry/search-all-results-dialog";
+import {useExternalSearch} from "@/hooks/api/external-search";
+import {useDebounce} from "@/hooks/use-debounce";
+import {searchApiClient} from "@/lib/api/client";
+import type {SearchResultDto, TranslatedResultDto} from "@/lib/api/generated";
 import type {TranslationKeys} from "@/lib/i18n/en";
 
 function createAddEntrySchema(t: (key: TranslationKeys) => string) {
     return z.object({
         title: z.string().min(1, t("titleRequired")).max(255, t("titleTooLong")),
-        description: z.string().max(1000, t("descriptionTooLong")).optional().or(z.literal("")),
+        description: z.string().max(2500, t("descriptionTooLong")).optional().or(z.literal("")),
         contentType: z.nativeEnum(EntryContentType),
         year: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1900 && +v <= 2100), t("invalidYear"))
@@ -88,7 +98,7 @@ function createAddEntrySchema(t: (key: TranslationKeys) => string) {
         totalSeasons: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
             .optional().or(z.literal("")),
-        runtimeMinutes: z.string()
+        runtimeSeconds: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
             .optional().or(z.literal("")),
         hours: z.string()
@@ -126,7 +136,28 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     const [memberRatings, setMemberRatings] = useState<Record<string, number>>({});
     const [error, setError] = useState("");
 
-    const cropper = useImageCropper();
+    // Search state
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchEnabled, setSearchEnabled] = useState(false);
+    const [showSearchPanel, setShowSearchPanel] = useState(false);
+    const [showAllResults, setShowAllResults] = useState(false);
+    const [externalPosterUrl, setExternalPosterUrl] = useState<string | null>(null);
+    const [tmdbId, setTmdbId] = useState<number | null>(null);
+    const [anilistId, setAnilistId] = useState<number | null>(null);
+    const [isCustom, setIsCustom] = useState(true);
+    const [autoFilledSnapshot, setAutoFilledSnapshot] = useState<Record<string, string> | null>(null);
+
+    // Translate state
+    const [translatedResults, setTranslatedResults] = useState<TranslatedResultDto[]>([]);
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [translatePhase, setTranslatePhase] = useState<"idle" | "exit" | "enter">("idle");
+
+    // Map locale to TMDB language
+    const searchLanguage = locale === "ru" ? "ru-RU" : "en-US";
+
+    const cropper = useImageCropper({
+        onPosterRemoved: () => setExternalPosterUrl(null),
+    });
 
     const form = useForm<AddEntryFormValues>({
         resolver: zodResolver(createAddEntrySchema(t)),
@@ -142,7 +173,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             currentEpisode: "",
             totalEpisodes: "",
             totalSeasons: "",
-            runtimeMinutes: "",
+            runtimeSeconds: "",
             hours: "",
             minutes: "",
             seconds: "",
@@ -160,6 +191,17 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
         setSelectedMembers([]);
         setMemberRatings({});
         setError("");
+        setSearchQuery("");
+        setSearchEnabled(false);
+        setShowSearchPanel(false);
+        setShowAllResults(false);
+        setExternalPosterUrl(null);
+        setTmdbId(null);
+        setAnilistId(null);
+        setIsCustom(true);
+        setAutoFilledSnapshot(null);
+        setTranslatedResults([]);
+        setIsTranslating(false);
         cropper.resetCropper();
     }, [form, cropper.resetCropper]);
 
@@ -169,6 +211,154 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
 
     const watchedStatus = form.watch("status");
     const watchedContentType = form.watch("contentType");
+
+    const debouncedSearchQuery = useDebounce(searchQuery, 300);
+    const searchResults = useExternalSearch(debouncedSearchQuery, searchEnabled, searchLanguage);
+
+    const handleSearch = () => {
+        const title = form.getValues("title");
+        if (title.trim().length >= 2) {
+            setSearchQuery(title.trim());
+            setSearchEnabled(true);
+            setShowSearchPanel(true);
+        }
+    };
+
+    const handleExternalSelect = (result: SearchResultDto) => {
+        // Map suggestedType to EntryContentType
+        const typeMap: Record<string, EntryContentType> = {
+            Movie: EntryContentType.Movie,
+            Series: EntryContentType.Series,
+            Anime: EntryContentType.Anime,
+            Cartoon: EntryContentType.Cartoon,
+            Show: EntryContentType.Show,
+        };
+
+        // When selecting from a group, prefer the localized title/description
+        // from another provider that originally returned data in the user's language
+        let bestTitle = result.title ?? "";
+        let bestDescription = result.description ?? "";
+        if (searchLanguage !== "en-US") {
+            const allResults = getDisplayResults();
+            const selectedKey = (result.englishTitle ?? result.title ?? "").toLowerCase().trim();
+            const groupResults = allResults.filter(
+                (r) => (r.englishTitle ?? r.title ?? "").toLowerCase().trim() === selectedKey
+            );
+            if (groupResults.length > 1) {
+                // Find a result whose title differs from its englishTitle (localized)
+                const localizedResult = groupResults.find(
+                    (r) => r.englishTitle && (r.title ?? "").toLowerCase() !== r.englishTitle.toLowerCase()
+                );
+                if (localizedResult) {
+                    bestTitle = localizedResult.title ?? "";
+                    if (localizedResult.description) {
+                        bestDescription = localizedResult.description;
+                    }
+                }
+            }
+        }
+
+        const suggestedType = result.suggestedType ?? "";
+        const snapshot: Record<string, string> = {
+            title: bestTitle,
+            description: bestDescription,
+            year: result.year?.toString() ?? "",
+            genre: result.genre ?? "",
+            contentType: typeMap[suggestedType]?.toString() ?? EntryContentType.Movie.toString(),
+        };
+
+        form.setValue("title", bestTitle);
+        form.setValue("description", bestDescription);
+        form.setValue("year", result.year?.toString() ?? "");
+        form.setValue("genre", result.genre ?? "");
+        if (typeMap[suggestedType]) {
+            form.setValue("contentType", typeMap[suggestedType]);
+        }
+        if (result.totalEpisodes) {
+            form.setValue("totalEpisodes", result.totalEpisodes.toString());
+        }
+        if (result.totalSeasons) {
+            form.setValue("totalSeasons", result.totalSeasons.toString());
+        }
+        if (result.runtimeMinutes) {
+            form.setValue("runtimeSeconds", (result.runtimeMinutes * 60).toString());
+        }
+
+        // Set external IDs
+        if (result.provider === "Tmdb") {
+            setTmdbId(result.externalId ?? null);
+            setAnilistId(null);
+        } else {
+            setAnilistId(result.externalId ?? null);
+            setTmdbId(null);
+        }
+
+        setExternalPosterUrl(result.posterUrl ?? null);
+        if (result.posterUrl) {
+            cropper.resetCropper(result.posterUrl);
+        }
+        setIsCustom(false);
+        setAutoFilledSnapshot(snapshot);
+        setShowSearchPanel(false);
+        setShowAllResults(false);
+    };
+
+    // Get display results (merging translations)
+    const getDisplayResults = useCallback((): SearchResultDto[] => {
+        const raw = searchResults.data ?? [];
+        if (translatedResults.length === 0) return raw;
+        return raw.map((r) => {
+            const tr = translatedResults.find(
+                (t) => t.externalId === r.externalId && t.provider === r.provider
+            );
+            if (!tr) return r;
+            return { ...r, title: tr.title, description: tr.description ?? r.description };
+        });
+    }, [searchResults.data, translatedResults]);
+
+    const handleTranslate = async () => {
+        const results = searchResults.data;
+        if (!results || results.length === 0) return;
+        setIsTranslating(true);
+        try {
+            const targetLang = locale === "ru" ? "ru" : "en";
+            const { data: translated } = await searchApiClient.api.searchTranslateCreate({
+                results,
+                targetLanguage: targetLang,
+            });
+            setIsTranslating(false);
+            // Animate: exit → swap data → enter
+            const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (reducedMotion) {
+                setTranslatedResults(translated);
+                return;
+            }
+            setTranslatePhase("exit");
+            setTimeout(() => {
+                setTranslatedResults(translated);
+                setTranslatePhase("enter");
+                setTimeout(() => setTranslatePhase("idle"), 320);
+            }, 220);
+        } catch {
+            setIsTranslating(false);
+            toast.error("Translation failed", {position: "top-center"});
+        }
+    };
+
+    // Track if user modifies auto-filled fields → mark as custom
+    useEffect(() => {
+        if (!autoFilledSnapshot) return;
+        const subscription = form.watch((values) => {
+            const changed = (
+                values.title !== autoFilledSnapshot.title ||
+                (values.description ?? "") !== autoFilledSnapshot.description ||
+                (values.year ?? "") !== autoFilledSnapshot.year ||
+                (values.genre ?? "") !== autoFilledSnapshot.genre
+            );
+            if (changed) setIsCustom(true);
+        });
+        return () => subscription.unsubscribe();
+    }, [autoFilledSnapshot, form]);
 
     const mutation = useMutation({
         mutationFn: async (overridePosterFile?: File | null) => {
@@ -180,13 +370,19 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 posterUrl = (uploadRes.data.id || 0).toString();
             }
 
+            // Use external poster URL if no uploaded poster
+            const finalPosterUrl = posterUrl || externalPosterUrl || undefined;
+
             const movieRes = await apiClient.api.moviesCreate({
                 title: values.title,
                 description: values.description || undefined,
                 type: values.contentType,
                 year: values.year ? parseInt(values.year) : undefined,
                 genre: values.genre || undefined,
-                posterUrl,
+                posterUrl: finalPosterUrl,
+                tmdbId: tmdbId ?? undefined,
+                anilistId: anilistId ?? undefined,
+                isCustom,
             });
             const movie = movieRes.data;
 
@@ -215,7 +411,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                         totalEpisodes: values.totalEpisodes ? parseInt(values.totalEpisodes) : undefined,
                         totalSeasons: values.totalSeasons ? parseInt(values.totalSeasons) : undefined,
                     } : {}),
-                    runtimeMinutes: values.runtimeMinutes ? parseInt(values.runtimeMinutes) : undefined,
+                    runtimeSeconds: values.runtimeSeconds ? parseInt(values.runtimeSeconds) : undefined,
                     watchingTime: (values.hours || values.minutes || values.seconds)
                         ? (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"))
                         : undefined,
@@ -285,7 +481,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     // Helper to pass validation errors + handleFieldChange to SeriesTrackingSection
     const validationErrors: Record<string, string> = {};
     const formErrors = form.formState.errors;
-    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "totalSeasons", "runtimeMinutes", "hours", "minutes", "seconds"] as const) {
+    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "totalSeasons", "runtimeSeconds", "hours", "minutes", "seconds"] as const) {
         if (formErrors[key]?.message) {
             validationErrors[key] = formErrors[key].message as string;
         }
@@ -301,13 +497,29 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+            <DialogContent className="max-w-md max-h-[85vh] flex flex-col !overflow-visible">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Film className="h-5 w-5"/>
                         {t("addNewEntry")}
                     </DialogTitle>
                 </DialogHeader>
+
+                {/* Search panel — positioned to the right of dialog on desktop */}
+                {showSearchPanel && (
+                    <div className="absolute left-full top-0 bottom-0 ml-3 hidden md:block z-50">
+                        <SearchResultsPanel
+                            results={getDisplayResults()}
+                            isLoading={searchResults.isLoading}
+                            onSelect={handleExternalSelect}
+                            onClose={() => setShowSearchPanel(false)}
+                            onShowAll={() => setShowAllResults(true)}
+                            onTranslate={handleTranslate}
+                            isTranslating={isTranslating}
+                            translatePhase={translatePhase}
+                        />
+                    </div>
+                )}
 
                 <ScrollArea className="flex-1">
                     <div style={{maxHeight: "calc(85vh - 120px)"}}>
@@ -317,6 +529,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                     fileInputRef={cropper.fileInputRef}
                                     onFileChange={cropper.handleFileChange}
                                     gridSwitchId="add-crop-grid"
+                                    canReCropFromPreview
                                 />
 
                                 <FieldGroup>
@@ -330,7 +543,17 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                         <Type className="h-3.5 w-3.5"/>
                                                         {t("title")} *
                                                     </FieldLabel>
-                                                    <Input {...field} id={field.name} autoFocus aria-invalid={fieldState.invalid}/>
+                                                    <div className="relative">
+                                                        <Input {...field} id={field.name} autoFocus aria-invalid={fieldState.invalid} className="pr-8" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearch(); } }}/>
+                                                        <button
+                                                            type="button"
+                                                            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-accent transition-colors"
+                                                            onClick={handleSearch}
+                                                            title={t("searchPlaceholder")}
+                                                        >
+                                                            <Search className="h-4 w-4 text-muted-foreground"/>
+                                                        </button>
+                                                    </div>
                                                     {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
                                                 </Field>
                                             )}
@@ -341,10 +564,37 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                             render={({field, fieldState}) => (
                                                 <Field data-invalid={fieldState.invalid || undefined}>
                                                     <FieldLabel htmlFor={field.name} className="flex items-center gap-1.5">
-                                                        <Calendar className="h-3.5 w-3.5"/>
+                                                        <CalendarIcon className="h-3.5 w-3.5"/>
                                                         {t("year")}
                                                     </FieldLabel>
-                                                    <Input {...field} id={field.name} placeholder="2024" aria-invalid={fieldState.invalid}/>
+                                                    <div className="relative">
+                                                        <Input {...field} id={field.name} placeholder="2024" aria-invalid={fieldState.invalid} className="pr-8"/>
+                                                        <Popover>
+                                                            <PopoverTrigger asChild>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon-xs"
+                                                                    className="absolute right-1.5 top-1/2 -translate-y-1/2"
+                                                                    title={t("pickYear")}
+                                                                >
+                                                                    <CalendarDays className="h-4 w-4 text-muted-foreground"/>
+                                                                </Button>
+                                                            </PopoverTrigger>
+                                                            <PopoverContent className="w-auto p-0" align="end">
+                                                                <Calendar
+                                                                    mode="single"
+                                                                    captionLayout="dropdown"
+                                                                    defaultMonth={field.value ? new Date(+field.value, 0) : undefined}
+                                                                    onSelect={(date) => {
+                                                                        if (date) field.onChange(date.getFullYear().toString());
+                                                                    }}
+                                                                    startMonth={new Date(1900, 0)}
+                                                                    endMonth={new Date(2100, 11)}
+                                                                />
+                                                            </PopoverContent>
+                                                        </Popover>
+                                                    </div>
                                                     {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
                                                 </Field>
                                             )}
@@ -466,8 +716,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                 setTotalEpisodes={(v) => form.setValue("totalEpisodes", v, {shouldValidate: true})}
                                                 totalSeasons={form.watch("totalSeasons") ?? ""}
                                                 setTotalSeasons={(v) => form.setValue("totalSeasons", v, {shouldValidate: true})}
-                                                runtimeMinutes={form.watch("runtimeMinutes") ?? ""}
-                                                setRuntimeMinutes={(v) => form.setValue("runtimeMinutes", v, {shouldValidate: true})}
+                                                runtimeSeconds={form.watch("runtimeSeconds") ?? ""}
+                                                setRuntimeSeconds={(v) => form.setValue("runtimeSeconds", v, {shouldValidate: true})}
                                                 hours={form.watch("hours") ?? ""}
                                                 setHours={(v) => form.setValue("hours", v, {shouldValidate: true})}
                                                 minutes={form.watch("minutes") ?? ""}
@@ -508,8 +758,8 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                 setTotalEpisodes={(v) => form.setValue("totalEpisodes", v, {shouldValidate: true})}
                                                 totalSeasons={form.watch("totalSeasons") ?? ""}
                                                 setTotalSeasons={(v) => form.setValue("totalSeasons", v, {shouldValidate: true})}
-                                                runtimeMinutes={form.watch("runtimeMinutes") ?? ""}
-                                                setRuntimeMinutes={(v) => form.setValue("runtimeMinutes", v, {shouldValidate: true})}
+                                                runtimeSeconds={form.watch("runtimeSeconds") ?? ""}
+                                                setRuntimeSeconds={(v) => form.setValue("runtimeSeconds", v, {shouldValidate: true})}
                                                 hours={form.watch("hours") ?? ""}
                                                 setHours={(v) => form.setValue("hours", v, {shouldValidate: true})}
                                                 minutes={form.watch("minutes") ?? ""}
@@ -583,6 +833,32 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             </form>
                     </div>
                 </ScrollArea>
+
+                {/* Mobile: show panel below form */}
+                {showSearchPanel && (
+                    <div className="md:hidden">
+                        <SearchResultsPanel
+                            results={getDisplayResults()}
+                            isLoading={searchResults.isLoading}
+                            onSelect={handleExternalSelect}
+                            onClose={() => setShowSearchPanel(false)}
+                            onShowAll={() => setShowAllResults(true)}
+                            onTranslate={handleTranslate}
+                            isTranslating={isTranslating}
+                            translatePhase={translatePhase}
+                        />
+                    </div>
+                )}
+
+                <SearchAllResultsDialog
+                    open={showAllResults}
+                    onOpenChange={setShowAllResults}
+                    results={getDisplayResults()}
+                    onSelect={handleExternalSelect}
+                    onTranslate={handleTranslate}
+                    isTranslating={isTranslating}
+                    translatePhase={translatePhase}
+                />
             </DialogContent>
         </Dialog>
     );
