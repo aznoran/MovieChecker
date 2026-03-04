@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Loader2 } from "lucide-react";
-import { provisionUser } from "@/lib/api/client";
+import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
 const PROVISION_KEY = "user_provisioned";
@@ -23,7 +23,7 @@ export function ProvisionGuard({ children }: { children: React.ReactNode }) {
 
         let cancelled = false;
 
-        provisionUser()
+        apiClient.api.authProvisionCreate()
             .then(() => {
                 if (cancelled) return;
                 localStorage.setItem(PROVISION_KEY, "1");
@@ -51,7 +51,7 @@ export function ProvisionGuard({ children }: { children: React.ReactNode }) {
                 <Button
                     onClick={() => {
                         setError(null);
-                        provisionUser()
+                        apiClient.api.authProvisionCreate()
                             .then(() => {
                                 localStorage.setItem(PROVISION_KEY, "1");
                                 setReady(true);

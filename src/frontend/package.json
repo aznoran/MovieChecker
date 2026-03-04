@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "generate_api": "npx swagger-typescript-api generate -p http://localhost:5000/swagger/v1/swagger.json -o src/lib/api -n generated.ts --axios --extract-enums"
+    "generate_api:moviechecker": "npx swagger-typescript-api generate -p http://localhost:5000/swagger/v1/swagger.json -o src/lib/api -n moviechecker-generated.ts --axios --extract-enums",
+    "generate_api:search": "npx swagger-typescript-api generate -p http://localhost:5100/swagger/v1/swagger.json -o src/lib/api -n search-generated.ts --axios --extract-enums",
+    "generate_api": "npm run generate_api:moviechecker && npm run generate_api:search"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

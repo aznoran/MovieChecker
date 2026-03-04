@@ -156,3 +156,51 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* ── Locale toggle animations ── */
+
+@keyframes locale-exit {
+    from { opacity: 1; filter: blur(0); transform: translateY(0); }
+    to   { opacity: 0; filter: blur(4px); transform: translateY(-6px); }
+}
+
+@keyframes locale-enter {
+    from { opacity: 0; filter: blur(4px); transform: translateY(6px); }
+    to   { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+
+@keyframes locale-icon-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(180deg); }
+}
+
+/* Staggered card text exit */
+[data-locale-phase="exit"] [data-locale-animate] {
+    animation: locale-exit 180ms ease-in both;
+    animation-delay: calc(min(var(--card-index, 0), 5) * 40ms);
+}
+
+/* Staggered card text enter */
+[data-locale-phase="enter"] [data-locale-animate] {
+    animation: locale-enter 280ms ease-out both;
+    animation-delay: calc(min(var(--card-index, 0), 5) * 40ms);
+}
+
+/* Immediate variant for toolbar / header elements (no stagger) */
+[data-locale-phase="exit"] [data-locale-animate-immediate] {
+    animation: locale-exit 180ms ease-in both;
+}
+
+[data-locale-phase="enter"] [data-locale-animate-immediate] {
+    animation: locale-enter 280ms ease-out both;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    [data-locale-phase="exit"] [data-locale-animate],
+    [data-locale-phase="enter"] [data-locale-animate],
+    [data-locale-phase="exit"] [data-locale-animate-immediate],
+    [data-locale-phase="enter"] [data-locale-animate-immediate] {
+        animation: none !important;
+    }
+}

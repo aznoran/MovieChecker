@@ -1,11 +1,10 @@
 "use client"
 
 import {useState} from "react";
-import {useQuery} from "@tanstack/react-query";
 import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
-import {getMyPermissions} from "@/lib/api/client";
+import {useMyPermissions} from "@/hooks/api";
 import {GroupRole, GroupType} from "@/lib/api/generated";
 import type {GroupDto} from "@/lib/api/generated";
 import {ConfirmDialog} from "@/components/shared/confirm-dialog";
@@ -63,11 +62,7 @@ export function GroupCard({group: g, onChangeRole, setError}: GroupCardProps) {
 
     const currentMember = (g.members ?? []).find(m => m.userId === userId);
     const isOwner = userId === g.createdByUserId || currentMember?.role === GroupRole.Owner;
-    const {data: permissions} = useQuery({
-        queryKey: ["permissions", g.id],
-        queryFn: () => getMyPermissions(g.id!),
-        enabled: !!session && !!g.id,
-    });
+    const {data: permissions} = useMyPermissions(g.id!, { enabled: !!session && !!g.id });
     // Fall back to role-based check if permissions API hasn't resolved yet
     const canManageMembers = permissions?.canManageMembers ?? isOwner;
     const canManageGroup = permissions?.canManageGroup ?? isOwner;

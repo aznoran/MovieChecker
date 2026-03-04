@@ -10,6 +10,10 @@ const genreKeys: TranslationKeys[] = [
   "genreAction", "genreComedy", "genreDrama", "genreHorror", "genreThriller",
   "genreRomance", "genreSciFi", "genreFantasy", "genreAnimation", "genreDocumentary",
   "genreAdventure", "genreMystery", "genreCrime", "genreFamily", "genreMusical",
+  "genreHistory", "genreMusic", "genreWar", "genreWestern",
+  "genreSupernatural", "genrePsychological", "genreSliceOfLife", "genreSports",
+  "genreMecha", "genreMahouShoujo", "genreEcchi", "genreKids",
+  "genreActionAdventure", "genreSciFiFantasy", "genreWarPolitics",
 ];
 genreKeys.forEach((key) => {
   genreEnglishToKey[en[key]] = key;
@@ -32,6 +36,19 @@ export function getWatchStatusLabels(locale: Locale): Record<WatchStatus, string
     [WatchStatus.Completed]: t("statusCompleted", locale),
     [WatchStatus.Dropped]: t("statusDropped", locale),
   };
+}
+
+const suggestedTypeToKey: Record<string, TranslationKeys> = {
+  Movie: "contentMovie",
+  Series: "contentSeries",
+  Anime: "contentAnime",
+  Cartoon: "contentCartoon",
+  Show: "contentShow",
+};
+
+export function translateSuggestedType(suggestedType: string, locale: Locale): string {
+  const key = suggestedTypeToKey[suggestedType];
+  return key ? t(key, locale) : suggestedType;
 }
 
 /**

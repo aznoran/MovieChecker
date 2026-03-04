@@ -3,7 +3,7 @@
 import {useState} from "react";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
-import {checkInviteCode} from "@/lib/api";
+import {useCheckInviteCode} from "@/hooks/api";
 import {AxiosError} from "axios";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -24,6 +24,7 @@ interface JoinGroupFormProps {
 export function JoinGroupForm({setError}: JoinGroupFormProps) {
     const {t} = useLocale();
     const {joinGroup} = useGroup();
+    const checkInviteMutation = useCheckInviteCode();
 
     const [joinCode, setJoinCode] = useState("");
     const [joinOtp, setJoinOtp] = useState("");
@@ -44,7 +45,7 @@ export function JoinGroupForm({setError}: JoinGroupFormProps) {
         }
         try {
             setError("");
-            const result = await checkInviteCode(joinCode.trim());
+            const result = await checkInviteMutation.mutateAsync(joinCode.trim());
 
             if (!result.exists) {
                 setError(t("invalidCode"));

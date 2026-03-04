@@ -8,5 +8,8 @@ public record CreateMovieRequest(
     EntryContentType Type,
     int? Year,
     string? Genre,
-    string? PosterUrl
+    string? PosterUrl,
+    int? TmdbId = null,
+    int? AnilistId = null,
+    bool IsCustom = true
 );
