@@ -167,7 +167,7 @@ export default function StatsPage() {
     }));
 
     // Activity timeline data
-    const timelineData = (stats.activityTimeline ?? []).map((p: { date?: string; count?: number }) => ({
+    const timelineData = (stats.activityTimeline ?? []).map((p) => ({
         date: p.date ?? "",
         count: p.count ?? 0,
     }));

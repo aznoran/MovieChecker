@@ -23,7 +23,7 @@ public static class AuthEndpoints
             .WithSummary("Set preferred language")
             .WithDescription("Sets the user's preferred language (en or ru)");
 
-        app.MapPost("/api/provision", ProvisionUser)
+        group.MapPost("/provision", ProvisionUser)
             .RequireAuthorization()
             .Produces<UserDto>(StatusCodes.Status200OK)
             .WithSummary("Provision user profile")

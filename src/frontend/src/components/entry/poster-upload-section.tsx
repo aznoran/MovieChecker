@@ -152,7 +152,11 @@ export function PosterUploadSection({
                                 aria-label={t("imageEditorTitle")}
                                 onClick={() => {
                                     if (!cropper.editorImageSrc && cropper.posterPreview) {
-                                        cropper.setEditorImageSrc(cropper.posterPreview);
+                                        // Cache-bust to avoid browser reusing the non-CORS cached response
+                                        // from the preview <img> (which loads without crossOrigin)
+                                        const url = cropper.posterPreview;
+                                        const sep = url.includes("?") ? "&" : "?";
+                                        cropper.setEditorImageSrc(`${url}${sep}_cors=1`);
                                     }
                                     cropper.setIsCropping(true);
                                 }}

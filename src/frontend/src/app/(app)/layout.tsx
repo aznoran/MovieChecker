@@ -2,6 +2,7 @@
 
 import {useState} from "react";
 import {useSession} from "next-auth/react";
+import {useLocale} from "@/context/locale-context";
 import {Loader2, MessageCircle} from "lucide-react";
 import {AppSidebar} from "@/components/layout/app-sidebar";
 import {SidebarInset, SidebarProvider} from "@/components/ui/sidebar";
@@ -12,6 +13,7 @@ import {FeedbackDialog} from "@/components/shared/feedback-dialog";
 
 export default function AppLayout({children}: { children: React.ReactNode }) {
     const {status} = useSession();
+    const {animationPhase} = useLocale();
     const [feedbackOpen, setFeedbackOpen] = useState(false);
 
     if (status === "loading") {
@@ -27,6 +29,7 @@ export default function AppLayout({children}: { children: React.ReactNode }) {
             <AppSidebar/>
             <SidebarInset
                 className="bg-transparent md:peer-data-[variant=inset]:shadow-none md:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:mt-0"
+                data-locale-phase={animationPhase}
             >
                 <NavBar/>
                 <div className="flex-1 flex flex-col rounded-xl border bg-card overflow-hidden">

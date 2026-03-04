@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="ContentSearch.Domain/ContentSearch.Domain.csproj" />
+  <Project Path="ContentSearch.Infrastructure/ContentSearch.Infrastructure.csproj" />
+  <Project Path="ContentSearch.Core/ContentSearch.Core.csproj" />
+  <Project Path="ContentSearch.Web/ContentSearch.Web.csproj" />
+</Solution>

@@ -1,9 +1,11 @@
 import axios from "axios";
 import { getSession, signIn } from "next-auth/react";
 import { QueryClient } from "@tanstack/react-query";
-import { Api } from "./generated";
+import { Api } from "./moviechecker-generated";
+import { Api as SearchApi } from "./search-generated";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+export const SEARCH_API_URL = process.env.NEXT_PUBLIC_SEARCH_API_URL || "http://localhost:5100";
 
 // Shared QueryClient — imported by providers.tsx
 export const queryClient = new QueryClient({
@@ -73,6 +75,11 @@ apiClient.instance.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+// ContentSearch API instance (no auth needed)
+export const searchApiClient = new SearchApi({
+    baseURL: SEARCH_API_URL,
+});
 
 export const getPosterUrl = (posterIdOrPath: string | undefined | null): string | null => {
     if (!posterIdOrPath) return null;

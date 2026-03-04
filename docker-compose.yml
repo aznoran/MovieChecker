@@ -85,6 +85,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://${APP_DOMAIN:-xui123qweqwe.org}
+        NEXT_PUBLIC_SEARCH_API_URL: https://${APP_DOMAIN:-xui123qweqwe.org}/search
         NEXT_PUBLIC_AUTHENTIK_URL: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
         NEXT_PUBLIC_AUTHENTIK_CLIENT_ID: moviechecker
         NEXT_PUBLIC_AUTHENTIK_REDIRECT_URI: https://xui123qweqwe.org/auth/callback
@@ -103,6 +104,49 @@ services:
       - "3000"
     depends_on:
       - backend
+    networks:
+      - backend_network
+
+  content-search:
+    build:
+      context: ./src/backend/ContentSearch
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,defaultDatabase=1,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
+      ExternalApis__Tmdb__AccessToken: "${TMDB_ACCESS_TOKEN}"
+      ExternalApis__Translation__ApiKey: "${DEEPL_API_KEY}"
+      AllowedHosts__0: "https://${APP_DOMAIN:-xui123qweqwe.org}"
+      AllowedHosts__1: "http://${APP_DOMAIN:-xui123qweqwe.org}"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      content-search-flyway:
+        condition: service_completed_successfully
+    networks:
+      - backend_network
+
+  content-search-flyway:
+    image: flyway/flyway:11
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./db/content-search-migration:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      FLYWAY_USER: ${POSTGRES_USER}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_BASELINE_VERSION: "0"
+      FLYWAY_TABLE: content_search_schema_history
+      FLYWAY_DEFAULT_SCHEMA: content_search
+    command: migrate
     networks:
       - backend_network
 
@@ -139,6 +183,7 @@ services:
     depends_on:
       - backend
       - frontend
+      - content-search
       - pgadmin
 
 volumes:

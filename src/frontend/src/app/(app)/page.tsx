@@ -9,7 +9,7 @@ import { useGroup } from "@/context/group-context";
 import { usePermissions } from "@/context/permissions-context";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { getPosterUrl, apiClient } from "@/lib/api";
-import { useWatchEntries, useDeleteWatchEntry } from "@/hooks/api";
+import { useWatchEntries, useDeleteWatchEntry, useUserSettings, useUpdateUserSettings } from "@/hooks/api";
 import { WatchStatus, EntryContentType } from "@/lib/api/generated";
 import type { WatchEntryDto } from "@/lib/api/generated";
 import {
@@ -57,6 +57,7 @@ import {
     PlayCircle,
     XCircle,
     HelpCircle,
+    Info,
 } from "lucide-react";
 import {HoverCard, HoverCardTrigger, HoverCardContent} from "@/components/ui/hover-card";
 import { toast } from "sonner";
@@ -198,12 +199,17 @@ function formatWatchingTime(totalSeconds: number): string {
     return `${minutes}m`;
 }
 
-function formatMinutesToHM(totalMinutes: number): string {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
+function formatSecondsToHMS(totalSeconds: number): string {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    if (hours > 0 && minutes > 0 && secs > 0) return `${hours}h ${minutes}m ${secs}s`;
     if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+    if (hours > 0 && secs > 0) return `${hours}h ${secs}s`;
     if (hours > 0) return `${hours}h`;
-    return `${minutes}m`;
+    if (minutes > 0 && secs > 0) return `${minutes}m ${secs}s`;
+    if (minutes > 0) return `${minutes}m`;
+    return `${secs}s`;
 }
 
 export const dynamic = "force-dynamic";
@@ -240,6 +246,7 @@ export default function HomePage() {
     const [editEntry, setEditEntry] = useState<WatchEntryDto | null>(null);
     const [statusFilter, setStatusFilter] = useState<WatchStatus | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [translateHintOpen, setTranslateHintOpen] = useState(false);
     const [cardSize, setCardSize] = useState<CardSize>(() => {
         if (typeof window !== "undefined") {
             const stored = localStorage.getItem(CARD_SIZE_KEY);
@@ -248,9 +255,38 @@ export default function HomePage() {
         return "medium";
     });
 
+    const {data: userSettings} = useUserSettings({enabled: !!session});
+    const updateUserSettings = useUpdateUserSettings();
+
+    // Sync card size from backend on mount
+    useEffect(() => {
+        if (userSettings?.cardSize) {
+            const backendSize = userSettings.cardSize as CardSize;
+            if (backendSize === "small" || backendSize === "medium" || backendSize === "large") {
+                setCardSize(backendSize);
+                localStorage.setItem(CARD_SIZE_KEY, backendSize);
+            }
+        }
+    }, [userSettings?.cardSize]);
+
     const handleCardSizeChange = (size: CardSize) => {
         setCardSize(size);
         localStorage.setItem(CARD_SIZE_KEY, size);
+        updateUserSettings.mutate({cardSize: size});
+    };
+
+    const handleAddEntry = () => {
+        if (userSettings && !userSettings.hasSeenTranslateHint) {
+            setTranslateHintOpen(true);
+        } else {
+            setAddOpen(true);
+        }
+    };
+
+    const handleDismissHint = () => {
+        setTranslateHintOpen(false);
+        updateUserSettings.mutate({hasSeenTranslateHint: true});
+        setAddOpen(true);
     };
 
     const {data: entries = [], isLoading, error, refetch} = useWatchEntries(
@@ -323,7 +359,7 @@ export default function HomePage() {
             <main className="container mx-auto px-4 py-4">
 
                 <div className="flex flex-wrap justify-between">
-                    <div className="flex flex-wrap gap-2 mb-6">
+                    <div className="flex flex-wrap gap-2 mb-6" data-locale-animate-immediate>
                         <Button
                             variant={statusFilter === null ? "default" : "outline"}
                             size="sm"
@@ -346,7 +382,7 @@ export default function HomePage() {
                     </div>
                     <div className="flex items-start gap-2 mb-6">
                         {canCreate && !isLoading && !isGroupsLoading && (
-                            <Button className="min-w-[12rem]" onClick={() => setAddOpen(true)}>
+                            <Button className="min-w-[12rem]" onClick={handleAddEntry}>
                                 <Plus className="h-4 w-4 mr-1.5"/>
                                 {t("addEntry")}
                             </Button>
@@ -382,7 +418,7 @@ export default function HomePage() {
                         <Film className="h-12 w-12 mx-auto text-muted-foreground mb-4"/>
                         <p className="text-muted-foreground mb-4">{t("noEntries")}</p>
                         {canCreate && (
-                        <Button onClick={() => setAddOpen(true)}>
+                        <Button onClick={handleAddEntry}>
                             <Plus className="h-4 w-4 mr-1.5"/>
                             {t("addFirstEntry")}
                         </Button>
@@ -390,7 +426,7 @@ export default function HomePage() {
                     </div>
                 ) : (
                     <div className={gridClasses[cardSize]}>
-                        {entries.map((entry) => {
+                        {entries.map((entry, index) => {
                             if (!entry.movie) return null;
                             const movie = entry.movie;
                             const posterSrc = getPosterUrl(movie.posterUrl);
@@ -408,7 +444,7 @@ export default function HomePage() {
                                         </div>
                                     )}
 
-                                    <CardContent className={cardContentPadding[cardSize]}>
+                                    <CardContent className={cardContentPadding[cardSize]} data-locale-animate style={{ '--card-index': index } as React.CSSProperties}>
                                         <div className="min-w-0">
                                             <div className={`flex items-start justify-between gap-2 ${metaSpacing[cardSize]}`}>
                                                 <div className="min-w-0 flex-1">
@@ -449,14 +485,14 @@ export default function HomePage() {
                                                 </Badge>
                                             </div>
                                             {(entry.status === WatchStatus.Watching || entry.status === WatchStatus.Dropped) && (
-                                                (entry.currentEpisode || entry.currentSeason || entry.watchingTime || entry.runtimeMinutes) && (() => {
+                                                (entry.currentEpisode || entry.currentSeason || entry.watchingTime || entry.runtimeSeconds) && (() => {
                                                     const isSeries = movie.type === EntryContentType.Series ||
                                                         movie.type === EntryContentType.Anime ||
                                                         movie.type === EntryContentType.Cartoon;
                                                     const hasEpisodeProgress = isSeries && entry.currentEpisode && entry.totalEpisodes && entry.totalEpisodes > 0;
-                                                    const hasTimeProgress = entry.watchingTime && entry.runtimeMinutes && entry.runtimeMinutes > 0;
+                                                    const hasTimeProgress = entry.watchingTime && entry.runtimeSeconds && entry.runtimeSeconds > 0;
                                                     const timeProgressPct = hasTimeProgress
-                                                        ? Math.min(100, (entry.watchingTime! / 60 / entry.runtimeMinutes!) * 100)
+                                                        ? Math.min(100, (entry.watchingTime! / entry.runtimeSeconds!) * 100)
                                                         : 0;
                                                     const episodeProgressPct = hasEpisodeProgress
                                                         ? Math.min(100, (entry.currentEpisode! / entry.totalEpisodes!) * 100)
@@ -479,7 +515,7 @@ export default function HomePage() {
                                                                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                                                         <Clock className="h-3 w-3"/>
                                                                         {formatWatchingTime(entry.watchingTime)}
-                                                                        {entry.runtimeMinutes ? ` / ${formatMinutesToHM(entry.runtimeMinutes)}` : ""}
+                                                                        {entry.runtimeSeconds ? ` / ${formatSecondsToHMS(entry.runtimeSeconds)}` : ""}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -522,15 +558,15 @@ export default function HomePage() {
                                                                             </>
                                                                         )}
                                                                         {/* Time section: duration, watching time, time progress */}
-                                                                        {(entry.watchingTime || entry.runtimeMinutes) && (
+                                                                        {(entry.watchingTime || entry.runtimeSeconds) && (
                                                                             <>
                                                                                 {isSeries && <div className="border-t border-border my-1" />}
-                                                                                {entry.runtimeMinutes && (
+                                                                                {entry.runtimeSeconds && (
                                                                                     <div className="flex justify-between gap-4">
                                                                                         <span className="text-muted-foreground">
-                                                                                            {isSeries ? t("episodeDuration") : t("runtimeMinutes")}
+                                                                                            {isSeries ? t("episodeDuration") : t("runtimeSeconds")}
                                                                                         </span>
-                                                                                        <span className="font-medium">{formatMinutesToHM(entry.runtimeMinutes)}</span>
+                                                                                        <span className="font-medium">{formatSecondsToHMS(entry.runtimeSeconds)}</span>
                                                                                     </div>
                                                                                 )}
                                                                                 {entry.watchingTime && (
@@ -691,6 +727,23 @@ export default function HomePage() {
                                 </Select>
                             </Field>
                         </div>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={translateHintOpen} onOpenChange={setTranslateHintOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Info className="h-5 w-5 text-blue-500" />
+                                {t("translateHintTitle")}
+                            </DialogTitle>
+                        </DialogHeader>
+                        <p className="text-sm text-muted-foreground">
+                            {t("translateHintBody")}
+                        </p>
+                        <Button onClick={handleDismissHint} className="w-full">
+                            {t("translateHintDismiss")}
+                        </Button>
                     </DialogContent>
                 </Dialog>
 

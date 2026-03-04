@@ -20,6 +20,6 @@ public record WatchEntryDto(
     int? TotalEpisodes,
     int? WatchingTime,
     int? TotalSeasons,
-    int? RuntimeMinutes,
+    int? RuntimeSeconds,
     int? RewatchCount
 );

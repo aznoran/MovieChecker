@@ -30,7 +30,7 @@ public class WatchEntry
 
     public int? TotalSeasons { get; set; }
 
-    public int? RuntimeMinutes { get; set; }
+    public int? RuntimeSeconds { get; set; }
 
     public int? RewatchCount { get; set; }
 
