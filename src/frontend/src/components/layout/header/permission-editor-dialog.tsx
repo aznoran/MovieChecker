@@ -1,11 +1,10 @@
 "use client"
 
 import {useState, useEffect, useCallback} from "react";
-import {useQuery, useQueryClient} from "@tanstack/react-query";
 import {toast} from "sonner";
 import {useLocale} from "@/context/locale-context";
 import type {TranslationKeys} from "@/lib/i18n/en";
-import {getMemberPermissions, updateMemberPermissions} from "@/lib/api/client";
+import {useMemberPermissions, useUpdateMemberPermissions} from "@/hooks/api";
 import {GroupRole} from "@/lib/api/generated";
 import {
     Dialog,
@@ -93,20 +92,15 @@ export function PermissionEditorDialog({
     role,
 }: PermissionEditorDialogProps) {
     const {t} = useLocale();
-    const queryClient = useQueryClient();
     const [toggles, setToggles] = useState<Record<PermissionKey, boolean>>({} as Record<PermissionKey, boolean>);
-    const [saving, setSaving] = useState(false);
 
-    const {data, isLoading} = useQuery({
-        queryKey: ["memberPermissions", groupId, userId],
-        queryFn: () => getMemberPermissions(groupId, userId),
-        enabled: open,
-    });
+    const {data, isLoading} = useMemberPermissions(groupId, userId, { enabled: open });
+    const updatePermissionsMutation = useUpdateMemberPermissions();
 
     // Initialize toggles when data loads
     useEffect(() => {
         if (data) {
-            const effective = data.effectivePermissionsFlags;
+            const effective = data.effectivePermissionsFlags ?? 0;
             const newToggles = {} as Record<PermissionKey, boolean>;
             for (const key of PERMISSION_KEYS) {
                 newToggles[key] = (effective & PERMISSION_FLAGS[key]) !== 0;
@@ -138,8 +132,9 @@ export function PermissionEditorDialog({
         setToggles(newToggles);
     };
 
+    const saving = updatePermissionsMutation.isPending;
+
     const handleSave = async () => {
-        setSaving(true);
         try {
             let granted = 0;
             let revoked = 0;
@@ -153,16 +148,11 @@ export function PermissionEditorDialog({
                     revoked |= flag;
                 }
             }
-            await updateMemberPermissions(groupId, userId, granted, revoked);
-            await queryClient.invalidateQueries({queryKey: ["groups"]});
-            await queryClient.invalidateQueries({queryKey: ["permissions"]});
-            await queryClient.invalidateQueries({queryKey: ["memberPermissions", groupId, userId]});
+            await updatePermissionsMutation.mutateAsync({ groupId, userId, granted, revoked });
             toast.success(t("permissionsUpdated"));
             onClose();
         } catch {
             toast.error(t("permissionsUpdateError"));
-        } finally {
-            setSaving(false);
         }
     };
 

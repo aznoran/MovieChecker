@@ -13,5 +13,6 @@ public record UpdateWatchEntryRequest(
     int? TotalEpisodes,
     int? WatchingTime,
     int? TotalSeasons,
-    int? RuntimeMinutes
+    int? RuntimeSeconds,
+    int? RewatchCount
 );

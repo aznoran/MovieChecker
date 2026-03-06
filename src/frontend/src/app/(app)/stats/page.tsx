@@ -1,11 +1,10 @@
 "use client";
 
-import {useQuery} from "@tanstack/react-query";
 import {useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
-import {getStats} from "@/lib/api";
+import {useStats} from "@/hooks/api";
 import {GroupType, EntryContentType} from "@/lib/api/generated";
 import {getContentTypeLabels, translateGenre} from "@/lib/i18n/labels";
 import type {TranslationKeys} from "@/lib/i18n";
@@ -16,6 +15,7 @@ import {
     PlayCircle,
     Clock,
     XCircle,
+    HelpCircle,
     Star,
     Heart,
     Users,
@@ -76,6 +76,13 @@ const STATUS_META: Record<string, {
         chart: "hsl(0, 84%, 60%)",
         bar: "bg-red-500",
     },
+    considering: {
+        icon: HelpCircle,
+        gradient: "from-gray-500/15 to-gray-500/5",
+        text: "text-gray-400",
+        chart: "hsl(0, 0%, 60%)",
+        bar: "bg-gray-400",
+    },
 };
 
 export default function StatsPage() {
@@ -85,9 +92,7 @@ export default function StatsPage() {
     const router = useRouter();
     const isGroupMode = !!activeGroup && activeGroup.groupType !== GroupType.Personal;
 
-    const {data: stats, isLoading, error, refetch} = useQuery({
-        queryKey: ["stats", activeGroupId],
-        queryFn: () => getStats(activeGroupId),
+    const {data: stats, isLoading, error, refetch} = useStats(activeGroupId, {
         enabled: !!session && activeGroupId !== undefined,
         retry: false,
     });
@@ -108,7 +113,7 @@ export default function StatsPage() {
     }
 
     const total = stats
-        ? (stats.totalWatched ?? 0) + (stats.totalWatching ?? 0) + (stats.totalPlanned ?? 0) + (stats.totalDropped ?? 0)
+        ? (stats.totalWatched ?? 0) + (stats.totalWatching ?? 0) + (stats.totalPlanned ?? 0) + (stats.totalDropped ?? 0) + (stats.totalConsidering ?? 0)
         : 0;
 
     const statusItems = stats
@@ -117,6 +122,7 @@ export default function StatsPage() {
             {key: "watching", label: t("watching"), value: stats.totalWatching ?? 0},
             {key: "planned", label: t("planned"), value: stats.totalPlanned ?? 0},
             {key: "dropped", label: t("dropped"), value: stats.totalDropped ?? 0},
+            {key: "considering", label: t("considering"), value: stats.totalConsidering ?? 0},
         ]
         : [];
 
@@ -161,7 +167,7 @@ export default function StatsPage() {
     }));
 
     // Activity timeline data
-    const timelineData = (stats.activityTimeline ?? []).map((p: { date?: string; count?: number }) => ({
+    const timelineData = (stats.activityTimeline ?? []).map((p) => ({
         date: p.date ?? "",
         count: p.count ?? 0,
     }));
@@ -207,7 +213,7 @@ export default function StatsPage() {
             )}
 
             {/* ── Row 1: Status Cards ── */}
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
                 {statusItems.map((item) => {
                     const meta = STATUS_META[item.key];
                     const Icon = meta.icon;

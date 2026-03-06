@@ -6,6 +6,8 @@ public class UserSettings
     public Guid UserId { get; set; }
     public bool PreventOthersAddingToMyPersonal { get; set; } = false;
     public bool PreventMeAddingToMyPersonal { get; set; } = false;
+    public string CardSize { get; set; } = "medium";
+    public bool HasSeenTranslateHint { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

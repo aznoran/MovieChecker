@@ -5,7 +5,7 @@ import {useMutation, useQueryClient} from "@tanstack/react-query";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {z} from "zod";
-import {updateWatchEntry, updateMovie, uploadPoster, getPosterUrl, rateEntry} from "@/lib/api";
+import {apiClient, getPosterUrl} from "@/lib/api";
 import {useLocale} from "@/context/locale-context";
 import {useSession} from "next-auth/react";
 import {useGroup} from "@/context/group-context";
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
 import {
     Select,
@@ -44,6 +45,7 @@ import {
     Loader2,
     Film,
     Calendar,
+    RefreshCw,
 } from "lucide-react";
 import {Rating, RatingItem} from "@/components/ui/rating";
 import {Controller} from "react-hook-form";
@@ -82,7 +84,7 @@ function createEditEntrySchema(t: (key: TranslationKeys) => string) {
         totalSeasons: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
             .optional().or(z.literal("")),
-        runtimeMinutes: z.string()
+        runtimeSeconds: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 1), t("invalidNumber"))
             .optional().or(z.literal("")),
         hours: z.string()
@@ -93,6 +95,9 @@ function createEditEntrySchema(t: (key: TranslationKeys) => string) {
             .optional().or(z.literal("")),
         seconds: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 0 && +v <= 59), t("invalidTimeComponent"))
+            .optional().or(z.literal("")),
+        rewatchCount: z.string()
+            .refine(v => !v || (/^\d+$/.test(v) && +v >= 0), t("invalidNumber"))
             .optional().or(z.literal("")),
     });
 }
@@ -151,10 +156,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             currentEpisode: entry.currentEpisode?.toString() || "",
             totalEpisodes: entry.totalEpisodes?.toString() || "",
             totalSeasons: entry.totalSeasons?.toString() || "",
-            runtimeMinutes: entry.runtimeMinutes?.toString() || "",
-            hours: Math.floor((entry.watchingTime || 0) / 3600).toString(),
-            minutes: Math.floor(((entry.watchingTime || 0) % 3600) / 60).toString(),
-            seconds: ((entry.watchingTime || 0) % 60).toString(),
+            runtimeSeconds: entry.runtimeSeconds?.toString() || "",
+            hours: entry.watchingTime ? Math.floor(entry.watchingTime / 3600).toString() : "",
+            minutes: entry.watchingTime ? Math.floor((entry.watchingTime % 3600) / 60).toString() : "",
+            seconds: entry.watchingTime ? (entry.watchingTime % 60).toString() : "",
+            rewatchCount: entry.rewatchCount?.toString() || "",
         },
         mode: "onBlur",
     });
@@ -170,10 +176,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 currentEpisode: entry.currentEpisode?.toString() || "",
                 totalEpisodes: entry.totalEpisodes?.toString() || "",
                 totalSeasons: entry.totalSeasons?.toString() || "",
-                runtimeMinutes: entry.runtimeMinutes?.toString() || "",
-                hours: Math.floor((entry.watchingTime || 0) / 3600).toString(),
-                minutes: Math.floor(((entry.watchingTime || 0) % 3600) / 60).toString(),
-                seconds: ((entry.watchingTime || 0) % 60).toString(),
+                runtimeSeconds: entry.runtimeSeconds?.toString() || "",
+                hours: entry.watchingTime ? Math.floor(entry.watchingTime / 3600).toString() : "",
+                minutes: entry.watchingTime ? Math.floor((entry.watchingTime % 3600) / 60).toString() : "",
+                seconds: entry.watchingTime ? (entry.watchingTime % 60).toString() : "",
+                rewatchCount: entry.rewatchCount?.toString() || "",
             });
             setMyRating((myRat?.rating ?? 0) / 2);
             setSelectedMembers(entry.ratings?.map((r) => r.userId!) ?? []);
@@ -204,16 +211,19 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             const curViewers = selectedMembers.slice().sort();
             if (origViewers.length !== curViewers.length || origViewers.some((v, i) => v !== curViewers[i])) return true;
         }
-        if (values.status === WatchStatus.Watching &&
-            (entry.movie?.type === EntryContentType.Anime || entry.movie?.type === EntryContentType.Series || entry.movie?.type === EntryContentType.Cartoon)) {
-            if ((values.currentSeason || "") !== (entry.currentSeason?.toString() || "")) return true;
-            if ((values.currentEpisode || "") !== (entry.currentEpisode?.toString() || "")) return true;
-            if ((values.totalEpisodes || "") !== (entry.totalEpisodes?.toString() || "")) return true;
-            if ((values.totalSeasons || "") !== (entry.totalSeasons?.toString() || "")) return true;
-            if ((values.runtimeMinutes || "") !== (entry.runtimeMinutes?.toString() || "")) return true;
+        if ((values.status === WatchStatus.Watching || values.status === WatchStatus.Dropped)) {
+            const isSeries = entry.movie?.type === EntryContentType.Anime || entry.movie?.type === EntryContentType.Series || entry.movie?.type === EntryContentType.Cartoon;
+            if (isSeries) {
+                if ((values.currentSeason || "") !== (entry.currentSeason?.toString() || "")) return true;
+                if ((values.currentEpisode || "") !== (entry.currentEpisode?.toString() || "")) return true;
+                if ((values.totalEpisodes || "") !== (entry.totalEpisodes?.toString() || "")) return true;
+                if ((values.totalSeasons || "") !== (entry.totalSeasons?.toString() || "")) return true;
+            }
+            if ((values.runtimeSeconds || "") !== (entry.runtimeSeconds?.toString() || "")) return true;
             const newWt = (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"));
             if (newWt !== (entry.watchingTime || 0)) return true;
         }
+        if ((values.rewatchCount || "0") !== (entry.rewatchCount?.toString() || "0")) return true;
         return false;
     }, [form, isGroupMode, selectedMembers, entry]);
 
@@ -261,12 +271,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             const newRating = Math.round((memberRatings[uid] ?? 0) * 2);
                             const origRating = origMap[uid] ?? 0;
                             if (newRating !== origRating) {
-                                await rateEntry(entry.id!, newRating, uid);
+                                await apiClient.api.watchEntriesRateCreate(entry.id!, {rating: newRating, targetUserId: uid});
                             }
                         }
                     } else {
                         const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
-                        await rateEntry(entry.id!, Math.round(currentRating * 2));
+                        await apiClient.api.watchEntriesRateCreate(entry.id!, {rating: Math.round(currentRating * 2)});
                     }
                 }
                 return;
@@ -279,10 +289,11 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             if (!entryChanged && !posterChanged && !ratingsChanged) return;
 
             if (fileToUpload) {
-                const posterUrl = await uploadPoster(fileToUpload);
-                await updateMovie(entry.movieId!, {posterUrl});
+                const uploadRes = await apiClient.api.uploadPosterCreate({file: fileToUpload});
+                const posterUrl = (uploadRes.data.id || 0).toString();
+                await apiClient.api.moviesUpdate(entry.movieId!, {posterUrl});
             } else if (posterRemoved) {
-                await updateMovie(entry.movieId!, {posterUrl: ""});
+                await apiClient.api.moviesUpdate(entry.movieId!, {posterUrl: ""});
             }
 
             if (entryChanged) {
@@ -290,20 +301,23 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                     entry.movie?.type === EntryContentType.Series ||
                     entry.movie?.type === EntryContentType.Cartoon;
 
-                await updateWatchEntry(entry.id!, {
+                await apiClient.api.watchEntriesUpdate(entry.id!, {
                     status: values.status,
                     comment: values.comment || undefined,
-                    ...(values.status === WatchStatus.Watching ? {
+                    ...((values.status === WatchStatus.Watching || values.status === WatchStatus.Dropped) ? {
                         ...(isSeries ? {
                             currentSeason: values.currentSeason ? parseInt(values.currentSeason) : undefined,
                             currentEpisode: values.currentEpisode ? parseInt(values.currentEpisode) : undefined,
                             totalEpisodes: values.totalEpisodes ? parseInt(values.totalEpisodes) : undefined,
                             totalSeasons: values.totalSeasons ? parseInt(values.totalSeasons) : undefined,
                         } : {}),
-                        runtimeMinutes: values.runtimeMinutes ? parseInt(values.runtimeMinutes) : undefined,
+                        runtimeSeconds: values.runtimeSeconds ? parseInt(values.runtimeSeconds) : undefined,
                         watchingTime: (values.hours || values.minutes || values.seconds)
                             ? (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"))
                             : undefined,
+                    } : {}),
+                    ...((values.status === WatchStatus.Completed || values.status === WatchStatus.Watching) ? {
+                        rewatchCount: values.rewatchCount ? parseInt(values.rewatchCount) : 0,
                     } : {}),
                 });
             }
@@ -318,12 +332,12 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                         const newRating = Math.round((memberRatings[uid] ?? 0) * 2);
                         const origRating = origMap[uid] ?? 0;
                         if (newRating !== origRating) {
-                            await rateEntry(entry.id!, newRating, uid);
+                            await apiClient.api.watchEntriesRateCreate(entry.id!, {rating: newRating, targetUserId: uid});
                         }
                     }
                 } else {
                     const currentRating = isGroupMode ? (memberRatings[user.id] ?? 0) : myRating;
-                    await rateEntry(entry.id!, Math.round(currentRating * 2));
+                    await apiClient.api.watchEntriesRateCreate(entry.id!, {rating: Math.round(currentRating * 2)});
                 }
             }
         },
@@ -413,13 +427,13 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
     // Build validation errors for SeriesTrackingSection
     const validationErrors: Record<string, string> = {};
     const formErrors = form.formState.errors;
-    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "totalSeasons", "runtimeMinutes", "hours", "minutes", "seconds"] as const) {
+    for (const key of ["currentSeason", "currentEpisode", "totalEpisodes", "totalSeasons", "runtimeSeconds", "hours", "minutes", "seconds"] as const) {
         if (formErrors[key]?.message) {
             validationErrors[key] = formErrors[key].message as string;
         }
     }
 
-    const showTracking = watchedStatus === WatchStatus.Watching;
+    const showTracking = watchedStatus === WatchStatus.Watching || watchedStatus === WatchStatus.Dropped;
 
     const showRating = watchedStatus === WatchStatus.Completed || watchedStatus === WatchStatus.Dropped;
 
@@ -594,7 +608,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             </form>
                         ) : (
                             /* Full edit form */
-                                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pr-4">
+                                <form onSubmit={form.handleSubmit(handleSubmit, () => setError(t("fixValidationErrors")))} className="space-y-4 pr-4">
                                     <PosterUploadSection
                                         cropper={cropper}
                                         fileInputRef={cropper.fileInputRef}
@@ -631,6 +645,30 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                 </Field>
                                             )}
                                         />
+                                        {(watchedStatus === WatchStatus.Completed || watchedStatus === WatchStatus.Watching) && (
+                                            <Controller
+                                                control={form.control}
+                                                name="rewatchCount"
+                                                render={({field, fieldState}) => (
+                                                    <Field data-invalid={fieldState.invalid || undefined}>
+                                                        <FieldLabel htmlFor={field.name} className="flex items-center gap-1.5">
+                                                            <RefreshCw className="h-3.5 w-3.5"/>
+                                                            {t("rewatchCount")}
+                                                        </FieldLabel>
+                                                        <Input
+                                                            {...field}
+                                                            id={field.name}
+                                                            type="number"
+                                                            min={0}
+                                                            placeholder="0"
+                                                            disabled={!canEdit}
+                                                            aria-invalid={fieldState.invalid}
+                                                        />
+                                                        {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
+                                                    </Field>
+                                                )}
+                                            />
+                                        )}
                                     </FieldGroup>
 
                                     {isGroupMode ? (
@@ -651,8 +689,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                     onMemberRatingChange={handleMemberRatingChange}
                                                     myRating={myRating}
                                                     onMyRatingChange={setMyRating}
-                                                    canRateOthers={canRateOthers}
-                                                    canRateSelf={canRateSelf}
+                                                    canRateOthers={canRateOthers ?? false}
+                                                    canRateSelf={canRateSelf ?? false}
                                                     currentUserId={user?.id}
                                                 />
                                             )}
@@ -668,8 +706,8 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                     setTotalEpisodes={(v) => form.setValue("totalEpisodes", v, {shouldValidate: true})}
                                                     totalSeasons={form.watch("totalSeasons") ?? ""}
                                                     setTotalSeasons={(v) => form.setValue("totalSeasons", v, {shouldValidate: true})}
-                                                    runtimeMinutes={form.watch("runtimeMinutes") ?? ""}
-                                                    setRuntimeMinutes={(v) => form.setValue("runtimeMinutes", v, {shouldValidate: true})}
+                                                    runtimeSeconds={form.watch("runtimeSeconds") ?? ""}
+                                                    setRuntimeSeconds={(v) => form.setValue("runtimeSeconds", v, {shouldValidate: true})}
                                                     hours={form.watch("hours") ?? ""}
                                                     setHours={(v) => form.setValue("hours", v, {shouldValidate: true})}
                                                     minutes={form.watch("minutes") ?? ""}
@@ -683,7 +721,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                         </>
                                     ) : (
                                         <>
-                                            {watchedStatus !== WatchStatus.Planned && watchedStatus !== WatchStatus.Watching && (
+                                            {showRating && (
                                                 <RatingSection
                                                     isGroupMode={false}
                                                     members={[]}
@@ -696,6 +734,30 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                     canRateOthers={false}
                                                     canRateSelf
                                                     currentUserId={user?.id}
+                                                />
+                                            )}
+
+                                            {showTracking && (
+                                                <SeriesTrackingSection
+                                                    contentType={entry.movie?.type ?? EntryContentType.Movie}
+                                                    currentSeason={form.watch("currentSeason") ?? ""}
+                                                    setCurrentSeason={(v) => form.setValue("currentSeason", v, {shouldValidate: true})}
+                                                    currentEpisode={form.watch("currentEpisode") ?? ""}
+                                                    setCurrentEpisode={(v) => form.setValue("currentEpisode", v, {shouldValidate: true})}
+                                                    totalEpisodes={form.watch("totalEpisodes") ?? ""}
+                                                    setTotalEpisodes={(v) => form.setValue("totalEpisodes", v, {shouldValidate: true})}
+                                                    totalSeasons={form.watch("totalSeasons") ?? ""}
+                                                    setTotalSeasons={(v) => form.setValue("totalSeasons", v, {shouldValidate: true})}
+                                                    runtimeSeconds={form.watch("runtimeSeconds") ?? ""}
+                                                    setRuntimeSeconds={(v) => form.setValue("runtimeSeconds", v, {shouldValidate: true})}
+                                                    hours={form.watch("hours") ?? ""}
+                                                    setHours={(v) => form.setValue("hours", v, {shouldValidate: true})}
+                                                    minutes={form.watch("minutes") ?? ""}
+                                                    setMinutes={(v) => form.setValue("minutes", v, {shouldValidate: true})}
+                                                    seconds={form.watch("seconds") ?? ""}
+                                                    setSeconds={(v) => form.setValue("seconds", v, {shouldValidate: true})}
+                                                    handleFieldChange={handleFieldChange}
+                                                    validationErrors={validationErrors}
                                                 />
                                             )}
                                         </>

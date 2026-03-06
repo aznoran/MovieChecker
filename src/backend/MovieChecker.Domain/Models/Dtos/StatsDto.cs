@@ -5,6 +5,7 @@ public record StatsDto(
     int TotalPlanned,
     int TotalWatching,
     int TotalDropped,
+    int TotalConsidering,
     double AverageMyRating,
     double AveragePartnerRating,
     Dictionary<string, int> ByType,

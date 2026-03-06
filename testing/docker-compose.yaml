@@ -21,24 +21,23 @@ services:
     restart: unless-stopped
     command: server
     environment:
-      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_REDIS__HOST: redis
       AUTHENTIK_POSTGRESQL__HOST: authentik-db
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD}
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
-      #     AUTHENTIK_HOST: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
-      #      AUTHENTIK_HOST_BROWSER: https://auth.${APP_DOMAIN:-xui123qweqwe.org}
-      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000"
+      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5001"
       AUTHENTIK_MOVIECHECKER_CLIENT_SECRET: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
+      APP_DOMAIN: "localhost:3000"
       # Fix issuer URL: ensures discovery docs and JWT `iss` always use the public hostname,
       # regardless of the incoming Host header (critical for Docker internal requests).
       AUTHENTIK_HOST: http://localhost:9000
     volumes:
-      - ../authentik/blueprints:/blueprints/custom:ro
+      - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
       - authentik_templates:/templates
     ports:
@@ -47,6 +46,14 @@ services:
     depends_on:
       authentik-db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9000/-/health/live/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
     networks:
       - backend_network
 
@@ -55,7 +62,7 @@ services:
     restart: unless-stopped
     command: worker
     environment:
-      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_REDIS__HOST: redis
       AUTHENTIK_POSTGRESQL__HOST: authentik-db
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
@@ -64,16 +71,21 @@ services:
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
       AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
-      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000"
+      AUTHENTIK_WEB__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5001"
       AUTHENTIK_MOVIECHECKER_CLIENT_SECRET: ${AUTHENTIK_MOVIECHECKER_CLIENT_SECRET}
+      APP_DOMAIN: "localhost:3000"
       AUTHENTIK_HOST: http://localhost:9000
     volumes:
-      - ../authentik/blueprints:/blueprints/custom:ro
+      - ./blueprints:/blueprints/custom:ro
       - authentik_media:/media
       - authentik_templates:/templates
     depends_on:
       authentik-db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      authentik-server:
+        condition: service_started
     networks:
       - backend_network
 
@@ -153,7 +165,7 @@ services:
       flyway:
         condition: service_completed_successfully
     ports:
-      - "5000:5000"
+      - "5001:5000"
     networks:
       - backend_network
 
@@ -162,7 +174,8 @@ services:
       context: ../src/frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: "http://localhost:5000"
+        NEXT_PUBLIC_API_URL: "http://localhost:5001"
+        NEXT_PUBLIC_SEARCH_API_URL: "http://localhost:5100"
         NEXT_PUBLIC_AUTHENTIK_LOGOUT_URL: "http://localhost:9000/if/flow/platform-provider-logout/"
     environment:
       AUTH_SECRET: ${AUTH_SECRET}
@@ -189,6 +202,48 @@ services:
     networks:
       - backend_network
 
+
+  content-search:
+    build:
+      context: ../src/backend/ContentSearch
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,defaultDatabase=1,user=${REDIS_USER},Password=${REDIS_PASSWORD}"
+      ExternalApis__Tmdb__AccessToken: "${TMDB_ACCESS_TOKEN}"
+      ExternalApis__Translation__ApiKey: "${DEEPL_API_KEY}"
+      AllowedHosts__0: "http://localhost:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      content-search-flyway:
+        condition: service_completed_successfully
+    ports:
+      - "5100:8080"
+    networks:
+      - backend_network
+
+  content-search-flyway:
+    image: flyway/flyway:11
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ../db/content-search-migration:/flyway/sql
+    environment:
+      FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      FLYWAY_USER: ${POSTGRES_USER}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_BASELINE_VERSION: "0"
+      FLYWAY_TABLE: content_search_schema_history
+      FLYWAY_DEFAULT_SCHEMA: content_search
+    command: migrate
+    networks:
+      - backend_network
 
   pgadmin:
     image: dpage/pgadmin4:latest

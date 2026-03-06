@@ -23,6 +23,8 @@ interface ConfirmDialogProps {
     cancelText: string;
     variant?: "default" | "destructive" | "outline";
     icon?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
 export function ConfirmDialog({
@@ -34,9 +36,11 @@ export function ConfirmDialog({
                                   cancelText,
                                   variant = "default",
                                   icon,
+                                  open,
+                                  onOpenChange,
                               }: ConfirmDialogProps) {
     return (
-        <AlertDialog>
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
             <AlertDialogContent className="bg-card" size="sm">
                 <AlertDialogHeader>

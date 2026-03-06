@@ -5,7 +5,7 @@ import {useParams, useRouter} from "next/navigation";
 import {useSession} from "next-auth/react";
 import {useLocale} from "@/context/locale-context";
 import {useGroup} from "@/context/group-context";
-import {joinGroup as apiJoinGroup} from "@/lib/api";
+import {apiClient} from "@/lib/api";
 import type {GroupDto} from "@/lib/api/generated";
 import {
     Card,
@@ -48,7 +48,8 @@ export default function JoinByTokenPage() {
 
         const doJoin = async () => {
             try {
-                const group = await apiJoinGroup("", undefined, token);
+                const res = await apiClient.api.groupsJoinCreate({ inviteCode: "", inviteLinkToken: token });
+                const group = res.data;
                 await queryClient.invalidateQueries({queryKey: ["groups"]});
                 setJoinedGroup(group);
                 setStatus("success");

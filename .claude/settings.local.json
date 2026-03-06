@@ -32,10 +32,18 @@
       "Bash(ls:*)",
       "Bash(xargs cat:*)",
       "Bash(python3:*)",
-      "WebFetch(domain:authjs.dev)"
+      "WebFetch(domain:authjs.dev)",
       "Bash(cat:*)",
       "Bash(docker ps:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "WebFetch(domain:developer.themoviedb.org)",
+      "Bash(/usr/local/share/dotnet/dotnet:*)",
+      "Bash(~/.dotnet/dotnet build:*)",
+      "WebFetch(domain:developers.deepl.com)",
+      "Bash(mv:*)",
+      "Bash(xargs basename:*)",
+      "WebFetch(domain:www.nuget.org)"
     ]
   }
 }

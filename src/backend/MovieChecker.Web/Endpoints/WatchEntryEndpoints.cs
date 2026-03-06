@@ -48,6 +48,19 @@ public static class WatchEntryEndpoints
             .WithSummary("Delete a watch entry")
             .WithDescription("Deletes a watch entry by its ID");
 
+        group.MapGet("/archived", GetArchived)
+            .Produces<List<WatchEntryDto>>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .WithSummary("Get archived watch entries")
+            .WithDescription("Returns all archived (soft-deleted) watch entries for the current user or group");
+
+        group.MapPost("/{id:int}/restore", Restore)
+            .Produces<WatchEntryDto>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .WithSummary("Restore an archived watch entry")
+            .WithDescription("Restores a soft-deleted watch entry from the archive");
+
         group.MapGet("/stats", GetStats)
             .Produces<StatsDto>(StatusCodes.Status200OK)
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
@@ -80,6 +93,9 @@ public static class WatchEntryEndpoints
             w.Movie.Year,
             w.Movie.Genre,
             w.Movie.PosterUrl,
+            w.Movie.TmdbId,
+            w.Movie.AnilistId,
+            w.Movie.IsCustom,
             w.Movie.CreatedAt
         ),
         w.Status,
@@ -100,7 +116,10 @@ public static class WatchEntryEndpoints
         w.TotalEpisodes,
         w.WatchingTime,
         w.TotalSeasons,
-        w.RuntimeMinutes
+        w.RuntimeSeconds,
+        w.RewatchCount,
+        w.IsArchived,
+        w.ArchivedAt
     );
 
     private static async Task<IResult> GetAll(
@@ -190,6 +209,18 @@ public static class WatchEntryEndpoints
         if (request.Comment != null && request.Comment.Length > 1000)
             return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
 
+        if (request.CurrentEpisode.HasValue && request.TotalEpisodes.HasValue
+            && request.CurrentEpisode.Value > request.TotalEpisodes.Value)
+            return Results.BadRequest(new ErrorResponse("Current episode cannot exceed total episodes"));
+
+        if (request.CurrentSeason.HasValue && request.TotalSeasons.HasValue
+            && request.CurrentSeason.Value > request.TotalSeasons.Value)
+            return Results.BadRequest(new ErrorResponse("Current season cannot exceed total seasons"));
+
+        if (request.WatchingTime.HasValue && request.RuntimeSeconds.HasValue
+            && request.WatchingTime.Value > request.RuntimeSeconds.Value)
+            return Results.BadRequest(new ErrorResponse("Watching time cannot exceed the total duration"));
+
         if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId))
             return Results.BadRequest(new ErrorResponse(localizer["MovieNotFound"]));
 
@@ -226,7 +257,8 @@ public static class WatchEntryEndpoints
             TotalEpisodes = request.TotalEpisodes,
             WatchingTime = request.WatchingTime,
             TotalSeasons = request.TotalSeasons,
-            RuntimeMinutes = request.RuntimeMinutes,
+            RuntimeSeconds = request.RuntimeSeconds,
+            RewatchCount = request.RewatchCount,
         };
 
         db.WatchEntries.Add(entry);
@@ -387,6 +419,24 @@ public static class WatchEntryEndpoints
         if (request.Comment != null && request.Comment.Length > 1000)
             return Results.BadRequest(new ErrorResponse("Comment must not exceed 1000 characters"));
 
+        var effectiveCurrentEpisode = request.CurrentEpisode ?? entry.CurrentEpisode;
+        var effectiveTotalEpisodes = request.TotalEpisodes ?? entry.TotalEpisodes;
+        if (effectiveCurrentEpisode.HasValue && effectiveTotalEpisodes.HasValue
+            && effectiveCurrentEpisode.Value > effectiveTotalEpisodes.Value)
+            return Results.BadRequest(new ErrorResponse("Current episode cannot exceed total episodes"));
+
+        var effectiveCurrentSeason = request.CurrentSeason ?? entry.CurrentSeason;
+        var effectiveTotalSeasons = request.TotalSeasons ?? entry.TotalSeasons;
+        if (effectiveCurrentSeason.HasValue && effectiveTotalSeasons.HasValue
+            && effectiveCurrentSeason.Value > effectiveTotalSeasons.Value)
+            return Results.BadRequest(new ErrorResponse("Current season cannot exceed total seasons"));
+
+        var effectiveWatchingTime = request.WatchingTime ?? entry.WatchingTime;
+        var effectiveRuntime = request.RuntimeSeconds ?? entry.RuntimeSeconds;
+        if (effectiveWatchingTime.HasValue && effectiveRuntime.HasValue
+            && effectiveWatchingTime.Value > effectiveRuntime.Value)
+            return Results.BadRequest(new ErrorResponse("Watching time cannot exceed the total duration"));
+
         if (request.Status.HasValue) entry.Status = request.Status.Value;
         if (request.Comment != null) entry.Comment = request.Comment;
         if (request.PrivateComment != null) entry.PrivateComment = request.PrivateComment;
@@ -397,11 +447,12 @@ public static class WatchEntryEndpoints
         if (request.TotalEpisodes.HasValue) entry.TotalEpisodes = request.TotalEpisodes.Value;
         if (request.WatchingTime.HasValue) entry.WatchingTime = request.WatchingTime.Value;
         if (request.TotalSeasons.HasValue) entry.TotalSeasons = request.TotalSeasons.Value;
-        if (request.RuntimeMinutes.HasValue) entry.RuntimeMinutes = request.RuntimeMinutes.Value;
+        if (request.RuntimeSeconds.HasValue) entry.RuntimeSeconds = request.RuntimeSeconds.Value;
+        if (request.RewatchCount.HasValue) entry.RewatchCount = request.RewatchCount.Value;
 
-        // Clear ratings when status changes to Planned or Watching
+        // Clear ratings when status changes to Planned, Watching, or Considering
         if (request.Status.HasValue &&
-            (request.Status.Value == WatchStatus.Planned || request.Status.Value == WatchStatus.Watching))
+            (request.Status.Value == WatchStatus.Planned || request.Status.Value == WatchStatus.Watching || request.Status.Value == WatchStatus.Considering))
         {
             if (entry.Ratings.Count > 0)
                 db.EntryRatings.RemoveRange(entry.Ratings);
@@ -516,7 +567,10 @@ public static class WatchEntryEndpoints
         int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
     {
         var userId = GetUserId(user);
+
+        // Look for the entry including archived ones (bypass global query filter)
         var entry = await db.WatchEntries
+            .IgnoreQueryFilters()
             .Include(w => w.Movie)
             .FirstOrDefaultAsync(w => w.Id == id);
 
@@ -527,28 +581,105 @@ public static class WatchEntryEndpoints
         if (!await PermissionService.CanDeleteEntry(db, userId, entry))
             return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsDelete"]));
 
-        var movieId = entry.MovieId;
-        var posterUrl = entry.Movie.PosterUrl;
-        var movie = entry.Movie;
-
-        db.WatchEntries.Remove(entry);
-        await db.SaveChangesAsync();
-
-        // Clean up movie and poster if no other entries reference this movie
-        var otherEntries = await db.WatchEntries.AnyAsync(w => w.MovieId == movieId);
-        if (!otherEntries)
+        // If already archived — hard delete
+        if (entry.IsArchived)
         {
-            if (!string.IsNullOrEmpty(posterUrl) && int.TryParse(posterUrl, out var posterId))
+            var movieId = entry.MovieId;
+            var posterUrl = entry.Movie.PosterUrl;
+            var movie = entry.Movie;
+
+            db.WatchEntries.Remove(entry);
+            await db.SaveChangesAsync();
+
+            // Clean up movie and poster if no other entries reference this movie
+            var otherEntries = await db.WatchEntries
+                .IgnoreQueryFilters()
+                .AnyAsync(w => w.MovieId == movieId);
+            if (!otherEntries)
             {
-                var poster = await db.PosterImages.FindAsync(posterId);
-                if (poster != null) db.PosterImages.Remove(poster);
+                if (!string.IsNullOrEmpty(posterUrl) && int.TryParse(posterUrl, out var posterId))
+                {
+                    var poster = await db.PosterImages.FindAsync(posterId);
+                    if (poster != null) db.PosterImages.Remove(poster);
+                }
+
+                db.Movies.Remove(movie);
+                await db.SaveChangesAsync();
             }
 
-            db.Movies.Remove(movie);
-            await db.SaveChangesAsync();
+            return Results.NoContent();
         }
 
+        // First delete — soft delete (archive)
+        entry.IsArchived = true;
+        entry.ArchivedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> GetArchived(
+        ClaimsPrincipal user,
+        AppDbContext db,
+        ILocalizationService localizer,
+        int? groupId = null)
+    {
+        var userId = GetUserId(user);
+
+        IQueryable<WatchEntry> query;
+
+        if (groupId.HasValue)
+        {
+            if (!await PermissionService.CanViewGroup(db, userId, groupId.Value))
+                return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsView"]));
+
+            query = db.WatchEntries
+                .IgnoreQueryFilters()
+                .Include(w => w.Movie)
+                .Include(w => w.Ratings).ThenInclude(r => r.User)
+                .Where(w => w.IsArchived)
+                .Where(w => w.WatchEntryGroups.Any(weg => weg.GroupId == groupId.Value)
+                            || w.GroupId == groupId.Value);
+        }
+        else
+        {
+            query = db.WatchEntries
+                .IgnoreQueryFilters()
+                .Include(w => w.Movie)
+                .Include(w => w.Ratings).ThenInclude(r => r.User)
+                .Where(w => w.IsArchived)
+                .Where(w => w.UserId == userId && w.GroupId == null);
+        }
+
+        var entries = await query
+            .OrderByDescending(w => w.ArchivedAt)
+            .ToListAsync();
+
+        return Results.Ok(entries.Select(ToDto).ToList());
+    }
+
+    private static async Task<IResult> Restore(
+        int id, ClaimsPrincipal user, AppDbContext db, ILocalizationService localizer)
+    {
+        var userId = GetUserId(user);
+        var entry = await db.WatchEntries
+            .IgnoreQueryFilters()
+            .Include(w => w.Movie)
+            .Include(w => w.Ratings).ThenInclude(r => r.User)
+            .FirstOrDefaultAsync(w => w.Id == id && w.IsArchived);
+
+        if (entry == null)
+            return Results.NotFound();
+
+        if (!await PermissionService.CanDeleteEntry(db, userId, entry))
+            return Results.BadRequest(new ErrorResponse(localizer["InsufficientPermissionsDelete"]));
+
+        entry.IsArchived = false;
+        entry.ArchivedAt = null;
+        entry.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return Results.Ok(ToDto(entry));
     }
 
     private static async Task<IResult> GetStats(
@@ -628,6 +759,7 @@ public static class WatchEntryEndpoints
             TotalPlanned: entries.Count(e => e.Status == WatchStatus.Planned),
             TotalWatching: entries.Count(e => e.Status == WatchStatus.Watching),
             TotalDropped: entries.Count(e => e.Status == WatchStatus.Dropped),
+            TotalConsidering: entries.Count(e => e.Status == WatchStatus.Considering),
             AverageMyRating: myRatings.Count > 0 ? myRatings.Average() : 0,
             AveragePartnerRating: otherRatings.Count > 0 ? otherRatings.Average() : 0,
             ByType: entries.GroupBy(e => e.Movie.Type.ToString()).ToDictionary(g => g.Key, g => g.Count()),

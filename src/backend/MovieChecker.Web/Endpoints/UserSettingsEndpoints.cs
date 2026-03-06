@@ -50,7 +50,9 @@ public static class UserSettingsEndpoints
 
         return Results.Ok(new UserSettingsDto(
             settings.PreventOthersAddingToMyPersonal,
-            settings.PreventMeAddingToMyPersonal
+            settings.PreventMeAddingToMyPersonal,
+            settings.CardSize,
+            settings.HasSeenTranslateHint
         ));
     }
 
@@ -70,7 +72,9 @@ public static class UserSettingsEndpoints
             {
                 UserId = userId,
                 PreventOthersAddingToMyPersonal = request.PreventOthersAddingToMyPersonal ?? false,
-                PreventMeAddingToMyPersonal = request.PreventMeAddingToMyPersonal ?? false
+                PreventMeAddingToMyPersonal = request.PreventMeAddingToMyPersonal ?? false,
+                CardSize = request.CardSize ?? "medium",
+                HasSeenTranslateHint = request.HasSeenTranslateHint ?? false
             };
             db.UserSettings.Add(settings);
         }
@@ -78,10 +82,16 @@ public static class UserSettingsEndpoints
         {
             if (request.PreventOthersAddingToMyPersonal.HasValue)
                 settings.PreventOthersAddingToMyPersonal = request.PreventOthersAddingToMyPersonal.Value;
-            
+
             if (request.PreventMeAddingToMyPersonal.HasValue)
                 settings.PreventMeAddingToMyPersonal = request.PreventMeAddingToMyPersonal.Value;
-            
+
+            if (request.CardSize != null)
+                settings.CardSize = request.CardSize;
+
+            if (request.HasSeenTranslateHint.HasValue)
+                settings.HasSeenTranslateHint = request.HasSeenTranslateHint.Value;
+
             settings.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -89,7 +99,9 @@ public static class UserSettingsEndpoints
 
         return Results.Ok(new UserSettingsDto(
             settings.PreventOthersAddingToMyPersonal,
-            settings.PreventMeAddingToMyPersonal
+            settings.PreventMeAddingToMyPersonal,
+            settings.CardSize,
+            settings.HasSeenTranslateHint
         ));
     }
 }

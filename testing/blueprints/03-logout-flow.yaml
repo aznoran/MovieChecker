@@ -1,0 +1,119 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: Platform - Logout Flow
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: >-
+      Кастомный invalidation flow для MovieChecker:
+      user logout + redirect на post_logout_redirect_uri.
+entries:
+  # ── Expression Policy: читает post_logout_redirect_uri и вызывает plan.redirect() ──
+  - model: authentik_policies_expression.expressionpolicy
+    id: logout-redirect-policy
+    identifiers:
+      name: platform-logout-redirect-policy
+    state: present
+    attrs:
+      expression: |
+        from urllib.parse import parse_qs, unquote, urlparse
+
+        # Белый список разрешённых origins для post_logout_redirect_uri.
+        # Защита от Open Redirect: без валидации злоумышленник может
+        # подставить фишинговый URL в параметр и перенаправить пользователя.
+        # При деплое на production — добавить реальный домен.
+        import os
+        app_domain = os.environ.get("APP_DOMAIN", "localhost:3000")
+        ALLOWED_ORIGINS = [
+            f"http://{app_domain}",
+        ]
+
+        plan = request.context.get("flow_plan")
+        if not plan:
+            return False
+
+        # post_logout_redirect_uri is a direct GET param when the flow is called
+        # via /if/flow/... URL. When routed through the OIDC end-session endpoint,
+        # Authentik wraps original params inside a URL-encoded `query` param instead.
+        redirect_uri = request.http_request.GET.get("post_logout_redirect_uri")
+        if not redirect_uri:
+            query_string = request.http_request.GET.get("query", "")
+            if query_string:
+                parsed = parse_qs(unquote(query_string))
+                redirect_uri = parsed.get("post_logout_redirect_uri", [None])[0]
+
+        if redirect_uri:
+            parsed_url = urlparse(redirect_uri)
+            origin = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            if origin in ALLOWED_ORIGINS:
+                plan.redirect(redirect_uri)
+                return False
+
+        # Fallback: если URI невалиден или отсутствует
+        plan.redirect(f"http://{app_domain}/")
+        return False
+
+  # ── Redirect Stage (target не важен — policy перенаправит через plan.redirect) ──
+  - model: authentik_stages_redirect.redirectstage
+    id: logout-redirect-stage
+    identifiers:
+      name: platform-logout-redirect
+    state: present
+    attrs:
+      mode: static
+      target_static: "about:blank"
+
+  # ── Flow: platform-provider-logout ──
+  - model: authentik_flows.flow
+    id: logout-flow
+    identifiers:
+      slug: platform-provider-logout
+    state: present
+    attrs:
+      name: "Выход из платформы"
+      title: "Выход"
+      designation: invalidation
+      authentication: none
+      layout: stacked
+      policy_engine_mode: any
+      denied_action: message_continue
+
+  # ── Stage binding 1: UserLogoutStage (уничтожает сессию authentik) ──
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf logout-flow
+      stage:
+        !Find [
+          authentik_stages_user_logout.userlogoutstage,
+          [name, default-invalidation-logout],
+        ]
+      order: 0
+    state: present
+    attrs:
+      invalid_response_action: retry
+      policy_engine_mode: any
+      re_evaluate_policies: true
+
+  # ── Stage binding 2: RedirectStage (перенаправляет на post_logout_redirect_uri) ──
+  - model: authentik_flows.flowstagebinding
+    id: logout-redirect-binding
+    identifiers:
+      target: !KeyOf logout-flow
+      stage: !KeyOf logout-redirect-stage
+      order: 10
+    state: present
+    attrs:
+      invalid_response_action: retry
+      policy_engine_mode: any
+      re_evaluate_policies: true
+
+  # ── Привязка Expression Policy к redirect stage binding ──
+  - model: authentik_policies.policybinding
+    identifiers:
+      policy: !KeyOf logout-redirect-policy
+      target: !KeyOf logout-redirect-binding
+      order: 0
+    state: present
+    attrs:
+      enabled: true
+      timeout: 30
