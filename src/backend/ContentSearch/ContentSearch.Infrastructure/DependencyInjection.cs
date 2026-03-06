@@ -48,6 +48,7 @@ public static class DependencyInjection
         // Services
         services.AddScoped<TmdbService>();
         services.AddScoped<AniListService>();
+        services.AddSingleton<LanguageDetectionService>();
         services.AddSingleton<TranslationService>();
 
         // Caching

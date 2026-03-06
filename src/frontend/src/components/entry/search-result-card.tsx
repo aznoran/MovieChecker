@@ -1,21 +1,26 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocale } from "@/context/locale-context";
 import { translateSuggestedType, translateGenre } from "@/lib/i18n/labels";
+import { Languages } from "lucide-react";
 import type { SearchResultDto } from "@/lib/api/generated";
 
 interface Props {
-    result: SearchResultDto;
+    result: SearchResultDto & { isTranslated?: boolean };
     onSelect: (result: SearchResultDto) => void;
+    onForceTranslate?: (externalId: number, provider: string) => void;
     compact?: boolean;
     hideTitle?: boolean;
     translating?: boolean;
 }
 
-export function SearchResultCard({ result, onSelect, compact = true, hideTitle = false, translating = false }: Props) {
+export function SearchResultCard({ result, onSelect, onForceTranslate, compact = true, hideTitle = false, translating = false }: Props) {
     const { locale } = useLocale();
+    const showForceTranslate = onForceTranslate && result.isTranslated === false && !translating;
+
     return (
         <div
             className="relative flex gap-3 p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden"
@@ -38,9 +43,26 @@ export function SearchResultCard({ result, onSelect, compact = true, hideTitle =
                         <p className={`font-medium leading-tight ${compact ? "text-sm line-clamp-1" : "text-base line-clamp-2"}`}>
                             {result.title}
                         </p>
-                        {result.year && (
-                            <span className="text-xs text-muted-foreground flex-shrink-0">{result.year}</span>
-                        )}
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                            {showForceTranslate && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    className="text-muted-foreground hover:text-primary"
+                                    title="Force translate"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onForceTranslate(result.externalId!, result.provider!);
+                                    }}
+                                >
+                                    <Languages className="!size-3" />
+                                </Button>
+                            )}
+                            {result.year && (
+                                <span className="text-xs text-muted-foreground">{result.year}</span>
+                            )}
+                        </div>
                     </div>
                 )}
                 {hideTitle && result.year && (

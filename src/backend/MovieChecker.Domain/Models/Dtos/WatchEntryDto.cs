@@ -21,5 +21,7 @@ public record WatchEntryDto(
     int? WatchingTime,
     int? TotalSeasons,
     int? RuntimeSeconds,
-    int? RewatchCount
+    int? RewatchCount,
+    bool IsArchived,
+    DateTime? ArchivedAt
 );

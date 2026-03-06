@@ -15,6 +15,7 @@ export enum WatchStatus {
   Watching = "Watching",
   Completed = "Completed",
   Dropped = "Dropped",
+  Considering = "Considering",
 }
 
 export enum GroupType {
@@ -104,6 +105,8 @@ export interface CreateWatchEntryRequest {
   runtimeSeconds?: number | null;
   ratings?: UserRatingInput[] | null;
   viewers?: string[] | null;
+  /** @format int32 */
+  rewatchCount?: number | null;
 }
 
 export interface EntryRatingDto {
@@ -285,6 +288,8 @@ export interface StatsDto {
   totalWatching?: number;
   /** @format int32 */
   totalDropped?: number;
+  /** @format int32 */
+  totalConsidering?: number;
   /** @format double */
   averageMyRating?: number;
   /** @format double */
@@ -356,6 +361,8 @@ export interface UpdateWatchEntryRequest {
   totalSeasons?: number | null;
   /** @format int32 */
   runtimeSeconds?: number | null;
+  /** @format int32 */
+  rewatchCount?: number | null;
 }
 
 export interface UploadPosterResponse {
@@ -417,6 +424,11 @@ export interface WatchEntryDto {
   totalSeasons?: number | null;
   /** @format int32 */
   runtimeSeconds?: number | null;
+  /** @format int32 */
+  rewatchCount?: number | null;
+  isArchived?: boolean;
+  /** @format date-time */
+  archivedAt?: string | null;
 }
 
 import type {
@@ -1311,6 +1323,45 @@ export class Api<
       this.request<void, ErrorResponse | void>({
         path: `/api/watch-entries/${id}`,
         method: "DELETE",
+        ...params,
+      }),
+
+    /**
+     * @description Returns all archived (soft-deleted) watch entries for the current user or group
+     *
+     * @tags WatchEntryEndpoints
+     * @name WatchEntriesArchivedList
+     * @summary Get archived watch entries
+     * @request GET:/api/watch-entries/archived
+     */
+    watchEntriesArchivedList: (
+      query?: {
+        /** @format int32 */
+        groupId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<WatchEntryDto[], ErrorResponse>({
+        path: `/api/watch-entries/archived`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Restores a soft-deleted watch entry from the archive
+     *
+     * @tags WatchEntryEndpoints
+     * @name WatchEntriesRestoreCreate
+     * @summary Restore an archived watch entry
+     * @request POST:/api/watch-entries/{id}/restore
+     */
+    watchEntriesRestoreCreate: (id: number, params: RequestParams = {}) =>
+      this.request<WatchEntryDto, ErrorResponse | void>({
+        path: `/api/watch-entries/${id}/restore`,
+        method: "POST",
+        format: "json",
         ...params,
       }),
 

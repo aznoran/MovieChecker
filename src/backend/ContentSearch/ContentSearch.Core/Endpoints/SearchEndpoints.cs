@@ -62,7 +62,10 @@ public static class SearchEndpoints
                 .ToListAsync(ct);
 
             if (localResults.Count > 0)
+            {
+                await LogSearchQuery(db, q, "search", language, localResults.Count, ct);
                 return Results.Ok(localResults);
+            }
         }
 
         // Always search both TMDB and AniList in parallel
@@ -115,18 +118,57 @@ public static class SearchEndpoints
 
         await db.SaveChangesAsync(ct);
 
+        await LogSearchQuery(db, q, "search", language, results.Count, ct);
+
         return Results.Ok(results);
     }
 
     private static async Task<IResult> Translate(
         TranslateRequest request,
         TranslationService translationService,
+        SearchDbContext db,
         CancellationToken ct)
     {
         if (request.Results.Count == 0 || string.IsNullOrWhiteSpace(request.TargetLanguage))
             return Results.Ok(new List<TranslatedResultDto>());
 
-        var translated = await translationService.TranslateResultsAsync(request.Results, request.TargetLanguage, ct);
-        return Results.Ok(translated);
+        HashSet<(int, string)>? forceSet = null;
+        if (request.ForceTranslate is { Count: > 0 })
+        {
+            forceSet = request.ForceTranslate
+                .Select(f => (f.ExternalId, f.Provider))
+                .ToHashSet();
+        }
+
+        var result = await translationService.TranslateResultsAsync(
+            request.Results, request.TargetLanguage, forceSet, ct);
+
+        // Log the translation query
+        var queryText = string.Join(", ", request.Results.Select(r => r.Title).Take(3));
+        db.SearchQueryLogs.Add(new SearchQueryLog
+        {
+            Query = queryText,
+            RequestType = "translate",
+            TargetLanguage = request.TargetLanguage,
+            ResultCount = request.Results.Count,
+            CharactersSent = result.CharactersSent,
+            TranslationSkipped = result.Skipped,
+        });
+        await db.SaveChangesAsync(ct);
+
+        return Results.Ok(result.Results);
+    }
+
+    private static async Task LogSearchQuery(
+        SearchDbContext db, string query, string requestType, string? language, int resultCount, CancellationToken ct)
+    {
+        db.SearchQueryLogs.Add(new SearchQueryLog
+        {
+            Query = query,
+            RequestType = requestType,
+            TargetLanguage = language,
+            ResultCount = resultCount,
+        });
+        await db.SaveChangesAsync(ct);
     }
 }

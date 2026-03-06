@@ -40,7 +40,10 @@
       "WebFetch(domain:developer.themoviedb.org)",
       "Bash(/usr/local/share/dotnet/dotnet:*)",
       "Bash(~/.dotnet/dotnet build:*)",
-      "WebFetch(domain:developers.deepl.com)"
+      "WebFetch(domain:developers.deepl.com)",
+      "Bash(mv:*)",
+      "Bash(xargs basename:*)",
+      "WebFetch(domain:www.nuget.org)"
     ]
   }
 }

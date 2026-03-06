@@ -8,6 +8,8 @@ public class WatchEntryConfiguration : IEntityTypeConfiguration<WatchEntry>
 {
     public void Configure(EntityTypeBuilder<WatchEntry> builder)
     {
+        builder.HasQueryFilter(w => !w.IsArchived);
+
         builder.HasOne(w => w.Movie)
             .WithMany(m => m.WatchEntries)
             .HasForeignKey(w => w.MovieId)

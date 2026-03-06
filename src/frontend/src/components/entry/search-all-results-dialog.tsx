@@ -18,6 +18,7 @@ interface Props {
     results: SearchResultDto[];
     onSelect: (result: SearchResultDto) => void;
     onTranslate?: () => void;
+    onForceTranslate?: (externalId: number, provider: string) => void;
     isTranslating?: boolean;
     translatePhase?: "idle" | "exit" | "enter";
 }
@@ -37,7 +38,7 @@ function groupByTitle(results: SearchResultDto[]) {
     return groups;
 }
 
-export function SearchAllResultsDialog({ open, onOpenChange, results, onSelect, onTranslate, isTranslating, translatePhase = "idle" }: Props) {
+export function SearchAllResultsDialog({ open, onOpenChange, results, onSelect, onTranslate, onForceTranslate, isTranslating, translatePhase = "idle" }: Props) {
     const { t, locale } = useLocale();
 
     const handleSelect = (result: SearchResultDto) => {
@@ -78,6 +79,7 @@ export function SearchAllResultsDialog({ open, onOpenChange, results, onSelect, 
                                     <SearchResultCard
                                         result={group.results[0]}
                                         onSelect={handleSelect}
+                                        onForceTranslate={onForceTranslate}
                                         compact={false}
                                         translating={isTranslating}
                                     />
@@ -93,6 +95,7 @@ export function SearchAllResultsDialog({ open, onOpenChange, results, onSelect, 
                                             key={`${result.provider}-${result.externalId}`}
                                             result={result}
                                             onSelect={handleSelect}
+                                            onForceTranslate={onForceTranslate}
                                             compact={false}
                                             hideTitle
                                             translating={isTranslating}

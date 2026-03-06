@@ -1,5 +1,6 @@
 export const queryKeys = {
     watchEntries: (status?: string, groupId?: number) => ["watchEntries", status, groupId] as const,
+    archivedEntries: (groupId?: number) => ["archivedEntries", groupId] as const,
     stats: (groupId?: number) => ["stats", groupId] as const,
     groups: () => ["groups"] as const,
     permissions: (groupId?: number) => ["permissions", groupId] as const,
@@ -13,6 +14,7 @@ export const mutationKeys = {
     createWatchEntry: () => ["createWatchEntry"] as const,
     updateWatchEntry: () => ["updateWatchEntry"] as const,
     deleteWatchEntry: () => ["deleteWatchEntry"] as const,
+    restoreWatchEntry: () => ["restoreWatchEntry"] as const,
     rateEntry: () => ["rateEntry"] as const,
     createMovie: () => ["createMovie"] as const,
     updateMovie: () => ["updateMovie"] as const,

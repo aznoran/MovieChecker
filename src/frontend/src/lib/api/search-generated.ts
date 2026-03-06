@@ -30,9 +30,16 @@ export interface SearchResultDto {
   englishTitle?: string | null;
 }
 
+export interface TranslateForceItem {
+  /** @format int32 */
+  externalId?: number;
+  provider?: string | null;
+}
+
 export interface TranslateRequest {
   results?: SearchResultDto[] | null;
   targetLanguage?: string | null;
+  forceTranslate?: TranslateForceItem[] | null;
 }
 
 export interface TranslatedResultDto {
@@ -41,6 +48,7 @@ export interface TranslatedResultDto {
   provider?: string | null;
   title?: string | null;
   description?: string | null;
+  isTranslated?: boolean;
 }
 
 import type {

@@ -51,6 +51,18 @@ export function useUpdateWatchEntry() {
     });
 }
 
+export function useArchivedEntries(groupId?: number, options?: Omit<UseQueryOptions<WatchEntryDto[]>, "queryKey" | "queryFn">) {
+    return useQuery({
+        queryKey: queryKeys.archivedEntries(groupId),
+        queryFn: async () => {
+            const query: { groupId?: number } = {};
+            if (groupId !== undefined) query.groupId = groupId;
+            return (await apiClient.api.watchEntriesArchivedList(query)).data;
+        },
+        ...options,
+    });
+}
+
 export function useDeleteWatchEntry() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -58,6 +70,21 @@ export function useDeleteWatchEntry() {
         mutationFn: (id: number) => apiClient.api.watchEntriesDelete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["watchEntries"] });
+            queryClient.invalidateQueries({ queryKey: ["archivedEntries"] });
+            queryClient.invalidateQueries({ queryKey: ["stats"] });
+        },
+    });
+}
+
+export function useRestoreWatchEntry() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationKey: mutationKeys.restoreWatchEntry(),
+        mutationFn: async (id: number) =>
+            (await apiClient.api.watchEntriesRestoreCreate(id)).data,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["watchEntries"] });
+            queryClient.invalidateQueries({ queryKey: ["archivedEntries"] });
             queryClient.invalidateQueries({ queryKey: ["stats"] });
         },
     });

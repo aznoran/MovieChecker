@@ -10,6 +10,7 @@ public class SearchDbContext : DbContext
     public DbSet<ExternalContent> ExternalContents => Set<ExternalContent>();
     public DbSet<TmdbContent> TmdbContents => Set<TmdbContent>();
     public DbSet<AniListContent> AniListContents => Set<AniListContent>();
+    public DbSet<SearchQueryLog> SearchQueryLogs => Set<SearchQueryLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

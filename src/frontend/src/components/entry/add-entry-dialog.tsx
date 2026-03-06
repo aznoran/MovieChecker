@@ -47,6 +47,7 @@ import {
     MessageSquare,
     Loader2,
     Search,
+    RefreshCw,
 } from "lucide-react";
 import {Calendar} from "@/components/ui/calendar";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
@@ -109,6 +110,9 @@ function createAddEntrySchema(t: (key: TranslationKeys) => string) {
             .optional().or(z.literal("")),
         seconds: z.string()
             .refine(v => !v || (/^\d+$/.test(v) && +v >= 0 && +v <= 59), t("invalidTimeComponent"))
+            .optional().or(z.literal("")),
+        rewatchCount: z.string()
+            .refine(v => !v || (/^\d+$/.test(v) && +v >= 0), t("invalidNumber"))
             .optional().or(z.literal("")),
     });
 }
@@ -177,6 +181,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
             hours: "",
             minutes: "",
             seconds: "",
+            rewatchCount: "",
         },
         mode: "onBlur",
     });
@@ -304,7 +309,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
     };
 
     // Get display results (merging translations)
-    const getDisplayResults = useCallback((): SearchResultDto[] => {
+    const getDisplayResults = useCallback((): (SearchResultDto & { isTranslated?: boolean })[] => {
         const raw = searchResults.data ?? [];
         if (translatedResults.length === 0) return raw;
         return raw.map((r) => {
@@ -312,7 +317,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 (t) => t.externalId === r.externalId && t.provider === r.provider
             );
             if (!tr) return r;
-            return { ...r, title: tr.title, description: tr.description ?? r.description };
+            return { ...r, title: tr.title, description: tr.description ?? r.description, isTranslated: tr.isTranslated };
         });
     }, [searchResults.data, translatedResults]);
 
@@ -339,6 +344,25 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                 setTranslatePhase("enter");
                 setTimeout(() => setTranslatePhase("idle"), 320);
             }, 220);
+        } catch {
+            setIsTranslating(false);
+            toast.error("Translation failed", {position: "top-center"});
+        }
+    };
+
+    const handleForceTranslate = async (externalId: number, provider: string) => {
+        const results = searchResults.data;
+        if (!results || results.length === 0) return;
+        setIsTranslating(true);
+        try {
+            const targetLang = locale === "ru" ? "ru" : "en";
+            const { data: translated } = await searchApiClient.api.searchTranslateCreate({
+                results,
+                targetLanguage: targetLang,
+                forceTranslate: [{ externalId, provider }],
+            });
+            setIsTranslating(false);
+            setTranslatedResults(translated);
         } catch {
             setIsTranslating(false);
             toast.error("Translation failed", {position: "top-center"});
@@ -415,6 +439,9 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     watchingTime: (values.hours || values.minutes || values.seconds)
                         ? (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"))
                         : undefined,
+                } : {}),
+                ...((values.status === WatchStatus.Completed || values.status === WatchStatus.Watching) ? {
+                    rewatchCount: values.rewatchCount ? parseInt(values.rewatchCount) : undefined,
                 } : {}),
             });
         },
@@ -515,6 +542,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             onClose={() => setShowSearchPanel(false)}
                             onShowAll={() => setShowAllResults(true)}
                             onTranslate={handleTranslate}
+                            onForceTranslate={handleForceTranslate}
                             isTranslating={isTranslating}
                             translatePhase={translatePhase}
                         />
@@ -544,15 +572,20 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                                         {t("title")} *
                                                     </FieldLabel>
                                                     <div className="relative">
-                                                        <Input {...field} id={field.name} autoFocus aria-invalid={fieldState.invalid} className="pr-8" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearch(); } }}/>
-                                                        <button
-                                                            type="button"
-                                                            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-accent transition-colors"
-                                                            onClick={handleSearch}
-                                                            title={t("searchPlaceholder")}
-                                                        >
-                                                            <Search className="h-4 w-4 text-muted-foreground"/>
-                                                        </button>
+                                                        <Input {...field} id={field.name} autoFocus aria-invalid={fieldState.invalid} className="pr-20" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearch(); } }}/>
+                                                        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                                            <kbd className="pointer-events-none select-none rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                                                Enter ↵
+                                                            </kbd>
+                                                            <button
+                                                                type="button"
+                                                                className="p-1 rounded hover:bg-accent transition-colors"
+                                                                onClick={handleSearch}
+                                                                title={t("searchPlaceholder")}
+                                                            >
+                                                                <Search className="h-4 w-4 text-muted-foreground"/>
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                     {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
                                                 </Field>
@@ -680,6 +713,30 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                                             </Field>
                                         )}
                                     />
+
+                                    {(watchedStatus === WatchStatus.Completed || watchedStatus === WatchStatus.Watching) && (
+                                        <Controller
+                                            control={form.control}
+                                            name="rewatchCount"
+                                            render={({field, fieldState}) => (
+                                                <Field data-invalid={fieldState.invalid || undefined}>
+                                                    <FieldLabel htmlFor={field.name} className="flex items-center gap-1.5">
+                                                        <RefreshCw className="h-3.5 w-3.5"/>
+                                                        {t("rewatchCount")}
+                                                    </FieldLabel>
+                                                    <Input
+                                                        {...field}
+                                                        id={field.name}
+                                                        type="number"
+                                                        min={0}
+                                                        placeholder="0"
+                                                        aria-invalid={fieldState.invalid}
+                                                    />
+                                                    {fieldState.error && <FieldError>{fieldState.error.message}</FieldError>}
+                                                </Field>
+                                            )}
+                                        />
+                                    )}
                                 </FieldGroup>
 
                                 {isGroupMode ? (
@@ -844,6 +901,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                             onClose={() => setShowSearchPanel(false)}
                             onShowAll={() => setShowAllResults(true)}
                             onTranslate={handleTranslate}
+                            onForceTranslate={handleForceTranslate}
                             isTranslating={isTranslating}
                             translatePhase={translatePhase}
                         />
@@ -856,6 +914,7 @@ export function AddEntryDialog({open, onOpenChange}: Props) {
                     results={getDisplayResults()}
                     onSelect={handleExternalSelect}
                     onTranslate={handleTranslate}
+                    onForceTranslate={handleForceTranslate}
                     isTranslating={isTranslating}
                     translatePhase={translatePhase}
                 />

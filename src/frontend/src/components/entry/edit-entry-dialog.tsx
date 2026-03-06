@@ -157,9 +157,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             totalEpisodes: entry.totalEpisodes?.toString() || "",
             totalSeasons: entry.totalSeasons?.toString() || "",
             runtimeSeconds: entry.runtimeSeconds?.toString() || "",
-            hours: Math.floor((entry.watchingTime || 0) / 3600).toString(),
-            minutes: Math.floor(((entry.watchingTime || 0) % 3600) / 60).toString(),
-            seconds: ((entry.watchingTime || 0) % 60).toString(),
+            hours: entry.watchingTime ? Math.floor(entry.watchingTime / 3600).toString() : "",
+            minutes: entry.watchingTime ? Math.floor((entry.watchingTime % 3600) / 60).toString() : "",
+            seconds: entry.watchingTime ? (entry.watchingTime % 60).toString() : "",
             rewatchCount: entry.rewatchCount?.toString() || "",
         },
         mode: "onBlur",
@@ -177,9 +177,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                 totalEpisodes: entry.totalEpisodes?.toString() || "",
                 totalSeasons: entry.totalSeasons?.toString() || "",
                 runtimeSeconds: entry.runtimeSeconds?.toString() || "",
-                hours: Math.floor((entry.watchingTime || 0) / 3600).toString(),
-                minutes: Math.floor(((entry.watchingTime || 0) % 3600) / 60).toString(),
-                seconds: ((entry.watchingTime || 0) % 60).toString(),
+                hours: entry.watchingTime ? Math.floor(entry.watchingTime / 3600).toString() : "",
+                minutes: entry.watchingTime ? Math.floor((entry.watchingTime % 3600) / 60).toString() : "",
+                seconds: entry.watchingTime ? (entry.watchingTime % 60).toString() : "",
                 rewatchCount: entry.rewatchCount?.toString() || "",
             });
             setMyRating((myRat?.rating ?? 0) / 2);
@@ -211,16 +211,19 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
             const curViewers = selectedMembers.slice().sort();
             if (origViewers.length !== curViewers.length || origViewers.some((v, i) => v !== curViewers[i])) return true;
         }
-        if ((values.status === WatchStatus.Watching || values.status === WatchStatus.Dropped) &&
-            (entry.movie?.type === EntryContentType.Anime || entry.movie?.type === EntryContentType.Series || entry.movie?.type === EntryContentType.Cartoon)) {
-            if ((values.currentSeason || "") !== (entry.currentSeason?.toString() || "")) return true;
-            if ((values.currentEpisode || "") !== (entry.currentEpisode?.toString() || "")) return true;
-            if ((values.totalEpisodes || "") !== (entry.totalEpisodes?.toString() || "")) return true;
-            if ((values.totalSeasons || "") !== (entry.totalSeasons?.toString() || "")) return true;
+        if ((values.status === WatchStatus.Watching || values.status === WatchStatus.Dropped)) {
+            const isSeries = entry.movie?.type === EntryContentType.Anime || entry.movie?.type === EntryContentType.Series || entry.movie?.type === EntryContentType.Cartoon;
+            if (isSeries) {
+                if ((values.currentSeason || "") !== (entry.currentSeason?.toString() || "")) return true;
+                if ((values.currentEpisode || "") !== (entry.currentEpisode?.toString() || "")) return true;
+                if ((values.totalEpisodes || "") !== (entry.totalEpisodes?.toString() || "")) return true;
+                if ((values.totalSeasons || "") !== (entry.totalSeasons?.toString() || "")) return true;
+            }
             if ((values.runtimeSeconds || "") !== (entry.runtimeSeconds?.toString() || "")) return true;
             const newWt = (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"));
             if (newWt !== (entry.watchingTime || 0)) return true;
         }
+        if ((values.rewatchCount || "0") !== (entry.rewatchCount?.toString() || "0")) return true;
         return false;
     }, [form, isGroupMode, selectedMembers, entry]);
 
@@ -313,7 +316,9 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             ? (parseInt(values.hours || "0") * 3600 + parseInt(values.minutes || "0") * 60 + parseInt(values.seconds || "0"))
                             : undefined,
                     } : {}),
-                    rewatchCount: values.rewatchCount ? parseInt(values.rewatchCount) : undefined,
+                    ...((values.status === WatchStatus.Completed || values.status === WatchStatus.Watching) ? {
+                        rewatchCount: values.rewatchCount ? parseInt(values.rewatchCount) : 0,
+                    } : {}),
                 });
             }
 
@@ -603,7 +608,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                             </form>
                         ) : (
                             /* Full edit form */
-                                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pr-4">
+                                <form onSubmit={form.handleSubmit(handleSubmit, () => setError(t("fixValidationErrors")))} className="space-y-4 pr-4">
                                     <PosterUploadSection
                                         cropper={cropper}
                                         fileInputRef={cropper.fileInputRef}
@@ -640,7 +645,7 @@ export function EditEntryDialog({entry, open, onOpenChange}: Props) {
                                                 </Field>
                                             )}
                                         />
-                                        {(entry.rewatchCount || watchedStatus === WatchStatus.Watching) && (
+                                        {(watchedStatus === WatchStatus.Completed || watchedStatus === WatchStatus.Watching) && (
                                             <Controller
                                                 control={form.control}
                                                 name="rewatchCount"

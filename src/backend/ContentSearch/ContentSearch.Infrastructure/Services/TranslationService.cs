@@ -5,76 +5,120 @@ using Microsoft.Extensions.Logging;
 
 namespace ContentSearch.Infrastructure.Services;
 
+public record TranslationResult(
+    List<TranslatedResultDto> Results,
+    int CharactersSent,
+    bool Skipped);
+
 public class TranslationService
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<TranslationService> _logger;
+    private readonly LanguageDetectionService _langDetection;
 
-    public TranslationService(IHttpClientFactory httpClientFactory, ILogger<TranslationService> logger)
+    public TranslationService(
+        IHttpClientFactory httpClientFactory,
+        ILogger<TranslationService> logger,
+        LanguageDetectionService langDetection)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _langDetection = langDetection;
     }
 
-    public async Task<List<TranslatedResultDto>> TranslateResultsAsync(
-        List<SearchResultDto> results, string targetLang, CancellationToken ct)
+    public async Task<TranslationResult> TranslateResultsAsync(
+        List<SearchResultDto> results, string targetLang,
+        HashSet<(int externalId, string provider)>? forceSet, CancellationToken ct)
     {
-        // Build flat list of texts: [title0, desc0, title1, desc1, ...]
-        var texts = new List<string>();
-        var descriptionIndices = new HashSet<int>();
+        var normalizedTarget = targetLang.ToUpperInvariant().Split('-')[0];
 
-        foreach (var result in results)
+        // Per-text language detection: only send texts that need translation
+        var textsToTranslate = new List<string>();
+        // Map: index in textsToTranslate -> (resultIndex, isDescription)
+        var translateMap = new List<(int resultIndex, bool isDescription)>();
+        // Track which result indices have texts queued for translation
+        var translatedIndices = new HashSet<int>();
+
+        // Pre-fill output with originals
+        var titles = results.Select(r => r.Title).ToArray();
+        var descriptions = results.Select(r => r.Description).ToArray();
+
+        for (var i = 0; i < results.Count; i++)
         {
-            texts.Add(result.Title);
-            if (!string.IsNullOrEmpty(result.Description))
+            var result = results[i];
+            var isForced = forceSet?.Contains((result.ExternalId, result.Provider)) == true;
+
+            // Determine if the entry as a whole is already in the target language.
+            // Use the longest available text (description > title) for most reliable detection.
+            // If description is in target language, the title is likely the official localized name
+            // (even if it looks like a foreign proper noun, e.g. "Steins;Gate" with Russian description).
+            var entryInTarget = false;
+            if (!isForced)
             {
-                descriptionIndices.Add(texts.Count);
-                texts.Add(result.Description);
+                var bestText = !string.IsNullOrEmpty(result.Description) && result.Description.Length >= 10
+                    ? result.Description
+                    : result.Title;
+                entryInTarget = _langDetection.IsTextInLanguage(bestText, normalizedTarget);
+            }
+
+            if (!entryInTarget)
+            {
+                translateMap.Add((i, false));
+                textsToTranslate.Add(result.Title);
+                translatedIndices.Add(i);
+
+                if (!string.IsNullOrEmpty(result.Description))
+                {
+                    translateMap.Add((i, true));
+                    textsToTranslate.Add(result.Description);
+                }
             }
         }
 
-        // Translate all texts in one batch call
-        string?[] translated;
-        try
+        var charactersSent = textsToTranslate.Sum(t => t.Length);
+        var skipped = textsToTranslate.Count == 0;
+
+        if (skipped)
         {
-            translated = await TranslateBatchAsync(texts, targetLang, ct);
+            _logger.LogInformation("Skipping translation: all texts already in target language {TargetLang}", targetLang);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogWarning(ex, "DeepL batch translation failed, returning original texts");
-            return results.Select(r => new TranslatedResultDto(
-                ExternalId: r.ExternalId,
-                Provider: r.Provider,
-                Title: r.Title,
-                Description: r.Description
-            )).ToList();
-        }
+            _logger.LogInformation("Translating {Count} texts ({Chars} chars) to {TargetLang}, skipped {Skipped} already in target",
+                textsToTranslate.Count, charactersSent, targetLang,
+                results.Count * 2 - textsToTranslate.Count);
 
-        // Map translated texts back to results
-        var output = new List<TranslatedResultDto>();
-        var textIndex = 0;
-
-        foreach (var result in results)
-        {
-            var translatedTitle = translated[textIndex] ?? result.Title;
-            textIndex++;
-
-            string? translatedDescription = result.Description;
-            if (!string.IsNullOrEmpty(result.Description))
+            try
             {
-                translatedDescription = translated[textIndex] ?? result.Description;
-                textIndex++;
-            }
+                var translated = await TranslateBatchAsync(textsToTranslate, targetLang, ct);
 
-            output.Add(new TranslatedResultDto(
-                ExternalId: result.ExternalId,
-                Provider: result.Provider,
-                Title: translatedTitle,
-                Description: translatedDescription
-            ));
+                for (var j = 0; j < translateMap.Count; j++)
+                {
+                    var (resultIndex, isDescription) = translateMap[j];
+                    var translatedText = translated[j];
+                    if (translatedText == null) continue;
+
+                    if (isDescription)
+                        descriptions[resultIndex] = translatedText;
+                    else
+                        titles[resultIndex] = translatedText;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "DeepL batch translation failed, returning original texts");
+            }
         }
 
-        return output;
+        var output = results.Select((r, i) => new TranslatedResultDto(
+            ExternalId: r.ExternalId,
+            Provider: r.Provider,
+            Title: titles[i],
+            Description: descriptions[i],
+            IsTranslated: translatedIndices.Contains(i)
+        )).ToList();
+
+        return new TranslationResult(output, CharactersSent: charactersSent, Skipped: skipped);
     }
 
     private async Task<string?[]> TranslateBatchAsync(List<string> texts, string targetLang, CancellationToken ct)
@@ -87,8 +131,8 @@ public class TranslationService
         var request = new DeepLRequest
         {
             Text = texts,
-            SourceLang = "EN",
             TargetLang = targetLang.ToUpperInvariant()
+            // source_lang omitted — DeepL will auto-detect from any language
         };
 
         var response = await client.PostAsJsonAsync("/v2/translate", request, ct);
@@ -114,7 +158,8 @@ public class TranslationService
         public List<string> Text { get; set; } = [];
 
         [JsonPropertyName("source_lang")]
-        public string SourceLang { get; set; } = "";
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? SourceLang { get; set; }
 
         [JsonPropertyName("target_lang")]
         public string TargetLang { get; set; } = "";

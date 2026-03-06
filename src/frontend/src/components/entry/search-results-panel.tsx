@@ -28,6 +28,7 @@ interface Props {
     onClose: () => void;
     onShowAll?: () => void;
     onTranslate?: () => void;
+    onForceTranslate?: (externalId: number, provider: string) => void;
     isTranslating?: boolean;
     translatePhase?: "idle" | "exit" | "enter";
 }
@@ -39,6 +40,7 @@ export function SearchResultsPanel({
     onClose,
     onShowAll,
     onTranslate,
+    onForceTranslate,
     isTranslating,
     translatePhase = "idle",
 }: Props) {
@@ -97,6 +99,7 @@ export function SearchResultsPanel({
                                     <SearchResultCard
                                         result={group.results[0]}
                                         onSelect={onSelect}
+                                        onForceTranslate={onForceTranslate}
                                         compact
                                         translating={isTranslating}
                                     />
@@ -112,6 +115,7 @@ export function SearchResultsPanel({
                                             key={`${result.provider}-${result.externalId}`}
                                             result={result}
                                             onSelect={onSelect}
+                                            onForceTranslate={onForceTranslate}
                                             compact
                                             hideTitle
                                             translating={isTranslating}
